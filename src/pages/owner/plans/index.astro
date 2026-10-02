@@ -1,6 +1,16 @@
 ---
+// Prices come from the `plans` table (migration 0008), not from this file, so a
+// price change is an admin/data change rather than a code change.
+export const prerender = false;
 import OwnerLayout from '@/layouts/OwnerLayout.astro';
-import { BadgeCheck, Sparkles, Clock3, ArrowRight, Building2, Check } from '@lucide/astro';
+import { BadgeCheck, Sparkles, ArrowRight, Building2, Check } from '@lucide/astro';
+import { getPlans } from '@/lib/server/plans';
+import { resolvePlan } from '@/lib/plans';
+import { formatINR } from '@/lib/format';
+
+const plans = await getPlans();
+const basic = resolvePlan(plans, 'basic');
+const verified = resolvePlan(plans, 'verified');
 ---
 
 <OwnerLayout title="Choose a Plan — PG Hunter" active="listings">
@@ -22,19 +32,18 @@ import { BadgeCheck, Sparkles, Clock3, ArrowRight, Building2, Check } from '@luc
       <!-- Basic -->
       <article class="card flex flex-col p-6">
         <div class="flex items-center justify-between">
-          <h2 class="text-lg font-extrabold text-slate-900">Basic Listing</h2>
-          <span class="badge bg-slate-100 text-slate-600">Free</span>
+          <h2 class="text-lg font-extrabold text-slate-900">{basic.name}</h2>
+          <span class="badge bg-slate-100 text-slate-600">{basic.priceInr === 0 ? 'Free' : 'Paid'}</span>
         </div>
-        <p class="mt-1 text-sm text-slate-500">List your PG and start receiving enquiries.</p>
+        <p class="mt-1 text-sm text-slate-500">{basic.tagline}</p>
         <p class="mt-5 text-3xl font-extrabold text-slate-900">
-          ₹0
-          <span class="text-sm font-medium text-slate-400">/ 15 days</span>
+          {formatINR(basic.priceInr)}
+          <span class="text-sm font-medium text-slate-400">/ {basic.durationLabel}</span>
         </p>
         <ul class="mt-6 flex-1 space-y-3 text-sm text-slate-700">
-          <li class="flex items-start gap-2"><Check class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> Live listing for 15 days</li>
-          <li class="flex items-start gap-2"><Check class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> Receive student enquiries</li>
-          <li class="flex items-start gap-2"><Check class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> Upload your own photos</li>
-          <li class="flex items-start gap-2"><Check class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> Unverified badge</li>
+          {basic.features.map((feature) => (
+            <li class="flex items-start gap-2"><Check class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> {feature}</li>
+          ))}
         </ul>
         <a href="/owner/listings/new" class="btn-secondary mt-8 w-full">
           Continue with Basic
@@ -49,20 +58,21 @@ import { BadgeCheck, Sparkles, Clock3, ArrowRight, Building2, Check } from '@luc
         </span>
         <div class="flex items-center justify-between">
           <h2 class="flex items-center gap-2 text-lg font-extrabold text-slate-900">
-            <BadgeCheck class="h-5 w-5 text-brand-600" /> PG Hunter Verified
+            <BadgeCheck class="h-5 w-5 text-brand-600" /> {verified.name}
           </h2>
-          <span class="badge bg-brand-100 text-brand-800">Paid</span>
+          <span class="badge bg-brand-100 text-brand-800">{verified.priceInr === 0 ? 'Free' : 'Paid'}</span>
         </div>
-        <p class="mt-1 text-sm text-slate-500">A real team visits your PG and verifies it on camera.</p>
+        <p class="mt-1 text-sm text-slate-500">{verified.tagline}</p>
         <p class="mt-5 text-3xl font-extrabold text-slate-900">
-          ₹1,499
-          <span class="text-sm font-medium text-slate-400">+ travel / 1 year</span>
+          {formatINR(verified.priceInr)}
+          <span class="text-sm font-medium text-slate-400">
+            {verified.hasTravelCharge ? '+ travel' : ''} / {verified.durationLabel}
+          </span>
         </p>
         <ul class="mt-6 flex-1 space-y-3 text-sm text-slate-700">
-          <li class="flex items-start gap-2"><BadgeCheck class="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> PG Hunter Verified badge for 1 year</li>
-          <li class="flex items-start gap-2"><Sparkles class="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> Physical visit + photography</li>
-          <li class="flex items-start gap-2"><Sparkles class="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> Video walkthrough on your listing</li>
-          <li class="flex items-start gap-2"><Clock3 class="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> 7–10 day visit window</li>
+          {verified.features.map((feature) => (
+            <li class="flex items-start gap-2"><Sparkles class="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> {feature}</li>
+          ))}
         </ul>
         <a href="/owner/plans/verified" class="btn-primary mt-8 w-full">
           Choose Verified

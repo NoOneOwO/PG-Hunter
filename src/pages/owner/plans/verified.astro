@@ -1,4 +1,8 @@
 ---
+// The amount shown here comes from the `plans` table (migration 0008) rather
+// than being typed into this file. No payment provider exists yet, so this page
+// must not imply a payment completed.
+export const prerender = false;
 import OwnerLayout from '@/layouts/OwnerLayout.astro';
 import {
   Camera,
@@ -10,6 +14,11 @@ import {
   Info,
 } from '@lucide/astro';
 import { formatINR } from '@/lib/format';
+import { getPlans } from '@/lib/server/plans';
+import { resolvePlan } from '@/lib/plans';
+
+const plans = await getPlans();
+const verified = resolvePlan(plans, 'verified');
 ---
 
 <OwnerLayout title="PG Hunter Verified — Checkout | PG Hunter" active="listings">
@@ -60,25 +69,27 @@ import { formatINR } from '@/lib/format';
           </div>
         </div>
 
-        <div class="card mt-6 bg-brand-50 p-5 ring-1 ring-brand-100">
-          <h3 class="flex items-center gap-2 text-sm font-bold text-brand-800">
-            <ShieldCheck class="h-4 w-4" /> Visit & refund policy
-          </h3>
-          <p class="mt-2 text-sm leading-relaxed text-brand-900/70">
-            We aim to complete your visit within 7–10 days of payment. If we're unable
-            to schedule a visit within that window, we'll refund the verification fee in full.
-          </p>
-        </div>
+        {verified.checkoutNote && (
+          <div class="card mt-6 bg-brand-50 p-5 ring-1 ring-brand-100">
+            <h3 class="flex items-center gap-2 text-sm font-bold text-brand-800">
+              <ShieldCheck class="h-4 w-4" /> Visit & refund policy
+            </h3>
+            <p class="mt-2 text-sm leading-relaxed text-brand-900/70">
+              {verified.checkoutNote}
+            </p>
+          </div>
+        )}
       </div>
 
       <!-- Right: price summary -->
       <aside class="lg:sticky lg:top-24 lg:self-start">
         <div class="card border border-slate-200 p-6">
           <h2 class="text-base font-bold text-slate-900">Price summary</h2>
+          <p class="mt-1 text-xs text-slate-500">{verified.name}, valid for {verified.durationLabel}.</p>
           <dl class="mt-4 space-y-3 text-sm">
             <div class="flex items-center justify-between gap-3">
-              <dt class="text-slate-500">Verification fee (1 year)</dt>
-              <dd class="font-semibold text-slate-900">{formatINR(1499)}</dd>
+              <dt class="text-slate-500">Verification fee ({verified.durationLabel})</dt>
+              <dd class="font-semibold text-slate-900">{formatINR(verified.priceInr)}</dd>
             </div>
             <div class="flex items-center justify-between gap-3">
               <dt class="flex items-center gap-1 text-slate-500">
@@ -93,8 +104,8 @@ import { formatINR } from '@/lib/format';
               <div class="flex items-center justify-between gap-3">
                 <dt class="font-bold text-slate-900">Total</dt>
                 <dd class="text-lg font-extrabold text-brand-700">
-                  {formatINR(1499)}
-                  <span class="text-xs font-medium text-slate-400">+ travel*</span>
+                  {formatINR(verified.priceInr)}
+                  {verified.hasTravelCharge && <span class="text-xs font-medium text-slate-400">+ travel*</span>}
                 </dd>
               </div>
               <p class="mt-1 text-xs text-slate-500">*Travel charge placeholder — final amount shown before payment.</p>
