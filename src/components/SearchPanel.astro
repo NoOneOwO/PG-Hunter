@@ -1,0 +1,73 @@
+---
+import { Search, ChevronDown } from '@lucide/astro';
+import { colleges, localities } from '@/data/colleges';
+
+// Suggest both the short name (DTU) and the full name so autocomplete always
+// produces a searchable query.
+const suggestions = [
+  ...colleges.map((c) => c.shortName),
+  ...colleges.map((c) => c.name),
+  ...localities.map((l) => l.name),
+];
+---
+
+<form action="/pgs-near-you" method="get" class="card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_auto] lg:items-center">
+  <label class="field focus-within:bg-white">
+    <span class="sr-only">College or locality</span>
+    <Search class="h-5 w-5 shrink-0 text-brand-600" />
+    <input
+      type="search"
+      name="q"
+      list="college-localities"
+      placeholder="Search college or area — e.g. DTU, Rohini"
+      class="w-full bg-transparent outline-none"
+      autocomplete="off"
+    />
+    <datalist id="college-localities">
+      {suggestions.map((s) => <option value={s} />)}
+    </datalist>
+  </label>
+
+  <label class="field">
+    <span class="sr-only">Budget</span>
+    <select name="budget" class="w-full appearance-none bg-transparent outline-none">
+      <option value="">Budget — Any</option>
+      <option value="under-10">Under ₹10k</option>
+      <option value="10-15">₹10k – ₹15k</option>
+      <option value="15-20">₹15k – ₹20k</option>
+      <option value="20-plus">₹20k +</option>
+    </select>
+    <ChevronDown class="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+  </label>
+
+  <label class="field">
+    <span class="sr-only">Room type</span>
+    <select name="roomType" class="w-full appearance-none bg-transparent outline-none">
+      <option value="">Room type — Any</option>
+      <option value="single">Single sharing</option>
+      <option value="double">Double sharing</option>
+      <option value="triple">Triple sharing</option>
+    </select>
+    <ChevronDown class="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+  </label>
+
+  <button type="submit" class="btn-primary h-11 w-full lg:w-auto">Search PGs</button>
+</form>
+
+<script>
+  // Keep the search fields in sync with the URL (?q=, ?budget=, ?roomType=).
+  // Done client-side because the server cannot see query strings in this
+  // static-first setup.
+  const params = new URLSearchParams(window.location.search);
+
+  const qInput = document.querySelector<HTMLInputElement>('input[name="q"]');
+  if (qInput && params.get('q')) qInput.value = params.get('q') ?? '';
+
+  const setSelect = (name: string) => {
+    const select = document.querySelector<HTMLSelectElement>(`select[name="${name}"]`);
+    const value = params.get(name);
+    if (select && value) select.value = value;
+  };
+  setSelect('budget');
+  setSelect('roomType');
+</script>

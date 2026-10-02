@@ -1,0 +1,78 @@
+---
+import OwnerLayout from '@/layouts/OwnerLayout.astro';
+import { BadgeCheck, Sparkles, Clock3, ArrowRight, Building2, Check } from '@lucide/astro';
+---
+
+<OwnerLayout title="Choose a Plan — PG Hunter" active="listings">
+  <div class="mx-auto max-w-4xl">
+    <div class="text-center">
+      <span class="badge bg-brand-100 text-brand-800">
+        <Building2 class="h-3.5 w-3.5" /> For Owners
+      </span>
+      <h1 class="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+        Choose how you list
+      </h1>
+      <p class="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-slate-600 sm:text-base">
+        Both plans get you live on PG Hunter. Pick Basic to list free, or go
+        Verified to stand out and win more student trust.
+      </p>
+    </div>
+
+    <div class="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
+      <!-- Basic -->
+      <article class="card flex flex-col p-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-extrabold text-slate-900">Basic Listing</h2>
+          <span class="badge bg-slate-100 text-slate-600">Free</span>
+        </div>
+        <p class="mt-1 text-sm text-slate-500">List your PG and start receiving enquiries.</p>
+        <p class="mt-5 text-3xl font-extrabold text-slate-900">
+          ₹0
+          <span class="text-sm font-medium text-slate-400">/ 15 days</span>
+        </p>
+        <ul class="mt-6 flex-1 space-y-3 text-sm text-slate-700">
+          <li class="flex items-start gap-2"><Check class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> Live listing for 15 days</li>
+          <li class="flex items-start gap-2"><Check class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> Receive student enquiries</li>
+          <li class="flex items-start gap-2"><Check class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> Upload your own photos</li>
+          <li class="flex items-start gap-2"><Check class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> Unverified badge</li>
+        </ul>
+        <a href="/owner/listings/new" class="btn-secondary mt-8 w-full">
+          Continue with Basic
+          <ArrowRight class="h-4 w-4" />
+        </a>
+      </article>
+
+      <!-- Verified -->
+      <article class="card relative flex flex-col overflow-hidden p-6 ring-2 ring-brand-600">
+        <span class="absolute right-0 top-0 rounded-bl-xl bg-brand-600 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+          Most trusted
+        </span>
+        <div class="flex items-center justify-between">
+          <h2 class="flex items-center gap-2 text-lg font-extrabold text-slate-900">
+            <BadgeCheck class="h-5 w-5 text-brand-600" /> PG Hunter Verified
+          </h2>
+          <span class="badge bg-brand-100 text-brand-800">Paid</span>
+        </div>
+        <p class="mt-1 text-sm text-slate-500">A real team visits your PG and verifies it on camera.</p>
+        <p class="mt-5 text-3xl font-extrabold text-slate-900">
+          ₹1,499
+          <span class="text-sm font-medium text-slate-400">+ travel / 1 year</span>
+        </p>
+        <ul class="mt-6 flex-1 space-y-3 text-sm text-slate-700">
+          <li class="flex items-start gap-2"><BadgeCheck class="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> PG Hunter Verified badge for 1 year</li>
+          <li class="flex items-start gap-2"><Sparkles class="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> Physical visit + photography</li>
+          <li class="flex items-start gap-2"><Sparkles class="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> Video walkthrough on your listing</li>
+          <li class="flex items-start gap-2"><Clock3 class="mt-0.5 h-4 w-4 shrink-0 text-brand-600" /> 7–10 day visit window</li>
+        </ul>
+        <a href="/owner/plans/verified" class="btn-primary mt-8 w-full">
+          Choose Verified
+          <ArrowRight class="h-4 w-4" />
+        </a>
+      </article>
+    </div>
+
+    <p class="mt-8 rounded-xl bg-brand-50 px-4 py-3 text-center text-sm font-medium text-brand-800">
+      Not sure yet? Start with Basic for free — you can upgrade to Verified anytime.
+    </p>
+  </div>
+</OwnerLayout>

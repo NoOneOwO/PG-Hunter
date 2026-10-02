@@ -1,0 +1,74 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PropertyCard from '@/components/PropertyCard.astro';
+import { Building2 } from '@lucide/astro';
+import { collegeBySlug, colleges } from '@/data/colleges';
+import { properties } from '@/data/properties';
+
+export function getStaticPaths() {
+  return colleges.map((c) => ({ params: { slug: c.slug } }));
+}
+
+const { slug } = Astro.params;
+const college = collegeBySlug(slug!);
+
+if (!college) {
+  return Astro.redirect('/colleges');
+}
+
+const nearby = properties
+  .filter((p) => p.collegeDistances.some((d) => d.collegeId === college.id))
+  .sort(
+    (a, b) =>
+      a.collegeDistances.find((d) => d.collegeId === college.id)!.distanceMeters -
+      b.collegeDistances.find((d) => d.collegeId === college.id)!.distanceMeters
+  );
+---
+
+<BaseLayout
+  title={`PGs near ${college.shortName} — Student PGs, Rooms & Co-living | PG Hunter`}
+  description={`Find verified PGs, rooms and co-living spaces near ${college.name} in ${college.locality}. Compare rent, amenities and walkthroughs on PG Hunter.`}
+>
+  <section class="bg-gradient-to-b from-brand-50 via-brand-50/40 to-white">
+    <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <nav aria-label="Breadcrumb" class="text-sm">
+        <ol class="flex flex-wrap items-center gap-1.5 text-slate-500">
+          <li><a href="/" class="hover:text-brand-700">Home</a></li>
+          <li aria-hidden="true">/</li>
+          <li><a href="/colleges" class="hover:text-brand-700">Colleges</a></li>
+          <li aria-hidden="true">/</li>
+          <li aria-current="page" class="font-semibold text-slate-800">{college.name}</li>
+        </ol>
+      </nav>
+
+      <div class="mt-6 flex items-start gap-4">
+        <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-white">
+          <Building2 class="h-7 w-7" />
+        </span>
+        <div>
+          <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+            PGs near {college.shortName}
+          </h1>
+          <p class="mt-1 text-sm text-slate-600 sm:text-base">
+            {college.name} · {college.locality}, {college.city} — {nearby.length} PGs found
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="Listings" class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    {nearby.length > 0 ? (
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {nearby.map((p) => (
+          <PropertyCard property={p} contextCollegeId={college.id} />
+        ))}
+      </div>
+    ) : (
+      <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+        <p class="text-base font-bold text-slate-900">No PGs listed near {college.shortName} yet</p>
+        <p class="mt-1 text-sm text-slate-500">We're expanding college by college. Check back soon.</p>
+      </div>
+    )}
+  </section>
+</BaseLayout>

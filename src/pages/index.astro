@@ -1,0 +1,141 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import SearchPanel from '@/components/SearchPanel.astro';
+import TrustStrip from '@/components/TrustStrip.astro';
+import PropertyCard from '@/components/PropertyCard.astro';
+import { ArrowRight, SlidersHorizontal, ArrowUpDown, Building2 } from '@lucide/astro';
+
+import { activeProperties } from '@/data/properties';
+import { colleges } from '@/data/colleges';
+
+const popular = activeProperties().slice(0, 6);
+const totalPgs = activeProperties().length;
+---
+
+<BaseLayout>
+  <section class="relative overflow-hidden bg-gradient-to-b from-brand-50 via-brand-50/40 to-white">
+    <div class="mx-auto max-w-7xl px-4 pb-12 pt-12 sm:px-6 sm:pt-16 lg:px-8 lg:pt-20">
+      <div class="mx-auto max-w-3xl text-center">
+        <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+          PG tera bhai dilaega <span aria-hidden="true">💪</span>
+        </h1>
+        <p class="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
+          ₹0 Brokerage. No Hidden Charges. Real PG Walkthroughs.
+        </p>
+      </div>
+
+      <div class="mx-auto mt-8 max-w-4xl">
+        <SearchPanel />
+      </div>
+
+      <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
+        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Popular:</span>
+        {colleges.slice(0, 5).map((c) => (
+          <a
+            href={`/colleges/${c.slug}`}
+            class="inline-flex min-h-9 items-center rounded-full bg-white px-3.5 text-sm font-semibold text-slate-700 shadow-card transition-colors hover:bg-brand-50 hover:text-brand-700"
+          >
+            {c.shortName}
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <TrustStrip />
+
+  <section aria-labelledby="popular-heading" class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h2 id="popular-heading" class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+          Popular PGs near you
+        </h2>
+        <p class="mt-1 text-sm font-medium text-slate-500">
+          {totalPgs} PGs found near your college
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <a
+          href="/pgs-near-you"
+          class="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+        >
+          <SlidersHorizontal class="h-4 w-4" />
+          Filters
+        </a>
+        <a
+          href="/pgs-near-you"
+          class="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+        >
+          <ArrowUpDown class="h-4 w-4" />
+          Sort
+        </a>
+      </div>
+    </div>
+
+    <div class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {popular.map((p) => (
+        <PropertyCard property={p} />
+      ))}
+    </div>
+
+    <div class="mt-8 flex justify-center">
+      <a href="/pgs-near-you" class="btn-primary px-8">
+        View all PGs
+        <ArrowRight class="h-4 w-4" />
+      </a>
+    </div>
+  </section>
+
+  <section aria-labelledby="colleges-heading" class="border-t border-slate-100 bg-slate-50/60">
+    <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 id="colleges-heading" class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+            Explore by college
+          </h2>
+          <p class="mt-1 text-sm font-medium text-slate-500">
+            Start with your campus and we'll find what's close.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {colleges.map((c) => (
+          <a
+            href={`/colleges/${c.slug}`}
+            class="card flex items-center gap-4 p-4 transition-shadow hover:shadow-card-hover"
+          >
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+              <Building2 class="h-5 w-5" />
+            </span>
+            <span>
+              <span class="block text-sm font-bold text-slate-900">{c.shortName}</span>
+              <span class="block text-xs text-slate-500">{c.locality} · {c.city}</span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="owners-heading">
+    <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div class="card flex flex-col items-start gap-6 bg-brand-600 p-8 text-white lg:flex-row lg:items-center lg:justify-between">
+        <div class="max-w-2xl">
+          <h2 id="owners-heading" class="text-2xl font-extrabold tracking-tight sm:text-3xl">
+            Owner? Fill your empty beds, not your time.
+          </h2>
+          <p class="mt-2 text-sm leading-relaxed text-brand-100 sm:text-base">
+            List your PG or rooms and receive enquiries from verified students near your
+            property. You stay in control of availability, pricing and your own listing.
+          </p>
+        </div>
+        <a href="/for-owners" class="btn-accent shrink-0 px-8">
+          For Owners
+          <ArrowRight class="h-4 w-4" />
+        </a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

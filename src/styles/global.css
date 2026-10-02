@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand — PG Hunter purple (source of truth: approved homepage reference) */
+  --color-brand-50: #f7f4ff;
+  --color-brand-100: #efe9fe;
+  --color-brand-200: #e1d7fd;
+  --color-brand-300: #cab8fb;
+  --color-brand-400: #ac8ff7;
+  --color-brand-500: #8f62f1;
+  --color-brand-600: #7a42e6;
+  --color-brand-700: #6930cb;
+  --color-brand-800: #5729a7;
+  --color-brand-900: #482388;
+  --color-brand-950: #2c125d;
+
+  /* CTA accent — warm yellow */
+  --color-accent-50: #fefce8;
+  --color-accent-100: #fef9c3;
+  --color-accent-200: #fef08a;
+  --color-accent-300: #fde047;
+  --color-accent-400: #facc15;
+  --color-accent-500: #eab308;
+
+  /* Typography — single variable font, limited weights */
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+
+  /* Soft, restrained shadows */
+  --shadow-card: 0 1px 2px 0 rgb(15 10 30 / 0.04), 0 1px 3px 0 rgb(15 10 30 / 0.06);
+  --shadow-card-hover: 0 4px 12px -2px rgb(15 10 30 / 0.1), 0 2px 6px -1px rgb(15 10 30 / 0.06);
+  --shadow-popover: 0 12px 32px -8px rgb(15 10 30 / 0.16), 0 4px 12px -4px rgb(15 10 30 / 0.08);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-white text-slate-900 antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  ::selection {
+    @apply bg-brand-200 text-brand-900;
+  }
+
+  /* Visible, consistent focus states */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+}
+
+@layer components {
+  /* Minimal borders, soft shadows, generous tap targets */
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors duration-150;
+  }
+
+  .btn-accent {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent-400 px-5 text-sm font-semibold text-slate-900 transition-colors duration-150 hover:bg-accent-300;
+  }
+
+  .btn-primary {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-700;
+  }
+
+  .btn-secondary {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-800 transition-colors duration-150 hover:bg-slate-50;
+  }
+
+  .card {
+    @apply rounded-2xl bg-white shadow-card;
+  }
+
+  .field {
+    @apply flex min-h-11 w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-within:border-brand-400;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+}

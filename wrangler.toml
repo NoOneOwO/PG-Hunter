@@ -1,0 +1,40 @@
+# PG Hunter — Cloudflare Workers configuration
+# Docs: CLOUDFLARE_SETUP.md
+
+name = "pg-hunter"
+# Entry point for the Worker built by the Astro Cloudflare adapter (v13).
+main = "@astrojs/cloudflare/entrypoints/server"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 is the primary datastore (see /ai/DATABASE_SCHEMA.md).
+# database_id comes from `npx wrangler d1 create pg_hunter` (production).
+# Any placeholder works for local development (`--local`).
+[[d1_databases]]
+binding = "DB"
+database_name = "pg_hunter"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "db/migrations"
+
+# Object storage for owner-uploaded images/documents.
+# Production: `npx wrangler r2 bucket create pg-hunter-media`
+# Local: created automatically by Miniflare.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "pg-hunter-media"
+
+# Comma-separated emails that get admin access automatically (register/login).
+# Put real values in .dev.vars / `wrangler secret put ADMIN_EMAILS`.
+[vars]
+ADMIN_EMAILS = ""
+
+# Static assets built by Astro (served by the Worker via the ASSETS binding).
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "404-page"
+
+# Override the site URL used for OAuth redirect URIs. Leave unset to derive
+# it from each request's origin (recommended for local + custom domains).
+# [vars]
+# SITE_URL = "https://pghunter.in"

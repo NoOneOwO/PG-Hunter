@@ -1,0 +1,70 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PropertyCard from '@/components/PropertyCard.astro';
+import { MapPin } from '@lucide/astro';
+import { localityBySlug, localities } from '@/data/colleges';
+import { activeProperties, startingRent } from '@/data/properties';
+
+export function getStaticPaths() {
+  return localities.map((l) => ({ params: { slug: l.slug } }));
+}
+
+const { slug } = Astro.params;
+const locality = localityBySlug(slug!);
+
+if (!locality) {
+  return Astro.redirect('/localities');
+}
+
+const nearby = activeProperties()
+  .filter((p) => p.localityId === locality.id)
+  .sort((a, b) => startingRent(a) - startingRent(b));
+---
+
+<BaseLayout
+  title={`PGs in ${locality.name} — Student PGs, Rooms & Co-living | PG Hunter`}
+  description={`Find verified PGs, rooms and co-living spaces in ${locality.name}, ${locality.city}. Compare rent, amenities and walkthroughs on PG Hunter.`}
+>
+  <section class="bg-gradient-to-b from-brand-50 via-brand-50/40 to-white">
+    <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <nav aria-label="Breadcrumb" class="text-sm">
+        <ol class="flex flex-wrap items-center gap-1.5 text-slate-500">
+          <li><a href="/" class="hover:text-brand-700">Home</a></li>
+          <li aria-hidden="true">/</li>
+          <li><a href="/localities" class="hover:text-brand-700">Localities</a></li>
+          <li aria-hidden="true">/</li>
+          <li aria-current="page" class="font-semibold text-slate-800">{locality.name}</li>
+        </ol>
+      </nav>
+
+      <div class="mt-6 flex items-start gap-4">
+        <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-white">
+          <MapPin class="h-7 w-7" />
+        </span>
+        <div>
+          <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+            PGs in {locality.name}
+          </h1>
+          <p class="mt-1 text-sm text-slate-600 sm:text-base">
+            {locality.city} — {nearby.length} PGs found
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="Listings" class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    {nearby.length > 0 ? (
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {nearby.map((p) => (
+          <PropertyCard property={p} />
+        ))}
+      </div>
+    ) : (
+      <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+        <p class="text-base font-bold text-slate-900">No PGs listed in {locality.name} yet</p>
+        <p class="mt-1 text-sm text-slate-500">We're expanding area by area. Check back soon.</p>
+      </div>
+    )}
+  </section>
+</BaseLayout>

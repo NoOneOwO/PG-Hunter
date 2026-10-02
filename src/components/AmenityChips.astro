@@ -1,0 +1,33 @@
+---
+import { amenityBySlug } from '@/data/amenities';
+import { amenityIcon } from '@/lib/amenityIcons';
+
+interface Props {
+  slugs: string[];
+  /** Max chips shown; the rest are counted. */
+  limit?: number;
+  compact?: boolean;
+}
+
+const { slugs, limit = 4, compact = false } = Astro.props;
+const visible = slugs.slice(0, limit);
+const hiddenCount = slugs.length - visible.length;
+---
+
+<div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+  {visible.map((slug) => {
+    const Icon = amenityIcon(slug);
+    const label = amenityBySlug(slug)?.label ?? slug;
+    return (
+      <span class="inline-flex items-center gap-1 text-slate-600">
+        <Icon class={compact ? 'h-3.5 w-3.5 text-brand-600' : 'h-4 w-4 text-brand-600'} />
+        <span class={compact ? 'text-xs' : 'text-sm'}>{label}</span>
+      </span>
+    );
+  })}
+  {hiddenCount > 0 && (
+    <span class={compact ? 'text-xs font-semibold text-slate-400' : 'text-sm font-semibold text-slate-400'}>
+      +{hiddenCount} more
+    </span>
+  )}
+</div>

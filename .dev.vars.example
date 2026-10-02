@@ -1,0 +1,11 @@
+# Local development secrets (used by `astro dev` via the Cloudflare adapter).
+# Copy to .dev.vars and fill in. Never commit .dev.vars.
+# Production equivalents:
+#   npx wrangler secret put GOOGLE_CLIENT_ID
+#   npx wrangler secret put GOOGLE_CLIENT_SECRET
+#   npx wrangler secret put ADMIN_EMAILS
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+# Comma-separated emails that get admin access (checked on login/register).
+ADMIN_EMAILS=

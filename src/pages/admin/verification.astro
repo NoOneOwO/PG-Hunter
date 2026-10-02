@@ -1,0 +1,72 @@
+---
+export const prerender = false;
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { getDb } from '@/lib/server/auth';
+const url = new URL(Astro.request.url);
+const status = url.searchParams.get('status')?.trim() ?? 'pending';
+const valid=['pending','approved','rejected'];
+const filter = valid.includes(status) ? status : 'pending';
+const db = getDb();
+const res = await db.prepare(
+  `SELECT d.*, u.name as owner_name, u.email as owner_email, ol.name as listing_name
+   FROM verification_documents d
+   JOIN users u ON u.id=d.owner_id
+   LEFT JOIN owner_listings ol ON ol.id=d.listing_id
+   WHERE d.status=?
+   ORDER BY d.created_at DESC LIMIT 50`
+).bind(filter).all();
+---
+
+<AdminLayout title="Verification — Admin" active="verification">
+  <h1 class="text-2xl font-extrabold">Verification</h1>
+  <p class="mt-1 text-sm text-slate-500">Pending owner documents. Uses existing <code>verification_documents</code> + R2. Documents are never public.</p>
+
+  <div class="mt-4 flex gap-2">
+    {valid.map(v=>(
+      <a href={`/admin/verification?status=${v}`} class:list={['rounded-lg px-3 py-2 text-sm font-semibold', v===filter ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700']}>{v}</a>
+    ))}
+  </div>
+
+  <div class="mt-6 space-y-4">
+    {res.results.length===0 ? <p class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">No {filter} documents — “No data yet”.</p> : res.results.map((d:any)=>(
+      <div class="card p-5">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold">{d.doc_type} — {d.file_name}</p>
+            <p class="text-xs text-slate-500">{d.owner_name} ({d.owner_email}) · {d.listing_name ?? 'no PG linked'} · {new Date(d.created_at).toLocaleDateString()}</p>
+            <p class="mt-1"><span class="badge bg-amber-100 text-amber-800">{d.status}</span> {d.notes ? <span class="text-xs text-slate-500">— {d.notes}</span> : null}</p>
+          </div>
+          <div class="flex gap-2">
+            {filter==='pending' ? (
+              <>
+                <button data-approve={d.id} class="btn-primary px-3 py-1.5 text-xs">Approve</button>
+                <button data-reject={d.id} class="btn-secondary px-3 py-1.5 text-xs">Reject</button>
+              </>
+            ) : <span class="badge bg-slate-100 text-slate-600">{d.status}</span>}
+          </div>
+        </div>
+        <p class="mt-3 text-xs text-slate-400">Document stored in R2 — admin can fetch via <code>/api/media/...</code> with admin auth (not public).</p>
+      </div>
+    ))}
+  </div>
+  <p class="mt-4 text-xs text-slate-500">Approve/reject via existing <code>PUT /api/admin/verifications/:id</code> — server-side <code>requireAdmin</code> enforced.</p>
+</AdminLayout>
+
+<script>
+  document.querySelectorAll('[data-approve]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id=(btn as HTMLElement).dataset.approve!;
+      if(!confirm('Approve this verification?')) return;
+      const res=await fetch(`/api/admin/verifications/${encodeURIComponent(id)}`,{method:'PUT', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({decision:'approved'})});
+      if(res.ok) location.reload(); else alert('Failed');
+    });
+  });
+  document.querySelectorAll('[data-reject]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id=(btn as HTMLElement).dataset.reject!;
+      const reason=prompt('Rejection reason (optional)') ?? undefined;
+      const res=await fetch(`/api/admin/verifications/${encodeURIComponent(id)}`,{method:'PUT', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({decision:'rejected', notes: reason})});
+      if(res.ok) location.reload(); else alert('Failed');
+    });
+  });
+</script>

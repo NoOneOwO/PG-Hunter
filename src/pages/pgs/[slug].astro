@@ -1,0 +1,762 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import VideoPlayer from '@/components/VideoPlayer.astro';
+import VerificationBadge from '@/components/VerificationBadge.astro';
+import { amenityBySlug } from '@/data/amenities';
+import { amenityIcon } from '@/lib/amenityIcons';
+import {
+  MapPin,
+  Bookmark,
+  Utensils,
+  Clock3,
+  ShieldCheck,
+  MessageCircle,
+  Check,
+  Building2,
+  Play,
+  Phone,
+  Eye,
+  ThumbsUp,
+  ThumbsDown,
+  Star,
+  ChevronLeft,
+  ChevronRight,
+} from '@lucide/astro';
+
+import { propertyBySlug, activeProperties, startingRent } from '@/data/properties';
+import { collegeById, localityById } from '@/data/colleges';
+import { formatINR, formatDistance } from '@/lib/format';
+
+export function getStaticPaths() {
+  return activeProperties().map((p) => ({ params: { slug: p.slug } }));
+}
+
+const { slug } = Astro.params;
+const property = propertyBySlug(slug!);
+
+if (!property) {
+  return Astro.redirect('/pgs-near-you');
+}
+
+const { p } = { p: property };
+const locality = localityById(p.localityId);
+const rent = startingRent(p);
+const photos = p.media.filter((m) => m.type === 'photo');
+const videos = p.media.filter((m) => m.type === 'video');
+const roomsLabel = [...new Set(p.rooms.map((r) => r.occupancy))].join(', ');
+const availableRooms = p.rooms.filter((r) => r.available).length;
+---
+
+<BaseLayout
+  title={`${p.name} — ${roomsLabel} starting from ${formatINR(rent)}/month | PG Hunter`}
+  description={p.description}
+  image={photos[0]?.externalId}
+>
+  <div class="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
+    <nav aria-label="Breadcrumb" class="text-sm">
+      <ol class="flex flex-wrap items-center gap-1.5 text-slate-500">
+        <li><a href="/" class="hover:text-brand-700">Home</a></li>
+        <li aria-hidden="true">/</li>
+        <li><a href="/pgs-near-you" class="hover:text-brand-700">PGs Near You</a></li>
+        <li aria-hidden="true">/</li>
+        <li aria-current="page" class="font-semibold text-slate-800">{p.name}</li>
+      </ol>
+    </nav>
+
+    <div class="mt-6">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{p.name}</h1>
+          <VerificationBadge status={p.verificationStatus} />
+        </div>
+        <p class="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-medium text-slate-500">
+          <MapPin class="h-4 w-4 text-brand-600" />
+          {p.address} · {locality?.name}
+        </p>
+        <ul class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-medium text-slate-500">
+          {p.collegeDistances.map((d) => {
+            const c = collegeById(d.collegeId);
+            return c ? (
+              <li>
+                <a href={`/colleges/${c.slug}`} class="text-brand-700 hover:underline">
+                  {formatDistance(d.distanceMeters)} from {c.shortName}
+                </a>
+              </li>
+            ) : null;
+          })}
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
+      <div class="min-w-0">
+        <section aria-roledescription="carousel" aria-label={`Photos of ${p.name}`} class="relative">
+          {photos.length > 0 ? (
+            <>
+              <div
+                id="pg-gallery"
+                tabindex="0"
+                class="flex snap-x snap-mandatory overflow-x-auto scroll-smooth rounded-2xl shadow-card [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {photos.map((photo, i) => (
+                  <figure class="w-full shrink-0 snap-center">
+                    <img
+                      src={photo.externalId}
+                      alt={photo.title || p.name}
+                      loading={i === 0 ? 'eager' : 'lazy'}
+                      decoding="async"
+                      width="800"
+                      height="500"
+                      class="aspect-[16/10] w-full object-cover"
+                    />
+                  </figure>
+                ))}
+              </div>
+
+              {photos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    data-gallery-prev
+                    class="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-card transition hover:bg-white disabled:pointer-events-none disabled:opacity-0"
+                    aria-label="Previous photo"
+                  >
+                    <ChevronLeft class="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    data-gallery-next
+                    class="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-card transition hover:bg-white disabled:pointer-events-none disabled:opacity-0"
+                    aria-label="Next photo"
+                  >
+                    <ChevronRight class="h-5 w-5" />
+                  </button>
+                  <p class="pointer-events-none absolute bottom-3 right-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-semibold text-white">
+                    <span data-gallery-index>1</span> / {photos.length}
+                  </p>
+                </>
+              )}
+            </>
+          ) : (
+            <div class="flex aspect-[16/10] w-full items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+              No photos yet for this property.
+            </div>
+          )}
+        </section>
+
+        <div
+          id="engagement-bar"
+          class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl bg-slate-50 px-3 py-2.5 sm:px-4"
+        >
+          <span class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
+            <Eye class="h-4 w-4 text-slate-400" />
+            <span id="eng-views">—</span> views
+          </span>
+
+          <div class="ml-auto flex items-center gap-1.5">
+            <button
+              type="button"
+              data-save-btn
+              data-property-id={p.id}
+              class="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600"
+              aria-label={`Save ${p.name} to your shortlist`}
+              aria-pressed="false"
+              title="Save to shortlist"
+            >
+              <Bookmark class="h-4 w-4" />
+              <span data-save-label>Save</span>
+            </button>
+            <button
+              type="button"
+              data-like-btn
+              data-property-id={p.id}
+              class="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+              aria-label="Like"
+              aria-pressed="false"
+              title="Like"
+            >
+              <ThumbsUp class="h-4 w-4" /> <span data-like-count>—</span>
+            </button>
+            <button
+              type="button"
+              data-dislike-btn
+              data-property-id={p.id}
+              class="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+              aria-label="Dislike"
+              aria-pressed="false"
+              title="Dislike"
+            >
+              <ThumbsDown class="h-4 w-4" /> <span data-dislike-count>—</span>
+            </button>
+          </div>
+        </div>
+
+        <section aria-labelledby="walkthrough-heading" class="mt-8">
+          <h2 id="walkthrough-heading" class="flex items-center gap-2 text-lg font-bold text-slate-900">
+            <Play class="h-5 w-5 text-brand-600" /> Walkthrough videos
+          </h2>
+          <p class="mt-1 text-sm text-slate-500">
+            Tap to play. Videos are placeholders during development.
+          </p>
+          {videos.length > 0 ? (
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {videos.map((video) => (
+                <VideoPlayer videoId={video.externalId} title={video.title} />
+              ))}
+            </div>
+          ) : (
+            <p class="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+              No walkthrough video yet for this property.
+            </p>
+          )}
+        </section>
+
+        <section aria-labelledby="about-heading" class="mt-8">
+          <h2 id="about-heading" class="text-lg font-bold text-slate-900">About this {p.propertyType === 'flat' ? 'flat' : 'PG'}</h2>
+          <p class="mt-2 text-sm leading-relaxed text-slate-600">{p.description}</p>
+        </section>
+
+        <section aria-labelledby="rooms-heading" class="mt-8">
+          <h2 id="rooms-heading" class="text-lg font-bold text-slate-900">Rooms & pricing</h2>
+          <div class="mt-3 overflow-hidden rounded-xl border border-slate-200">
+            <table class="w-full text-left text-sm">
+              <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th scope="col" class="px-4 py-3 font-semibold">Room</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">Monthly rent</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">Deposit</th>
+                  <th scope="col" class="px-4 py-3 font-semibold">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {p.rooms.map((room) => (
+                  <tr>
+                    <td class="px-4 py-3 font-semibold text-slate-800">{room.occupancy}</td>
+                    <td class="px-4 py-3 text-slate-700">{formatINR(room.rent)}</td>
+                    <td class="px-4 py-3 text-slate-700">{formatINR(room.deposit)}</td>
+                    <td class="px-4 py-3">
+                      {room.available ? (
+                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                          <Check class="h-3 w-3" /> Available
+                        </span>
+                      ) : (
+                        <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
+                          Occupied
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {availableRooms === 0 && (
+            <p class="mt-3 rounded-xl bg-amber-50 p-3 text-sm font-medium text-amber-800">
+              All rooms are currently occupied — enquire to join a waiting list.
+            </p>
+          )}
+        </section>
+
+        <section aria-labelledby="amenities-heading" class="mt-8">
+          <h2 id="amenities-heading" class="text-lg font-bold text-slate-900">Amenities</h2>
+          <ul class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {p.amenitySlugs.map((slug) => {
+              const Icon = amenityIcon(slug);
+              return (
+                <li class="flex items-center gap-2.5 rounded-xl bg-slate-50 px-3.5 py-3 text-sm font-medium text-slate-700">
+                  <Icon class="h-5 w-5 shrink-0 text-brand-600" />
+                  {amenityBySlug(slug)?.label ?? slug}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section aria-labelledby="stay-heading" class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="rounded-xl border border-slate-200 p-4">
+            <h2 id="stay-heading" class="flex items-center gap-2 text-sm font-bold text-slate-900">
+              <Utensils class="h-4 w-4 text-brand-600" /> Food & mess
+            </h2>
+            {p.food.available ? (
+              <ul class="mt-2 space-y-1 text-sm text-slate-600">
+                <li>Mess available: {p.food.type === 'both' ? 'Veg & non-veg' : p.food.type === 'veg' ? 'Vegetarian' : 'Non-veg'}</li>
+                {p.food.monthlyCost && <li>Cost: {formatINR(p.food.monthlyCost)}/month</li>}
+              </ul>
+            ) : (
+              <p class="mt-2 text-sm text-slate-600">No mess. Self-cooking kitchen available.</p>
+            )}
+          </div>
+          <div class="rounded-xl border border-slate-200 p-4">
+            <h2 class="flex items-center gap-2 text-sm font-bold text-slate-900">
+              <Clock3 class="h-4 w-4 text-brand-600" /> Curfew & rules
+            </h2>
+            <ul class="mt-2 space-y-1 text-sm text-slate-600">
+              {p.curfew ? <li>Curfew: {p.curfew}</li> : <li>No fixed curfew</li>}
+              {p.rules.slice(0, 4).map((rule) => (
+                <li>{rule}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section id="experiences-section" aria-labelledby="experiences-heading" class="mt-10">
+          <h2 id="experiences-heading" class="flex items-center gap-2 text-lg font-bold text-slate-900">
+            <Star class="h-5 w-5 text-amber-500" /> Student Experiences
+          </h2>
+          <p class="mt-1 text-sm text-slate-500"><span id="exp-count">—</span> · <span id="exp-avg">—</span></p>
+          <div id="experiences-list" class="mt-4 space-y-4"></div>
+          <div id="experiences-empty" class="mt-4 hidden rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+            <p class="text-sm font-semibold text-slate-700">No experiences yet</p>
+            <p class="mt-1 text-xs text-slate-500">Be the first to share your experience.</p>
+          </div>
+          <div class="mt-6 card border border-slate-200 p-5">
+            <h3 class="text-sm font-bold text-slate-900">Write your experience</h3>
+            <p class="mt-1 text-xs text-slate-500">Only approved experiences appear publicly. Pending experiences are not shown until reviewed.</p>
+            <form id="experience-form" class="mt-4 flex flex-col gap-3">
+              <div class="flex items-center gap-2">
+                <label for="exp-rating" class="text-sm font-semibold text-slate-700">Rating</label>
+                <select id="exp-rating" class="field appearance-none text-sm">
+                  <option value="">No rating</option>
+                  <option value="5">★★★★★ 5</option>
+                  <option value="4">★★★★ 4</option>
+                  <option value="3">★★★ 3</option>
+                  <option value="2">★★ 2</option>
+                  <option value="1">★ 1</option>
+                </select>
+              </div>
+              <textarea
+                id="exp-content"
+                rows="3"
+                placeholder="Share your experience (10–2000 characters)..."
+                class="w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm focus:border-brand-400 focus:outline-none"
+                maxlength="2000"
+                required
+              ></textarea>
+              <div class="flex items-center gap-3">
+                <button type="submit" class="btn-primary">Submit for review</button>
+                <span id="exp-status" class="hidden rounded-lg px-3 py-2 text-sm font-medium"></span>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <p class="mt-8 rounded-xl bg-slate-50 p-4 text-xs leading-relaxed text-slate-500">
+          <ShieldCheck class="mr-1 inline h-4 w-4 text-brand-600" />
+          Verification reflects what has actually been performed. "{'Listed'}" means owner-submitted and
+          not yet verified. Development preview — this listing is mock data.
+        </p>
+      </div>
+
+      <aside class="lg:sticky lg:top-24 lg:self-start">
+        <div class="card border border-slate-200 p-6">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Starting from</p>
+          <p class="mt-1 text-3xl font-extrabold text-brand-700">
+            {formatINR(rent)}
+            <span class="text-sm font-medium text-slate-400">/month</span>
+          </p>
+          <p class="mt-2 text-sm font-medium text-slate-600">{roomsLabel}</p>
+
+          <div class="mt-5 flex flex-col gap-2.5">
+            <button id="enquiry-btn" type="button" class="btn-primary w-full">
+              Send Enquiry
+            </button>
+            <a
+              id="message-owner-link"
+              href="/login"
+              class="btn-secondary w-full"
+              title="Login required to message the owner"
+            >
+              <MessageCircle class="h-4 w-4" />
+              Message Owner
+            </a>
+          </div>
+
+          <p class="mt-4 rounded-lg bg-brand-50 px-3 py-2.5 text-xs leading-relaxed text-brand-800">
+            <Phone class="mr-1 inline h-3.5 w-3.5" />
+            Contact details are shared with logged-in students to keep your number private.
+          </p>
+
+          <div id="enquiry-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="enquiry-title">
+            <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+              <div class="card w-full max-w-md border border-slate-200 p-6">
+                <h2 id="enquiry-title" class="text-lg font-extrabold text-slate-900">
+                  Send enquiry to {p.name}
+                </h2>
+                <p class="mt-1 text-sm text-slate-500">
+                  The owner will see your contact details and reach out to you.
+                </p>
+                <form id="enquiry-form" class="mt-4 flex flex-col gap-3">
+                  <label class="field">
+                    <span class="sr-only">Budget</span>
+                    <select name="budget" class="w-full appearance-none bg-transparent outline-none">
+                      <option value="">Monthly budget — any</option>
+                      <option value="under-10">Under ₹10k</option>
+                      <option value="10-15">₹10k – ₹15k</option>
+                      <option value="15-20">₹15k – ₹20k</option>
+                      <option value="20-plus">₹20k +</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span class="sr-only">Move-in month</span>
+                    <select name="moveInMonth" class="w-full appearance-none bg-transparent outline-none">
+                      <option value="">Move-in month — any</option>
+                    </select>
+                  </label>
+                  <textarea
+                    name="message"
+                    rows="3"
+                    placeholder="Anything the owner should know? (optional)"
+                    class="w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none"
+                  ></textarea>
+                  <button type="submit" class="btn-primary w-full">Send enquiry</button>
+                  <button type="button" id="enquiry-cancel" class="btn-secondary w-full">Cancel</button>
+                  <p id="enquiry-status" class="hidden rounded-lg bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-700" role="status">
+                    Enquiry sent! The owner will reach out to you shortly.
+                  </p>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-4 border border-slate-200 p-6">
+          <h2 class="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <Building2 class="h-4 w-4 text-brand-600" /> Property details
+          </h2>
+          <dl class="mt-3 space-y-2.5 text-sm">
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">Type</dt>
+              <dd class="font-semibold capitalize text-slate-800">{p.propertyType}</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">Gender</dt>
+              <dd class="font-semibold capitalize text-slate-800">{p.gender === 'co-ed' ? 'Co-ed' : p.gender === 'boys' ? 'Boys' : 'Girls'}</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">Locality</dt>
+              <dd class="font-semibold text-slate-800">{locality?.name}</dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">Availability</dt>
+              <dd class="font-semibold text-slate-800">{availableRooms} of {p.rooms.length} room types</dd>
+            </div>
+          </dl>
+        </div>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  // Engagement wiring: views, saves, likes/dislikes, enquiries, student experiences.
+  import { getCurrentSession, getSession, isSaved, toggleSaved, createEnquiry } from '@/lib/auth';
+  import { recordView, getStats, setReaction, getExperiences, submitExperience } from '@/lib/engagement';
+
+  const saveBtn = document.querySelector<HTMLButtonElement>('[data-save-btn]');
+  const likeBtn = document.querySelector<HTMLButtonElement>('[data-like-btn]');
+  const dislikeBtn = document.querySelector<HTMLButtonElement>('[data-dislike-btn]');
+  const propertyId = saveBtn?.dataset.propertyId ?? likeBtn?.dataset.propertyId ?? '';
+
+  const engViews = document.getElementById('eng-views') as HTMLElement | null;
+  const likeCountEl = likeBtn?.querySelector('[data-like-count]') as HTMLElement | null;
+  const dislikeCountEl = dislikeBtn?.querySelector('[data-dislike-count]') as HTMLElement | null;
+
+  const setSaveState = (btn: HTMLButtonElement, saved: boolean) => {
+    const svg = btn.querySelector('svg');
+    btn.classList.toggle('text-brand-600', saved);
+    btn.classList.toggle('bg-brand-50', saved);
+    btn.classList.toggle('border-brand-200', saved);
+    btn.setAttribute('aria-pressed', String(saved));
+    btn.setAttribute('aria-label', saved ? 'Remove from shortlist' : 'Save to shortlist');
+    btn.title = saved ? 'Remove from shortlist' : 'Save to shortlist';
+    if (svg) svg.style.fill = saved ? 'currentColor' : 'none';
+    const label = btn.querySelector('[data-save-label]');
+    if (label) label.textContent = saved ? 'Saved' : 'Save';
+  };
+
+  const setReactionState = (reaction: 'like' | 'dislike' | null) => {
+    const isLike = reaction === 'like';
+    const isDislike = reaction === 'dislike';
+    likeBtn?.classList.toggle('bg-emerald-50', isLike);
+    likeBtn?.classList.toggle('text-emerald-700', isLike);
+    likeBtn?.classList.toggle('border-emerald-200', isLike);
+    likeBtn?.setAttribute('aria-pressed', String(isLike));
+    dislikeBtn?.classList.toggle('bg-rose-50', isDislike);
+    dislikeBtn?.classList.toggle('text-rose-700', isDislike);
+    dislikeBtn?.classList.toggle('border-rose-200', isDislike);
+    dislikeBtn?.setAttribute('aria-pressed', String(isDislike));
+  };
+
+  const refreshStats = async () => {
+    try {
+      const stats = await getStats(propertyId);
+      if (engViews) engViews.textContent = String(stats.views);
+      if (likeCountEl) likeCountEl.textContent = String(stats.likes);
+      if (dislikeCountEl) dislikeCountEl.textContent = String(stats.dislikes);
+      setReactionState(stats.userReaction);
+      if (saveBtn) setSaveState(saveBtn, stats.userSaved);
+    } catch {}
+  };
+
+  // Record view (deduped client+server) and load initial counts
+  recordView(propertyId);
+  refreshStats();
+
+  if (saveBtn) {
+    setSaveState(saveBtn, await isSaved(propertyId));
+    saveBtn.addEventListener('click', async () => {
+      if (!(await getCurrentSession())) {
+        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
+      const { saved } = await toggleSaved(propertyId);
+      setSaveState(saveBtn, saved);
+      window.dispatchEvent(new CustomEvent('pghunter:saved', { detail: { propertyId, saved } }));
+      refreshStats();
+    });
+  }
+
+  const handleReaction = async (desired: 'like' | 'dislike') => {
+    if (!(await getCurrentSession())) {
+      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+      return;
+    }
+    try {
+      const current = (likeBtn?.getAttribute('aria-pressed') === 'true' ? 'like' : dislikeBtn?.getAttribute('aria-pressed') === 'true' ? 'dislike' : null) as 'like' | 'dislike' | null;
+      const next = current === desired ? null : desired;
+      const res = await setReaction(propertyId, next);
+      if (likeCountEl) likeCountEl.textContent = String(res.likes);
+      if (dislikeCountEl) dislikeCountEl.textContent = String(res.dislikes);
+      setReactionState(res.userReaction);
+    } catch (e) {
+      // silent
+    }
+  };
+
+  likeBtn?.addEventListener('click', () => handleReaction('like'));
+  dislikeBtn?.addEventListener('click', () => handleReaction('dislike'));
+
+  // ---- Photo carousel (native scroll-snap, no dependency) --------------
+  const gallery = document.getElementById('pg-gallery') as HTMLElement | null;
+  if (gallery) {
+    const total = gallery.children.length;
+    const indexEl = gallery.parentElement?.querySelector('[data-gallery-index]') as HTMLElement | null;
+    const prevBtn = document.querySelector<HTMLButtonElement>('[data-gallery-prev]');
+    const nextBtn = document.querySelector<HTMLButtonElement>('[data-gallery-next]');
+
+    const currentIndex = () =>
+      Math.min(Math.max(Math.round(gallery.scrollLeft / gallery.clientWidth), 0), total - 1);
+
+    const syncGallery = () => {
+      const i = currentIndex();
+      if (indexEl) indexEl.textContent = String(i + 1);
+      prevBtn?.toggleAttribute('disabled', i === 0);
+      nextBtn?.toggleAttribute('disabled', i === total - 1);
+    };
+
+    const goTo = (i: number) => {
+      gallery.scrollTo({ left: i * gallery.clientWidth, behavior: 'smooth' });
+    };
+
+    prevBtn?.addEventListener('click', () => goTo(currentIndex() - 1));
+    nextBtn?.addEventListener('click', () => goTo(currentIndex() + 1));
+
+    let ticking = false;
+    gallery.addEventListener(
+      'scroll',
+      () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          syncGallery();
+          ticking = false;
+        });
+      },
+      { passive: true }
+    );
+
+    // Keyboard: the track is focusable, so arrow keys page through photos.
+    gallery.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goTo(currentIndex() + 1);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goTo(currentIndex() - 1);
+      }
+    });
+
+    window.addEventListener('resize', syncGallery, { passive: true });
+    syncGallery();
+  }
+
+  // ---- Student Experiences -------------------------------------------
+  const expList = document.getElementById('experiences-list') as HTMLElement | null;
+  const expEmpty = document.getElementById('experiences-empty') as HTMLElement | null;
+  const expCount = document.getElementById('exp-count') as HTMLElement | null;
+  const expAvg = document.getElementById('exp-avg') as HTMLElement | null;
+  const expForm = document.getElementById('experience-form') as HTMLFormElement | null;
+  const expContent = document.getElementById('exp-content') as HTMLTextAreaElement | null;
+  const expRating = document.getElementById('exp-rating') as HTMLSelectElement | null;
+  const expStatus = document.getElementById('exp-status') as HTMLElement | null;
+
+  const renderExperiences = async () => {
+    if (!expList || !expCount || !expAvg || !expEmpty) return;
+    try {
+      const data = await getExperiences(propertyId);
+      expCount.textContent = `${data.count} experience${data.count === 1 ? '' : 's'}`;
+      expAvg.textContent = data.avgRating !== null ? `⭐ ${data.avgRating} avg` : 'No ratings yet';
+      if (data.experiences.length === 0) {
+        expList.innerHTML = '';
+        expEmpty.classList.remove('hidden');
+        return;
+      }
+      expEmpty.classList.add('hidden');
+      expList.innerHTML = data.experiences
+        .map(
+          (e) => `
+        <article class="rounded-xl border border-slate-200 bg-white p-4">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-sm font-bold text-slate-900">${(e.user_name ?? 'Student').replace(/</g, '&lt;')}</p>
+            <span class="text-xs text-slate-500">${new Date(e.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+          </div>
+          ${e.rating ? `<p class="mt-1 text-sm text-amber-500">${'★'.repeat(e.rating)}${'☆'.repeat(5 - e.rating)}</p>` : ''}
+          <p class="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">${e.content.replace(/</g, '&lt;')}</p>
+          <div class="mt-3 flex justify-end">
+            <button data-report="${e.id}" class="text-xs font-medium text-slate-500 hover:text-rose-600">Report</button>
+          </div>
+        </article>`
+        )
+        .join('');
+      // Report handler (subtle, auth required)
+      expList.querySelectorAll('[data-report]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = (btn as HTMLElement).dataset.report!;
+          if (!(await getCurrentSession())) {
+            window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+            return;
+          }
+          const reason = prompt('Report reason: spam, abuse, fake, inappropriate, other')?.trim().toLowerCase();
+          if (!reason || !['spam','abuse','fake','inappropriate','other'].includes(reason)) {
+            if (reason !== null) alert('Invalid reason.');
+            return;
+          }
+          const description = prompt('Description (optional, max 1000)')?.trim().slice(0,1000) ?? null;
+          const res = await fetch('/api/reports', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target_type: 'experience', target_id: id, reason, description }) });
+          if (res.ok) alert('Report submitted.');
+          else {
+            const err = await res.json().catch(()=>({error:'failed'}));
+            alert(err.error || 'Failed to report.');
+          }
+        });
+      });
+    } catch {
+      if (expCount) expCount.textContent = '—';
+    }
+  };
+
+  renderExperiences();
+
+  expForm?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if (!expContent || !expStatus) return;
+    if (!(await getCurrentSession())) {
+      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+      return;
+    }
+    const content = expContent.value.trim();
+    const ratingVal = expRating?.value ? Number(expRating.value) : null;
+    if (content.length < 10) {
+      expStatus.textContent = 'Please write at least 10 characters.';
+      expStatus.className = 'rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700';
+      expStatus.classList.remove('hidden');
+      return;
+    }
+    expStatus.textContent = 'Submitting…';
+    expStatus.className = 'rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600';
+    expStatus.classList.remove('hidden');
+    try {
+      await submitExperience(propertyId, content, ratingVal);
+      expStatus.textContent = 'Experience submitted for moderation and will appear after approval.';
+      expStatus.className = 'rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700';
+      expContent.value = '';
+      if (expRating) expRating.value = '';
+    } catch (err) {
+      expStatus.textContent = (err as Error).message || 'Could not submit experience.';
+      expStatus.className = 'rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700';
+    }
+  });
+
+  // ---- Enquiry modal ------------------------------------------------
+  const modal = document.getElementById('enquiry-modal') as HTMLElement;
+  const enquiryBtn = document.getElementById('enquiry-btn') as HTMLButtonElement;
+  const cancelBtn = document.getElementById('enquiry-cancel') as HTMLButtonElement;
+  const enquiryForm = document.getElementById('enquiry-form') as HTMLFormElement;
+  const statusEl = document.getElementById('enquiry-status') as HTMLElement;
+  const moveInSelect = enquiryForm.querySelector<HTMLSelectElement>('select[name="moveInMonth"]')!;
+
+  // Next 8 months for the move-in picker.
+  const now = new Date();
+  for (let i = 0; i < 8; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    moveInSelect.insertAdjacentHTML('beforeend', `<option value="${value}">${label}</option>`);
+  }
+
+  const closeModal = () => {
+    modal.classList.add('hidden');
+    statusEl.classList.add('hidden');
+    enquiryForm.reset();
+    enquiryForm.querySelector<HTMLButtonElement>('button[type="submit"]')?.removeAttribute('disabled');
+  };
+
+  enquiryBtn.addEventListener('click', async () => {
+    if (!(await getCurrentSession())) {
+      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+      return;
+    }
+    modal.classList.remove('hidden');
+  });
+
+  cancelBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  enquiryForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!(await getCurrentSession())) return;
+    const data = new FormData(enquiryForm);
+    const { error } = await createEnquiry({
+      propertyId,
+      budget: String(data.get('budget') ?? ''),
+      moveInMonth: String(data.get('moveInMonth') ?? ''),
+      message: String(data.get('message') ?? ''),
+    });
+    if (error) {
+      statusEl.textContent = `Could not send the enquiry: ${error}`;
+      statusEl.classList.remove('hidden');
+      statusEl.classList.replace('bg-emerald-50', 'bg-rose-50');
+      statusEl.classList.replace('text-emerald-700', 'text-rose-700');
+      return;
+    }
+    statusEl.textContent = 'Enquiry sent! The owner will reach out to you shortly.';
+    statusEl.classList.remove('hidden');
+    enquiryForm.querySelector<HTMLButtonElement>('button[type="submit"]')?.setAttribute('disabled', 'true');
+    setTimeout(closeModal, 2000);
+  });
+
+  // Private messaging is deferred (Phase 3) — disable it for signed-in users.
+  getSession().then((user) => {
+    const msgLink = document.getElementById('message-owner-link') as HTMLAnchorElement;
+    if (!user || !msgLink) return;
+    msgLink.href = '#';
+    msgLink.classList.add('pointer-events-none', 'opacity-60');
+    msgLink.title = 'Private messaging is coming soon';
+    msgLink.setAttribute('aria-disabled', 'true');
+  });
+</script>

@@ -1,0 +1,173 @@
+---
+export const prerender = false;
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { getDb } from '@/lib/server/auth';
+import { ShieldCheck, Users, Building2, Star, Flag, Eye, Heart, ThumbsUp, ThumbsDown, MessageCircle } from '@lucide/astro';
+
+const db = getDb();
+
+// Platform
+const [usersRes, listingsRes, leadsRes, verifsRes, expsRes, reportsRes, engRes, mediaRes] = await Promise.all([
+  db.prepare(`SELECT role, COUNT(*) as n FROM users GROUP BY role`).all<{role:string,n:number}>(),
+  db.prepare(`SELECT status, COUNT(*) as n FROM owner_listings GROUP BY status`).all<{status:string,n:number}>(),
+  db.prepare(`SELECT COUNT(*) as n FROM leads`).first<{n:number}>().catch(()=>({n:0})),
+  db.prepare(`SELECT status, COUNT(*) as n FROM verification_documents GROUP BY status`).all<{status:string,n:number}>().catch(()=>({results:[]} as any)),
+  db.prepare(`SELECT status, COUNT(*) as n FROM pg_experiences GROUP BY status`).all<{status:string,n:number}>().catch(()=>({results:[]} as any)),
+  db.prepare(`SELECT status, COUNT(*) as n FROM reports GROUP BY status`).all<{status:string,n:number}>().catch(()=>({results:[]} as any)),
+  db.prepare(`SELECT event_type, COUNT(*) as n FROM pg_engagement_events GROUP BY event_type`).all<{event_type:string,n:number}>().catch(()=>({results:[]} as any)),
+  db.prepare(`SELECT COUNT(*) as n FROM media`).first<{n:number}>().catch(()=>({n:0})),
+]);
+
+const byKey = (rows:any[], key:string) => rows.find((r:any)=> r.role===key || r.status===key || r.event_type===key)?.n ?? 0;
+const totalUsers = usersRes.results.reduce((a:any,c:any)=>a+c.n,0);
+const totalListings = listingsRes.results.reduce((a:any,c:any)=>a+c.n,0);
+const pendingExps = byKey(expsRes.results,'pending');
+const pendingVerifs = byKey(verifsRes.results,'pending');
+const pendingReports = byKey(reportsRes.results,'open');
+
+const eng = (t:string)=> byKey(engRes.results,t);
+const totalViews = eng('VIEW');
+const totalSaves = eng('SAVE');
+const totalLikes = eng('LIKE');
+const totalDislikes = eng('DISLIKE');
+
+// Recent activity
+const [recentExps, recentVerifs, recentReports, recentListings] = await Promise.all([
+  db.prepare(`SELECT e.*, u.name as user_name FROM pg_experiences e LEFT JOIN users u ON u.id=e.user_id ORDER BY e.created_at DESC LIMIT 5`).all().catch(()=>({results:[]} as any)),
+  db.prepare(`SELECT d.*, u.name as owner_name FROM verification_documents d LEFT JOIN users u ON u.id=d.owner_id ORDER BY d.created_at DESC LIMIT 5`).all().catch(()=>({results:[]} as any)),
+  db.prepare(`SELECT r.*, u.name as reporter_name FROM reports r LEFT JOIN users u ON u.id=r.reporter_id ORDER BY r.created_at DESC LIMIT 5`).all().catch(()=>({results:[]} as any)),
+  db.prepare(`SELECT ol.*, u.name as owner_name FROM owner_listings ol LEFT JOIN users u ON u.id=ol.owner_id ORDER BY ol.created_at DESC LIMIT 5`).all().catch(()=>({results:[]} as any)),
+]);
+---
+
+<AdminLayout title="Admin Dashboard — PG Hunter" active="dashboard">
+  <div class="flex items-center gap-2">
+    <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Dashboard</h1>
+    <span class="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-bold text-white">Operational overview</span>
+  </div>
+  <p class="mt-1 text-sm text-slate-500">Real database metrics — no fake numbers. If data is missing, it shows “No data yet”.</p>
+
+  <div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="card p-5">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Total users</p>
+      <p class="mt-2 text-2xl font-extrabold">{totalUsers}</p>
+      <p class="text-xs text-slate-500">Students {byKey(usersRes.results,'student')} · Owners {byKey(usersRes.results,'owner')}</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">PG listings (D1)</p>
+      <p class="mt-2 text-2xl font-extrabold">{totalListings}</p>
+      <p class="text-xs text-slate-500">Active {byKey(listingsRes.results,'active')} · Pending {byKey(listingsRes.results,'pending')}</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Enquiries</p>
+      <p class="mt-2 text-2xl font-extrabold">{leadsRes?.n ?? 0}</p>
+      <p class="text-xs text-slate-500">Leads total</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Media</p>
+      <p class="mt-2 text-2xl font-extrabold">{mediaRes?.n ?? 0}</p>
+      <p class="text-xs text-slate-500">Photos/videos</p>
+    </div>
+  </div>
+
+  <div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="card p-5 border-amber-200">
+      <p class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700"><Star class="h-4 w-4" /> Pending experiences</p>
+      <p class="mt-2 text-2xl font-extrabold text-amber-700">{pendingExps}</p>
+      <p class="text-xs text-slate-500">Approved {byKey(expsRes.results,'approved')} · Spam {byKey(expsRes.results,'spam')}</p>
+    </div>
+    <div class="card p-5 border-amber-200">
+      <p class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700"><ShieldCheck class="h-4 w-4" /> Pending verifications</p>
+      <p class="mt-2 text-2xl font-extrabold text-amber-700">{pendingVerifs}</p>
+      <p class="text-xs text-slate-500">Approved {byKey(verifsRes.results,'approved')}</p>
+    </div>
+    <div class="card p-5">
+      <p class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500"><Flag class="h-4 w-4" /> Open reports</p>
+      <p class="mt-2 text-2xl font-extrabold">{pendingReports}</p>
+      <p class="text-xs text-slate-500">Reports</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Pending content</p>
+      <p class="mt-2 text-2xl font-extrabold">{pendingExps + pendingVerifs}</p>
+      <p class="text-xs text-slate-500">Experiences + verifications</p>
+    </div>
+  </div>
+
+  <div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="card p-5">
+      <p class="flex items-center gap-1 text-xs font-semibold text-slate-500"><Eye class="h-4 w-4" /> Views</p>
+      <p class="mt-2 text-xl font-extrabold">{totalViews}</p>
+    </div>
+    <div class="card p-5">
+      <p class="flex items-center gap-1 text-xs font-semibold text-slate-500"><Heart class="h-4 w-4" /> Saves</p>
+      <p class="mt-2 text-xl font-extrabold">{totalSaves}</p>
+    </div>
+    <div class="card p-5">
+      <p class="flex items-center gap-1 text-xs font-semibold text-slate-500"><ThumbsUp class="h-4 w-4" /> Likes</p>
+      <p class="mt-2 text-xl font-extrabold">{totalLikes}</p>
+    </div>
+    <div class="card p-5">
+      <p class="flex items-center gap-1 text-xs font-semibold text-slate-500"><ThumbsDown class="h-4 w-4" /> Dislikes</p>
+      <p class="mt-2 text-xl font-extrabold">{totalDislikes}</p>
+    </div>
+  </div>
+
+  <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <section class="card">
+      <div class="border-b border-slate-100 px-5 py-3">
+        <h2 class="text-sm font-bold">Recent experiences</h2>
+      </div>
+      <div class="divide-y divide-slate-100">
+        {recentExps.results.length === 0 ? <p class="p-5 text-sm text-slate-500">No data yet</p> : recentExps.results.map((r:any)=>(
+          <div class="px-5 py-3">
+            <p class="truncate text-sm font-semibold">{r.content?.slice(0,60) ?? '—'}</p>
+            <p class="text-xs text-slate-500">{r.user_name ?? '—'} · {r.status} · {new Date(r.created_at).toLocaleDateString()}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+    <section class="card">
+      <div class="border-b border-slate-100 px-5 py-3">
+        <h2 class="text-sm font-bold">Recent verifications</h2>
+      </div>
+      <div class="divide-y divide-slate-100">
+        {recentVerifs.results.length === 0 ? <p class="p-5 text-sm text-slate-500">No data yet</p> : recentVerifs.results.map((r:any)=>(
+          <div class="px-5 py-3">
+            <p class="text-sm font-semibold">{r.doc_type} · {r.status}</p>
+            <p class="text-xs text-slate-500">{r.owner_name ?? '—'} · {new Date(r.created_at).toLocaleDateString()}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+    <section class="card">
+      <div class="border-b border-slate-100 px-5 py-3">
+        <h2 class="text-sm font-bold">Recent reports</h2>
+      </div>
+      <div class="divide-y divide-slate-100">
+        {recentReports.results.length === 0 ? <p class="p-5 text-sm text-slate-500">No data yet</p> : recentReports.results.map((r:any)=>(
+          <div class="px-5 py-3">
+            <p class="text-sm font-semibold">{r.target_type} · {r.reason}</p>
+            <p class="text-xs text-slate-500">{r.status} · {new Date(r.created_at).toLocaleDateString()}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+    <section class="card">
+      <div class="border-b border-slate-100 px-5 py-3">
+        <h2 class="text-sm font-bold">Recent PGs</h2>
+      </div>
+      <div class="divide-y divide-slate-100">
+        {recentListings.results.length === 0 ? <p class="p-5 text-sm text-slate-500">No data yet — public PGs are still mock data in src/data/properties.ts, D1 owner listings appear here when owners create them.</p> : recentListings.results.map((r:any)=>(
+          <div class="px-5 py-3">
+            <p class="text-sm font-semibold">{r.name}</p>
+            <p class="text-xs text-slate-500">{r.owner_name ?? '—'} · {r.status} · {new Date(r.created_at).toLocaleDateString()}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  </div>
+
+  <div class="mt-6 rounded-xl bg-amber-50 p-4 text-xs leading-relaxed text-amber-800">
+    <strong>Note:</strong> Public PG data is still mock (<code>src/data/properties.ts</code>). Admin PGs table shows D1 <code>owner_listings</code> only. No fake numbers — empty states show “No data yet”.
+  </div>
+</AdminLayout>

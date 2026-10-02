@@ -1,0 +1,48 @@
+---
+export const prerender = false;
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { getDb } from '@/lib/server/auth';
+const url = new URL(Astro.request.url);
+const q = url.searchParams.get('q')?.trim() ?? '';
+const db = getDb();
+const students = await db.prepare(
+  `SELECT u.id, u.name, u.email, u.created_at,
+          (SELECT COUNT(*) FROM saved_pgs s WHERE s.user_id=u.id) as saves,
+          (SELECT COUNT(*) FROM pg_experiences e WHERE e.user_id=u.id) as exps,
+          (SELECT COUNT(*) FROM leads l WHERE l.student_id=u.id) as enqs
+   FROM users u
+   WHERE u.role='student' ${q ? 'AND (u.name LIKE ? OR u.email LIKE ?)' : ''}
+   ORDER BY u.created_at DESC LIMIT 100`
+).bind(...(q? [`%${q}%`,`%${q}%`] : [])).all();
+---
+
+<AdminLayout title="Students — Admin" active="students">
+  <h1 class="text-2xl font-extrabold">Students</h1>
+  <p class="mt-1 text-sm text-slate-500">Visibility only — no user-editing in this phase.</p>
+
+  <form class="mt-4 flex gap-2">
+    <input name="q" value={q} placeholder="Search name or email" class="field flex-1 text-sm" />
+    <button class="btn-primary px-4 text-sm">Search</button>
+    <a href="/admin/students" class="btn-secondary px-4 text-sm">Clear</a>
+  </form>
+
+  <div class="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <table class="w-full min-w-[700px] text-left text-sm">
+      <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+        <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Email</th><th class="px-4 py-3">Created</th><th class="px-4 py-3">Saves</th><th class="px-4 py-3">Experiences</th><th class="px-4 py-3">Enquiries</th></tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {students.results.length===0 ? <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">No students yet</td></tr> : students.results.map((s:any)=>(
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 font-semibold">{s.name}</td>
+            <td class="px-4 py-3 text-xs">{s.email}</td>
+            <td class="px-4 py-3 text-xs">{new Date(s.created_at).toLocaleDateString()}</td>
+            <td class="px-4 py-3">{s.saves}</td>
+            <td class="px-4 py-3">{s.exps}</td>
+            <td class="px-4 py-3">{s.enqs}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

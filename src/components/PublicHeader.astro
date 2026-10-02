@@ -1,0 +1,313 @@
+---
+import { Menu, X, UserRound, Bookmark, Compass, Wallet, LayoutDashboard } from '@lucide/astro';
+
+interface Props {
+  activePath?: string;
+}
+
+const { activePath = Astro.url.pathname } = Astro.props;
+
+// Role-aware public header:
+// - Student: Explore / Saved / Earn with PG Hunter / Profile (no prominent For Owners)
+// - Guest: Explore / Saved / Earn + subtle For Owners
+// - Owner on public routes: Explore / Saved / Earn + Dashboard (profile pill routes to /owner/profile)
+// Owner shell itself lives in OwnerHeader (/owner/*).
+
+const isActive = (href: string): boolean =>
+  href === '/' ? activePath === '/' : activePath.startsWith(href);
+
+const isExploreActive =
+  activePath.startsWith('/pgs-near-you') ||
+  activePath.startsWith('/pgs') ||
+  activePath.startsWith('/colleges') ||
+  activePath.startsWith('/localities');
+---
+
+<header class="sticky top-0 z-40 border-b border-slate-100 bg-white/95 backdrop-blur">
+  <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+    <a href="/" class="flex items-center gap-2" aria-label="PG Hunter home">
+      <img src="/favicon.svg" alt="" width="32" height="32" class="h-8 w-8" />
+      <span class="text-lg font-extrabold tracking-tight text-slate-900">
+        PG<span class="text-brand-600">Hunter</span>
+      </span>
+    </a>
+
+    <nav id="primary-nav" class="hidden items-center gap-1 lg:flex" aria-label="Primary">
+      <a
+        data-nav="explore"
+        href="/pgs-near-you"
+        class:list={[
+          'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors',
+          isExploreActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+        ]}
+        aria-current={isExploreActive ? 'page' : undefined}
+      >
+        <Compass class="h-4 w-4" /> Explore
+      </a>
+      <a
+        data-nav="saved"
+        href="/saved"
+        class:list={[
+          'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors',
+          isActive('/saved') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+        ]}
+        aria-current={isActive('/saved') ? 'page' : undefined}
+      >
+        <Bookmark class="h-4 w-4" /> Saved
+      </a>
+      <a
+        data-nav="earn"
+        href="/earn"
+        class:list={[
+          'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors',
+          isActive('/earn') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+        ]}
+        aria-current={isActive('/earn') ? 'page' : undefined}
+      >
+        <Wallet class="h-4 w-4" /> Earn with PG Hunter
+      </a>
+      <a
+        data-nav="profile"
+        href="/profile"
+        class:list={[
+          'hidden min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors',
+          isActive('/profile') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+        ]}
+        aria-current={isActive('/profile') ? 'page' : undefined}
+      >
+        <UserRound class="h-4 w-4" /> Profile
+      </a>
+      <a
+        data-nav="for-owners"
+        href="/for-owners"
+        class:list={[
+          'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors',
+          isActive('/for-owners') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+        ]}
+        aria-current={isActive('/for-owners') ? 'page' : undefined}
+      >
+        For Owners
+      </a>
+      <a
+        data-nav="dashboard"
+        href="/owner"
+        class="hidden min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+      >
+        <LayoutDashboard class="h-4 w-4" /> Dashboard
+      </a>
+    </nav>
+
+    <div class="ml-auto flex items-center gap-2">
+      <div id="auth-guest" class="flex items-center gap-2">
+        <a href="/login" class="btn-accent hidden sm:inline-flex" aria-label="Log in or sign up">
+          Login/Sign up
+        </a>
+        <a
+          href="/login"
+          aria-label="Account"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition-colors hover:bg-slate-50"
+        >
+          <UserRound class="h-5 w-5" />
+        </a>
+      </div>
+      <div id="auth-user" class="hidden items-center gap-2">
+        <a
+          href="/profile"
+          id="header-profile-link"
+          class="hidden items-center gap-2 rounded-full border border-slate-200 py-1 pl-1 pr-3 transition-colors hover:bg-slate-50 sm:inline-flex"
+          aria-label="Your profile"
+        >
+          <span
+            id="header-avatar"
+            class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-xs font-extrabold text-white"
+          >?</span>
+          <span id="header-name" class="max-w-28 truncate text-sm font-semibold text-slate-800"></span>
+        </a>
+        <a
+          href="/profile"
+          id="header-avatar-mobile"
+          aria-label="Your profile"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-sm font-extrabold text-white sm:hidden"
+        >?</a>
+      </div>
+      <button
+        id="menu-toggle"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-50 lg:hidden"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+        aria-label="Open menu"
+      >
+        <Menu id="icon-open" class="h-5 w-5" />
+        <X id="icon-close" class="hidden h-5 w-5" />
+      </button>
+    </div>
+  </div>
+
+  <nav
+    id="mobile-menu"
+    class="hidden border-t border-slate-100 bg-white px-4 pb-4 pt-2 lg:hidden"
+    aria-label="Mobile"
+  >
+    <div class="mx-auto flex max-w-7xl flex-col">
+      <a
+        data-nav="explore-mobile"
+        href="/pgs-near-you"
+        class:list={[
+          'flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+          isExploreActive ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
+        ]}
+      >
+        <Compass class="h-4 w-4" /> Explore
+      </a>
+      <a
+        data-nav="saved-mobile"
+        href="/saved"
+        class:list={[
+          'flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+          isActive('/saved') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
+        ]}
+      >
+        <Bookmark class="h-4 w-4" /> Saved
+      </a>
+      <a
+        data-nav="earn-mobile"
+        href="/earn"
+        class:list={[
+          'flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+          isActive('/earn') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
+        ]}
+      >
+        <Wallet class="h-4 w-4" /> Earn with PG Hunter
+      </a>
+      <a
+        data-nav="profile-mobile"
+        href="/profile"
+        class:list={[
+          'hidden min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+          isActive('/profile') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
+        ]}
+      >
+        <UserRound class="h-4 w-4" /> Profile
+      </a>
+      <a
+        data-nav="for-owners-mobile"
+        href="/for-owners"
+        class:list={[
+          'flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+          isActive('/for-owners') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
+        ]}
+      >
+        For Owners
+      </a>
+      <a
+        data-nav="dashboard-mobile"
+        href="/owner"
+        class="hidden min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+      >
+        <LayoutDashboard class="h-4 w-4" /> Dashboard
+      </a>
+      <div id="auth-guest-mobile" class="mt-2">
+        <a href="/login" class="btn-accent w-full sm:hidden">Login/Sign up</a>
+      </div>
+      <a href="/profile" id="auth-user-mobile" class="btn-secondary mt-2 hidden w-full sm:hidden">
+        My profile
+      </a>
+    </div>
+  </nav>
+</header>
+
+<script>
+  const toggle = document.getElementById('menu-toggle') as HTMLButtonElement;
+  const menu = document.getElementById('mobile-menu') as HTMLElement;
+  const iconOpen = document.getElementById('icon-open') as HTMLElement;
+  const iconClose = document.getElementById('icon-close') as HTMLElement;
+
+  const setOpen = (open: boolean) => {
+    menu.classList.toggle('hidden', !open);
+    iconOpen.classList.toggle('hidden', open);
+    iconClose.classList.toggle('hidden', !open);
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  };
+
+  toggle.addEventListener('click', () => setOpen(menu.classList.contains('hidden')));
+
+  // ---- Role-aware navigation (student/owner/guest) --------------------
+  // Visible nav is adapted client-side after session fetch; server render
+  // is intentionally guest-friendly (For Owners visible, Profile hidden).
+  import { getSession, onAuthChange, initialsOf } from '@/lib/auth';
+  import type { AppUser } from '@/lib/auth';
+
+  const guest = document.getElementById('auth-guest')!;
+  const userWrap = document.getElementById('auth-user')!;
+  const guestMobile = document.getElementById('auth-guest-mobile')!;
+  const userMobile = document.getElementById('auth-user-mobile')!;
+  const avatar = document.getElementById('header-avatar')!;
+  const avatarMobile = document.getElementById('header-avatar-mobile')!;
+  const nameEl = document.getElementById('header-name')!;
+  const headerProfileLink = document.getElementById('header-profile-link') as HTMLAnchorElement | null;
+  const headerAvatarMobile = document.getElementById('header-avatar-mobile') as HTMLAnchorElement | null;
+
+  const navProfile = document.querySelector<HTMLElement>('[data-nav="profile"]');
+  const navForOwners = document.querySelector<HTMLElement>('[data-nav="for-owners"]');
+  const navDashboard = document.querySelector<HTMLElement>('[data-nav="dashboard"]');
+  const navEarn = document.querySelector<HTMLElement>('[data-nav="earn"]');
+  const navProfileMobile = document.querySelector<HTMLElement>('[data-nav="profile-mobile"]');
+  const navForOwnersMobile = document.querySelector<HTMLElement>('[data-nav="for-owners-mobile"]');
+  const navDashboardMobile = document.querySelector<HTMLElement>('[data-nav="dashboard-mobile"]');
+  const navEarnMobile = document.querySelector<HTMLElement>('[data-nav="earn-mobile"]');
+
+  const showFlex = (el: HTMLElement | null, show: boolean) => {
+    if (!el) return;
+    el.classList.toggle('hidden', !show);
+    el.classList.toggle('inline-flex', show);
+    el.classList.toggle('flex', false);
+  };
+  const showFlexMobile = (el: HTMLElement | null, show: boolean) => {
+    if (!el) return;
+    el.classList.toggle('hidden', !show);
+    if (show) el.classList.add('flex');
+  };
+
+  const renderAuth = (user: AppUser | null) => {
+    const loggedIn = Boolean(user);
+    const isOwner = user?.role === 'owner' || Boolean(user?.isAdmin);
+    const isStudent = Boolean(user) && !isOwner;
+
+    guest.classList.toggle('hidden', loggedIn);
+    guest.classList.toggle('flex', !loggedIn);
+    userWrap.classList.toggle('hidden', !loggedIn);
+    userWrap.classList.toggle('flex', loggedIn);
+    guestMobile.classList.toggle('hidden', loggedIn);
+    userMobile.classList.toggle('hidden', !loggedIn);
+
+    // Nav items:
+    // - Student: Explore/Saved/Earn/Profile (For Owners hidden)
+    // - Guest: Explore/Saved/Earn/For Owners (Profile hidden)
+    // - Owner on public routes: Explore/Saved/Dashboard (Earn hidden per Phase 2), profile pill points to /owner/profile
+    showFlex(navProfile, isStudent);
+    showFlex(navForOwners, !loggedIn);
+    showFlex(navDashboard, isOwner);
+    showFlex(navEarn, !isOwner);
+    showFlexMobile(navProfileMobile, isStudent);
+    showFlexMobile(navForOwnersMobile, !loggedIn);
+    showFlexMobile(navDashboardMobile, isOwner);
+    showFlexMobile(navEarnMobile, !isOwner);
+
+    // Profile pill destination: owners go to their shell, students to /profile
+    if (headerProfileLink) headerProfileLink.href = isOwner ? '/owner/profile' : '/profile';
+    if (headerAvatarMobile) headerAvatarMobile.href = isOwner ? '/owner/profile' : '/profile';
+    const authUserMobile = document.getElementById('auth-user-mobile') as HTMLAnchorElement | null;
+    if (authUserMobile) authUserMobile.href = isOwner ? '/owner/profile' : '/profile';
+
+    if (user) {
+      const initials = initialsOf(user.name);
+      avatar.textContent = initials;
+      avatarMobile.textContent = initials;
+      nameEl.textContent = user.name.split(' ')[0];
+    }
+  };
+
+  getSession().then(renderAuth);
+  onAuthChange(renderAuth);
+</script>

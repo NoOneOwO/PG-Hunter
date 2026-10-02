@@ -1,0 +1,32 @@
+---
+export const prerender = false;
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { getDb } from '@/lib/server/auth';
+const db = getDb();
+const media = await db.prepare(`SELECT m.*, ol.name as listing_name FROM media m LEFT JOIN owner_listings ol ON ol.id=m.listing_id ORDER BY m.created_at DESC LIMIT 50`).all().catch(()=>({results:[]} as any));
+---
+
+<AdminLayout title="Content — Admin" active="content">
+  <h1 class="text-2xl font-extrabold">Content</h1>
+  <p class="mt-1 text-sm text-slate-500">Foundation for Campus Creator pipeline. Shows existing <code>media</code> (PG photos/videos, R2/YouTube). No assignments/payouts yet.</p>
+
+  <div class="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <table class="w-full min-w-[700px] text-left text-sm">
+      <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+        <tr><th class="px-4 py-3">Type</th><th class="px-4 py-3">Provider</th><th class="px-4 py-3">Listing</th><th class="px-4 py-3">Title</th><th class="px-4 py-3">Created</th></tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {media.results.length===0 ? <tr><td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">No media yet</td></tr> : media.results.map((m:any)=>(
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3"><span class="badge bg-slate-100 text-slate-700">{m.type}</span></td>
+            <td class="px-4 py-3 text-xs">{m.provider}</td>
+            <td class="px-4 py-3 text-xs">{m.listing_name ?? m.listing_id ?? '—'}</td>
+            <td class="px-4 py-3 text-xs">{m.title ?? '—'}</td>
+            <td class="px-4 py-3 text-xs">{new Date(m.created_at).toLocaleDateString()}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-4 rounded-xl bg-slate-50 p-4 text-xs text-slate-500">Future creator assignments will appear here. No payout system in this phase.</p>
+</AdminLayout>

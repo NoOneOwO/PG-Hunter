@@ -1,0 +1,52 @@
+---
+export const prerender = false;
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { getDb } from '@/lib/server/auth';
+
+const url = new URL(Astro.request.url);
+const q = url.searchParams.get('q')?.trim() ?? '';
+const db = getDb();
+let where = '';
+let binds:any[]=[];
+if (q) { where = `WHERE (u.name LIKE ? OR u.email LIKE ?)`; const like=`%${q}%`; binds=[like,like]; }
+
+const owners = await db.prepare(
+  `SELECT u.id, u.name, u.email, u.created_at, u.is_admin,
+          (SELECT COUNT(*) FROM owner_listings ol WHERE ol.owner_id=u.id) as listings,
+          (SELECT COUNT(*) FROM verification_documents vd WHERE vd.owner_id=u.id AND vd.status='pending') as pending_verifs
+   FROM users u
+   WHERE u.role='owner' ${q ? 'AND (u.name LIKE ? OR u.email LIKE ?)' : ''}
+   ORDER BY u.created_at DESC LIMIT 100`
+).bind(...(q? [`%${q}%`,`%${q}%`] : [])).all();
+---
+
+<AdminLayout title="Owners — Admin" active="owners">
+  <h1 class="text-2xl font-extrabold">Owners</h1>
+  <p class="mt-1 text-sm text-slate-500">From <code>users</code> where <code>role=owner</code>. Never shows password hashes or tokens.</p>
+
+  <form class="mt-4 flex gap-2">
+    <input name="q" value={q} placeholder="Search name or email" class="field text-sm flex-1" />
+    <button class="btn-primary px-4 text-sm">Search</button>
+    <a href="/admin/owners" class="btn-secondary px-4 text-sm">Clear</a>
+  </form>
+
+  <div class="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <table class="w-full min-w-[700px] text-left text-sm">
+      <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+        <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Email</th><th class="px-4 py-3">Created</th><th class="px-4 py-3">Listings</th><th class="px-4 py-3">Pending verifs</th><th class="px-4 py-3">Admin</th></tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {owners.results.length===0 ? <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">No owners yet</td></tr> : owners.results.map((o:any)=>(
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 font-semibold">{o.name}</td>
+            <td class="px-4 py-3 text-xs">{o.email}</td>
+            <td class="px-4 py-3 text-xs">{new Date(o.created_at).toLocaleDateString()}</td>
+            <td class="px-4 py-3"><a href={`/admin/pgs?q=${encodeURIComponent(o.email)}`} class="text-brand-700 hover:underline">{o.listings}</a></td>
+            <td class="px-4 py-3">{o.pending_verifs}</td>
+            <td class="px-4 py-3">{o.is_admin ? <span class="badge bg-slate-900 text-white">admin</span> : <span class="badge bg-slate-100 text-slate-600">—</span>}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</AdminLayout>

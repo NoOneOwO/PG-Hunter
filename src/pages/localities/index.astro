@@ -1,0 +1,49 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { MapPin, ArrowRight } from '@lucide/astro';
+import { localities } from '@/data/colleges';
+import { activeProperties } from '@/data/properties';
+
+const pgCount = (localityId: string): number =>
+  activeProperties().filter((p) => p.localityId === localityId).length;
+---
+
+<BaseLayout
+  title="Localities — Find PGs in Your Area | PG Hunter"
+  description="Explore student PGs, rooms and co-living spaces in every major Delhi locality. Pick your area and find the best accommodation."
+>
+  <section class="bg-gradient-to-b from-brand-50 via-brand-50/40 to-white">
+    <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+        Explore PGs by locality
+      </h1>
+      <p class="mt-2 max-w-xl text-sm text-slate-600 sm:text-base">
+        Pick your area and discover the best accommodation around it.
+      </p>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {localities.map((l) => (
+        <a
+          href={`/localities/${l.slug}`}
+          class="card group flex items-center gap-4 p-5 transition-shadow hover:shadow-card-hover"
+        >
+          <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+            <MapPin class="h-6 w-6" />
+          </span>
+          <span class="min-w-0">
+            <span class="block truncate text-base font-bold text-slate-900 group-hover:text-brand-700">
+              {l.name}
+            </span>
+            <span class="block text-xs text-slate-500">
+              {l.city} · {pgCount(l.id)} PGs
+            </span>
+          </span>
+          <ArrowRight class="ml-auto h-5 w-5 shrink-0 text-slate-300 transition-colors group-hover:text-brand-600" />
+        </a>
+      ))}
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,193 @@
+---
+import OwnerLayout from '@/layouts/OwnerLayout.astro';
+import { Plus, Building2, ArrowRight } from '@lucide/astro';
+---
+
+<OwnerLayout title="My PGs — PG Hunter" active="listings">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">My PGs</h1>
+      <p class="mt-1 text-sm font-medium text-slate-500">
+        Create, edit and submit your listings for review.
+      </p>
+    </div>
+    <a href="/owner/listings/new" class="btn-primary">
+      <Plus class="h-4 w-4" />
+      Add PG
+    </a>
+  </div>
+
+  <div id="listings-loading" class="mx-auto max-w-md py-20 text-center" role="status">
+    <span class="mx-auto flex h-12 w-12 animate-spin items-center justify-center rounded-full border-4 border-brand-100 border-t-brand-600"></span>
+    <p class="mt-4 text-sm font-medium text-slate-500">Loading your listings…</p>
+  </div>
+
+  <div id="listings-root" class="hidden">
+    <div id="listings-empty" class="card mt-6 hidden p-12 text-center">
+      <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
+        <Building2 class="h-8 w-8" />
+      </span>
+      <h2 class="mt-6 text-xl font-extrabold tracking-tight text-slate-900">No PGs yet</h2>
+      <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
+        Add your first PG to start receiving enquiries from students near your property.
+      </p>
+      <a href="/owner/listings/new" class="btn-primary mt-8 px-8">
+        Add your first PG
+        <ArrowRight class="h-4 w-4" />
+      </a>
+    </div>
+
+    <div id="listings-grid" class="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"></div>
+  </div>
+</OwnerLayout>
+
+<script>
+  import { getOwnerListings, deleteListing, submitListing } from '@/lib/auth';
+  import type { Listing } from '@/lib/auth';
+  import { listingStatusMeta, minRentOf, formatShortDate } from '@/lib/owner';
+  import { formatINR } from '@/lib/format';
+
+  const loading = document.getElementById('listings-loading')!;
+  const root = document.getElementById('listings-root')!;
+  const empty = document.getElementById('listings-empty')!;
+  const grid = document.getElementById('listings-grid')!;
+
+  const coverImage = (l: Listing): string | null =>
+    l.media.find((m) => m.type === 'photo')?.url ?? l.media.find((m) => m.type === 'photo')?.externalId ?? null;
+
+  const statusBadge = (status: Listing['status']) => {
+    const meta = listingStatusMeta[status];
+    return `<span class="badge ${meta.classes}">
+      <span class="h-1.5 w-1.5 rounded-full ${meta.dot}"></span>${meta.label}</span>`;
+  };
+
+  const roomSummary = (l: Listing) => {
+    const kinds = [...new Set(l.rooms.map((r) => r.occupancy))];
+    return kinds.join(' · ') || 'No rooms added';
+  };
+
+
+  const actionIcon = {
+    pencil:
+      '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+    send:
+      '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>',
+    trash:
+      '<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>',
+  };
+  const card = (l: Listing) => {
+    const img = coverImage(l);
+    const minRent = minRentOf(l);
+    const canSubmit = l.status === 'draft' || l.status === 'rejected';
+    return `
+    <article class="card flex flex-col overflow-hidden transition-shadow hover:shadow-card-hover">
+      <a href="/owner/listings/${l.id}/edit" class="relative block aspect-[16/9] overflow-hidden bg-slate-100">
+        ${img
+          ? `<img src="${img}" alt="${l.name}" loading="lazy" decoding="async" class="h-full w-full object-cover" />`
+          : `<div class="flex h-full items-center justify-center bg-brand-50 text-brand-300">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+            </div>`
+        }
+        <div class="absolute left-3 top-3">${statusBadge(l.status)}</div>
+        ${!img ? `<span class="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2.5 py-1 text-[11px] font-semibold text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Add photos
+        </span>` : ''}
+      </a>
+
+      <div class="flex flex-1 flex-col gap-2 p-4">
+        <div class="flex items-start justify-between gap-2">
+          <h2 class="min-w-0 text-base font-bold leading-snug text-slate-900">
+            <a href="/owner/listings/${l.id}/edit" class="hover:text-brand-700">${l.name}</a>
+          </h2>
+          <span class="shrink-0 text-xs font-medium text-slate-400">${formatShortDate(l.updatedAt)}</span>
+        </div>
+
+        <p class="text-xs font-medium text-slate-500">
+          ${l.locality ? `${l.locality} · ` : ''}${l.city ?? ''} · ${roomSummary(l)}
+        </p>
+
+        <div class="flex flex-wrap items-baseline gap-x-2">
+          <span class="text-lg font-extrabold text-brand-700">${minRent ? formatINR(minRent) + '/month' : '—'}</span>
+          <span class="text-xs font-medium text-slate-500">starting from</span>
+        </div>
+
+        ${l.status === 'rejected' && l.rejectionReason
+          ? `<p class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">${l.rejectionReason}</p>`
+          : ''}
+
+        <div class="mt-auto grid grid-cols-1 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-2">
+          <a href="/owner/listings/${l.id}/edit" class="btn-secondary h-10 min-w-0 justify-center px-3 text-xs">
+            ${actionIcon.pencil} <span>Edit</span>
+          </a>
+          ${canSubmit
+            ? `<button type="button" class="btn-primary h-10 min-w-0 justify-center px-3 text-xs" data-submit="${l.id}">
+                ${actionIcon.send} <span>Submit</span>
+              </button>`
+            : `<button type="button" class="btn-secondary h-10 min-w-0 justify-center px-3 text-xs" data-delete="${l.id}">
+                ${actionIcon.trash} <span>Delete</span>
+              </button>`}
+        </div>      </div>
+    </article>`;
+  };
+
+  const render = (listings: Listing[]) => {
+    empty.classList.toggle('hidden', listings.length > 0);
+    grid.innerHTML = listings.map(card).join('');
+  };
+
+  const showToast = (message: string) => {
+    const el = document.createElement('div');
+    el.className =
+      'fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-popover';
+    el.textContent = message;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3000);
+  };
+
+  const init = async () => {
+    try {
+      const { listings } = await getOwnerListings();
+      render(listings);
+    } catch (err) {
+      empty.classList.add('hidden');
+      grid.innerHTML = `<div class="card col-span-full p-8 text-center text-sm font-semibold text-rose-700">${(err as Error).message}</div>`;
+    } finally {
+      loading.classList.add('hidden');
+      root.classList.remove('hidden');
+    }
+
+    grid.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+      const submitBtn = target.closest<HTMLButtonElement>('[data-submit]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        try {
+          await submitListing(submitBtn.dataset.submit!);
+          showToast('Submitted for review — our team will get back to you.');
+          const { listings: fresh } = await getOwnerListings();
+          render(fresh);
+        } catch (err) {
+          showToast((err as Error).message);
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `${actionIcon.send} <span>Submit</span>`;
+        }
+        return;
+      }
+      const deleteBtn = target.closest<HTMLButtonElement>('[data-delete]');
+      if (deleteBtn) {
+        const id = deleteBtn.dataset.delete!;
+        if (!window.confirm('Delete this listing? This cannot be undone.')) return;
+        await deleteListing(id);
+        showToast('Listing deleted.');
+        const { listings: fresh } = await getOwnerListings();
+        render(fresh);
+      }
+    });
+  };
+
+  void init();
+</script>
+
+

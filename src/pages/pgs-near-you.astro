@@ -1,0 +1,245 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import SearchPanel from '@/components/SearchPanel.astro';
+import PropertyCard from '@/components/PropertyCard.astro';
+import { SlidersHorizontal, ArrowUpDown, ChevronDown } from '@lucide/astro';
+
+import { activeProperties } from '@/data/properties';
+
+const allPgs = activeProperties();
+---
+
+<BaseLayout
+  title="PGs Near You — Find Student PGs, Rooms & Co-living | PG Hunter"
+  description="Browse PGs, rooms and co-living spaces near your college. Filter by budget, room type, food and more on PG Hunter."
+>
+  <section class="bg-gradient-to-b from-brand-50 via-brand-50/40 to-white">
+    <div class="mx-auto max-w-7xl px-4 pb-10 pt-10 sm:px-6 lg:px-8">
+      <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">PGs Near You</h1>
+      <p class="mt-2 max-w-xl text-sm text-slate-600 sm:text-base">
+        Search, filter and sort the best PGs, rooms and co-living spaces around your college.
+      </p>
+      <div class="mt-6 max-w-4xl">
+        <SearchPanel />
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="Search results" class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8" id="explorer">
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-3">
+      <h2 id="results-heading" class="text-lg font-bold text-slate-900">
+        <span id="result-count">{allPgs.length}</span> PGs found
+      </h2>
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+        <label class="field w-auto">
+          <ArrowUpDown class="h-4 w-4 shrink-0 text-brand-600" />
+          <span class="sr-only">Sort</span>
+          <select id="sort-select" name="sort" class="w-auto appearance-none bg-transparent py-2 outline-none">
+            <option value="recommended">Sort: Recommended</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+          </select>
+          <ChevronDown class="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+        </label>
+      </div>
+    </div>
+
+    <div id="filter-bar" class="mt-5 space-y-2" aria-label="Filters">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-brand-50 px-3 text-sm font-semibold text-brand-700">
+          <SlidersHorizontal class="h-4 w-4" />
+          Filters
+        </span>
+        <button type="button" class="chip filter-chip is-active" data-filter="gender" data-value="">All</button>
+        <button type="button" class="chip filter-chip" data-filter="gender" data-value="boys">Boys PG</button>
+        <button type="button" class="chip filter-chip" data-filter="gender" data-value="girls">Girls PG</button>
+        <button type="button" class="chip filter-chip" data-filter="gender" data-value="co-ed">Co-ed</button>
+        <span class="hidden h-6 w-px bg-slate-200 sm:block" aria-hidden="true"></span>
+        <button type="button" class="chip filter-chip" data-filter="food" data-value="yes">With food</button>
+        <button type="button" class="chip filter-chip" data-filter="verified" data-value="verified">Verified only</button>
+        <span class="hidden h-6 w-px bg-slate-200 sm:block" aria-hidden="true"></span>
+        <button type="button" id="clear-filters-btn" class="chip text-rose-600 hover:bg-rose-50">Clear all</button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Budget</span>
+        <button type="button" class="chip filter-chip is-active" data-filter="budget" data-value="">Any</button>
+        <button type="button" class="chip filter-chip" data-filter="budget" data-value="under-10">Under ₹10k</button>
+        <button type="button" class="chip filter-chip" data-filter="budget" data-value="10-15">₹10k – ₹15k</button>
+        <button type="button" class="chip filter-chip" data-filter="budget" data-value="15-20">₹15k – ₹20k</button>
+        <button type="button" class="chip filter-chip" data-filter="budget" data-value="20-plus">₹20k +</button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Room type</span>
+        <button type="button" class="chip filter-chip is-active" data-filter="roomType" data-value="">Any</button>
+        <button type="button" class="chip filter-chip" data-filter="roomType" data-value="single">Single</button>
+        <button type="button" class="chip filter-chip" data-filter="roomType" data-value="double">Double</button>
+        <button type="button" class="chip filter-chip" data-filter="roomType" data-value="triple">Triple</button>
+        <button type="button" class="chip filter-chip" data-filter="roomType" data-value="four-plus">4+ sharing</button>
+      </div>
+    </div>
+
+    <div id="results-grid" class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {allPgs.map((p) => (
+        <PropertyCard property={p} />
+      ))}
+    </div>
+
+    <div id="empty-state" class="hidden mt-12 text-center" role="status">
+      <p class="text-lg font-bold text-slate-900">No PGs match those filters</p>
+      <p id="empty-query" class="mt-1 text-sm font-medium text-slate-500"></p>
+      <p class="mt-1 text-sm text-slate-500">Try widening your budget, searching a shorter name (e.g. DTU, Rohini), or clearing a filter.</p>
+      <button type="button" id="clear-filters" class="btn-secondary mt-4">Clear all filters</button>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  @reference "../styles/global.css";
+  .chip {
+    @apply inline-flex min-h-11 items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50;
+  }
+  .chip.is-active {
+    @apply border-brand-600 bg-brand-600 text-white hover:bg-brand-700;
+  }
+</style>
+
+<script>
+  const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-property]'));
+  const grid = document.getElementById('results-grid')!;
+  const countEl = document.getElementById('result-count')!;
+  const emptyEl = document.getElementById('empty-state')!;
+  const sortSelect = document.getElementById('sort-select') as HTMLSelectElement;
+  const chips = Array.from(document.querySelectorAll<HTMLButtonElement>('.filter-chip'));
+  const clearBtn = document.getElementById('clear-filters') as HTMLButtonElement;
+  const clearBtnTop = document.getElementById('clear-filters-btn') as HTMLButtonElement;
+
+  type Filters = {
+    q: string;
+    budget: string;
+    roomType: string;
+    gender: string;
+    food: string;
+    verified: string;
+    sort: string;
+  };
+
+  const params = new URLSearchParams(window.location.search);
+  const filters: Filters = {
+    q: (params.get('q') ?? '').trim().toLowerCase(),
+    budget: params.get('budget') ?? '',
+    roomType: params.get('roomType') ?? '',
+    gender: params.get('gender') ?? '',
+    food: params.get('food') ?? '',
+    verified: params.get('verified') ?? '',
+    sort: params.get('sort') ?? 'recommended',
+  };
+
+  sortSelect.value = filters.sort;
+  chips.forEach((chip) => {
+    const value = filters[chip.dataset.filter as keyof Filters] ?? '';
+    chip.classList.toggle('is-active', chip.dataset.value === value);
+  });
+
+  const inBudget = (rent: number): boolean => {
+    switch (filters.budget) {
+      case 'under-10':
+        return rent < 10000;
+      case '10-15':
+        return rent >= 10000 && rent <= 15000;
+      case '15-20':
+        return rent > 15000 && rent <= 20000;
+      case '20-plus':
+        return rent > 20000;
+      default:
+        return true;
+    }
+  };
+
+  const matchesQuery = (card: HTMLElement): boolean => {
+    if (!filters.q) return true;
+    const hay = [
+      card.dataset.name,
+      card.dataset.locality,
+      card.dataset.colleges,
+      card.dataset.collegeNames,
+    ]
+      .join(' ')
+      .toLowerCase();
+    return hay.includes(filters.q);
+  };
+
+  const apply = () => {
+    const visible: HTMLElement[] = [];
+    cards.forEach((card) => {
+      const rent = Number(card.dataset.rent);
+      const roomTypes = card.dataset.roomtypes ?? '';
+      const foodOk = filters.food ? card.dataset.food === 'yes' : true;
+      const genderOk = filters.gender ? card.dataset.gender === filters.gender : true;
+      const verifiedOk = filters.verified ? card.dataset.verified !== 'listed' : true;
+      const roomTypeOk = filters.roomType
+        ? roomTypes.split(' ').includes(filters.roomType)
+        : true;
+
+      const show = matchesQuery(card) && inBudget(rent) && roomTypeOk && genderOk && foodOk && verifiedOk;
+      card.classList.toggle('hidden', !show);
+      if (show) visible.push(card);
+    });
+
+    if (filters.sort === 'price-asc') {
+      visible.sort((a, b) => Number(a.dataset.rent) - Number(b.dataset.rent));
+    } else if (filters.sort === 'price-desc') {
+      visible.sort((a, b) => Number(b.dataset.rent) - Number(a.dataset.rent));
+    }
+    visible.forEach((card) => grid.appendChild(card));
+
+    countEl.textContent = String(visible.length);
+    emptyEl.classList.toggle('hidden', visible.length > 0);
+    const emptyQuery = document.getElementById('empty-query');
+    if (emptyQuery) {
+      emptyQuery.textContent = filters.q ? `No results for "${filters.q}"` : '';
+    }
+  };
+
+  const syncUrl = () => {
+    const next = new URLSearchParams();
+    (Object.keys(filters) as (keyof Filters)[]).forEach((k) => {
+      if (filters[k]) next.set(k, filters[k]);
+    });
+    const qs = next.toString();
+    window.history.replaceState({}, '', qs ? `?${qs}` : window.location.pathname);
+  };
+
+  const updateFilter = (key: keyof Filters, value: string) => {
+    filters[key] = value;
+    syncUrl();
+    apply();
+  };
+
+  sortSelect.addEventListener('change', () => updateFilter('sort', sortSelect.value));
+
+  chips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const key = chip.dataset.filter as keyof Filters;
+      const value = chip.dataset.value ?? '';
+      const isActive = chip.classList.contains('is-active');
+      chips
+        .filter((c) => c.dataset.filter === key)
+        .forEach((c) => c.classList.toggle('is-active', c === chip && !isActive));
+      updateFilter(key, isActive ? '' : value);
+    });
+  });
+
+  const clearAll = () => {
+    (Object.keys(filters) as (keyof Filters)[]).forEach((k) => (filters[k] = ''));
+    filters.sort = 'recommended';
+    sortSelect.value = 'recommended';
+    chips.forEach((c) => c.classList.toggle('is-active', c.dataset.value === ''));
+    syncUrl();
+    apply();
+  };
+
+  clearBtn.addEventListener('click', clearAll);
+  clearBtnTop.addEventListener('click', clearAll);
+
+  apply();
+</script>

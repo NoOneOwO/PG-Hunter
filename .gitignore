@@ -1,0 +1,37 @@
+# build output
+dist/
+node_modules/
+
+# Astro-generated artifacts (regenerate with `npm run build`/`astro sync`).
+# These were previously committed by mistake and churned on every build.
+.astro/
+
+# Local desktop app state (contains a sqlite db, never source)
+.freebuff/
+
+# environment
+.env
+.env.local
+.env.production
+.dev.vars
+.dev.vars.local
+
+# cloudflare local state
+.wrangler/
+
+# astro dev server logs
+astro-*.log
+*.err.log
+
+# generated wrangler types (regenerate with `npx wrangler types`)
+worker-configuration.d.ts
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

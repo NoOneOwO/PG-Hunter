@@ -1,0 +1,139 @@
+---
+export const prerender = false;
+import AdminLayout from '@/layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Experiences Moderation — PG Hunter Admin" active="experiences">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Student Experiences</h1>
+      <p class="mt-1 text-sm text-slate-500">Pending is default. Only <code class="rounded bg-emerald-50 px-1">approved</code> appears publicly.</p>
+    </div>
+    <div class="flex gap-2">
+      <select id="filter-status" class="field text-sm">
+        <option value="pending" selected>Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="spam">Spam</option>
+        <option value="">All</option>
+      </select>
+      <button id="refresh-btn" class="btn-secondary text-sm">Refresh</button>
+    </div>
+  </div>
+
+  <div id="loading" class="mx-auto max-w-md py-16 text-center">
+    <span class="mx-auto flex h-10 w-10 animate-spin items-center justify-center rounded-full border-4 border-slate-200 border-t-slate-900"></span>
+    <p class="mt-3 text-sm text-slate-500">Loading experiences…</p>
+  </div>
+
+  <div id="list" class="mt-6 space-y-4 hidden"></div>
+  <p id="empty" class="mt-6 hidden rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">No experiences for this filter — shows “No data yet” when empty.</p>
+
+  <template id="item-tpl">
+    <article class="card p-5">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-bold text-slate-900" data-field="content">—</p>
+          <p class="mt-1 text-xs text-slate-500"><span data-field="user"></span> · <span data-field="listing"></span> · <span data-field="date"></span> · <span data-field="rating"></span></p>
+          <p class="mt-2"><span data-field="status" class="badge"></span></p>
+        </div>
+        <div class="flex shrink-0 gap-2" data-actions>
+          <button data-action="approve" class="btn-primary px-3 py-1.5 text-xs">Approve</button>
+          <button data-action="reject" class="btn-secondary px-3 py-1.5 text-xs">Reject</button>
+          <button data-action="spam" class="btn-secondary px-3 py-1.5 text-xs text-rose-600">Spam</button>
+        </div>
+      </div>
+      <div data-reason-wrap class="mt-3 hidden">
+        <input data-reason placeholder="Reason (optional, 500 chars)" class="field w-full text-sm" maxlength="500" />
+        <button data-confirm class="btn-primary mt-2 px-3 py-1.5 text-xs">Confirm</button>
+        <span data-status class="ml-2 text-xs"></span>
+      </div>
+    </article>
+  </template>
+</AdminLayout>
+
+<script>
+  const filter = document.getElementById('filter-status') as HTMLSelectElement;
+  const refreshBtn = document.getElementById('refresh-btn') as HTMLButtonElement;
+  const loading = document.getElementById('loading') as HTMLElement;
+  const list = document.getElementById('list') as HTMLElement;
+  const empty = document.getElementById('empty') as HTMLElement;
+  const tpl = document.getElementById('item-tpl') as HTMLTemplateElement;
+
+  const badgeClass = (s: string) =>
+    s === 'pending' ? 'bg-amber-100 text-amber-800' :
+    s === 'approved' ? 'bg-emerald-100 text-emerald-800' :
+    s === 'rejected' ? 'bg-slate-100 text-slate-600' :
+    'bg-rose-100 text-rose-700';
+
+  const load = async () => {
+    loading.classList.remove('hidden');
+    list.classList.add('hidden');
+    empty.classList.add('hidden');
+    const status = filter.value;
+    const url = status ? `/api/admin/experiences?status=${encodeURIComponent(status)}` : `/api/admin/experiences`;
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if (res.status === 401 || res.status === 403) {
+      loading.innerHTML = '<p class="text-sm text-rose-600">Access denied — admin only.</p>';
+      return;
+    }
+    const data = await res.json().catch(()=>({experiences:[]}));
+    const exps = data.experiences ?? [];
+    loading.classList.add('hidden');
+    if (exps.length === 0) {
+      empty.classList.remove('hidden');
+      return;
+    }
+    list.innerHTML = '';
+    exps.forEach((e: any) => {
+      const clone = (tpl.content.cloneNode(true) as DocumentFragment);
+      const article = clone.querySelector('article') as HTMLElement;
+      (clone.querySelector('[data-field="content"]') as HTMLElement).textContent = e.content?.slice(0,300) ?? '—';
+      (clone.querySelector('[data-field="user"]') as HTMLElement).textContent = `${e.user_name ?? '—'} (${e.user_email ?? ''})`;
+      (clone.querySelector('[data-field="listing"]') as HTMLElement).textContent = `PG ${e.listing_id ?? '—'}`;
+      (clone.querySelector('[data-field="date"]') as HTMLElement).textContent = new Date(e.created_at).toLocaleDateString();
+      (clone.querySelector('[data-field="rating"]') as HTMLElement).textContent = e.rating ? `★${e.rating}` : 'no rating';
+      const badge = clone.querySelector('[data-field="status"]') as HTMLElement;
+      badge.textContent = e.status;
+      badge.className = `badge ${badgeClass(e.status)}`;
+      const actions = clone.querySelector('[data-actions]') as HTMLElement;
+      const reasonWrap = clone.querySelector('[data-reason-wrap]') as HTMLElement;
+      const reasonInput = clone.querySelector('[data-reason]') as HTMLInputElement;
+      const confirmBtn = clone.querySelector('[data-confirm]') as HTMLButtonElement;
+      const statusEl = clone.querySelector('[data-status]') as HTMLElement;
+      let pendingAction: string | null = null;
+      actions.querySelectorAll('button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          pendingAction = (btn as HTMLButtonElement).dataset.action ?? null;
+          reasonWrap.classList.remove('hidden');
+          confirmBtn.textContent = `Confirm ${pendingAction}`;
+        });
+      });
+      confirmBtn.addEventListener('click', async () => {
+        if (!pendingAction) return;
+        confirmBtn.disabled = true;
+        statusEl.textContent = 'Saving…';
+        const res2 = await fetch(`/api/admin/experiences/${encodeURIComponent(e.id)}`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: pendingAction, reason: reasonInput.value || undefined }),
+        });
+        if (!res2.ok) {
+          const err = await res2.json().catch(()=>({error:'failed'}));
+          statusEl.textContent = err.error || 'Failed';
+          confirmBtn.disabled = false;
+          return;
+        }
+        statusEl.textContent = 'Saved — audit recorded.';
+        setTimeout(load, 600);
+      });
+      list.appendChild(clone);
+    });
+    list.classList.remove('hidden');
+  };
+
+  filter.addEventListener('change', load);
+  refreshBtn.addEventListener('click', load);
+  load();
+</script>

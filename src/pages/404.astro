@@ -1,0 +1,20 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { ArrowRight } from '@lucide/astro';
+---
+
+<BaseLayout title="Page not found — PG Hunter">
+  <section class="mx-auto max-w-2xl px-4 py-24 text-center sm:px-6">
+    <p class="text-7xl font-extrabold text-brand-200">404</p>
+    <h1 class="mt-4 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+      This page wandered off campus
+    </h1>
+    <p class="mx-auto mt-2 max-w-md text-sm text-slate-600 sm:text-base">
+      The page you're looking for doesn't exist. Head back home and keep hunting for your PG.
+    </p>
+    <a href="/" class="btn-primary mt-8 px-8">
+      Back to homepage
+      <ArrowRight class="h-4 w-4" />
+    </a>
+  </section>
+</BaseLayout>

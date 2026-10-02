@@ -1,0 +1,49 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { Building2, ArrowRight } from '@lucide/astro';
+import { colleges } from '@/data/colleges';
+import { properties } from '@/data/properties';
+
+const pgCount = (collegeId: string): number =>
+  properties.filter((p) => p.collegeDistances.some((d) => d.collegeId === collegeId)).length;
+---
+
+<BaseLayout
+  title="Colleges — Find PGs Near Your College | PG Hunter"
+  description="Explore student PGs, rooms and co-living spaces near every major college. Start with your campus."
+>
+  <section class="bg-gradient-to-b from-brand-50 via-brand-50/40 to-white">
+    <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+        Explore PGs by college
+      </h1>
+      <p class="mt-2 max-w-xl text-sm text-slate-600 sm:text-base">
+        Pick your campus and discover the best accommodation around it.
+      </p>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {colleges.map((c) => (
+        <a
+          href={`/colleges/${c.slug}`}
+          class="card group flex items-center gap-4 p-5 transition-shadow hover:shadow-card-hover"
+        >
+          <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+            <Building2 class="h-6 w-6" />
+          </span>
+          <span class="min-w-0">
+            <span class="block truncate text-base font-bold text-slate-900 group-hover:text-brand-700">
+              {c.name}
+            </span>
+            <span class="block text-xs text-slate-500">
+              {c.locality} · {c.city} · {pgCount(c.id)} PGs
+            </span>
+          </span>
+          <ArrowRight class="ml-auto h-5 w-5 shrink-0 text-slate-300 transition-colors group-hover:text-brand-600" />
+        </a>
+      ))}
+    </div>
+  </section>
+</BaseLayout>

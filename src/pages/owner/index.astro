@@ -1,0 +1,302 @@
+---
+import OwnerLayout from '@/layouts/OwnerLayout.astro';
+import {
+  Building2,
+  TrendingUp,
+  Inbox,
+  BadgeCheck,
+  Plus,
+  ArrowRight,
+} from '@lucide/astro';
+import { listingStatusMeta } from '@/lib/owner';
+---
+
+<OwnerLayout title="Owner Dashboard — PG Hunter" active="dashboard">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="text-sm font-semibold text-brand-700">Owner dashboard</p>
+      <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+        Welcome back, <span id="dash-name">owner</span> 👋
+      </h1>
+      <p class="mt-1 text-sm font-medium text-slate-500">
+        Your listings, enquiries and verification at a glance.
+      </p>
+    </div>
+    <a href="/owner/listings/new" class="btn-primary">
+      <Plus class="h-4 w-4" />
+      Add PG
+    </a>
+  </div>
+
+  <div id="dash-loading" class="mx-auto max-w-md py-20 text-center" role="status">
+    <span class="mx-auto flex h-12 w-12 animate-spin items-center justify-center rounded-full border-4 border-brand-100 border-t-brand-600"></span>
+    <p class="mt-4 text-sm font-medium text-slate-500">Loading your dashboard…</p>
+  </div>
+
+  <div id="dash-root" class="hidden">
+    <div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <a href="/owner/listings" class="card p-5 transition-shadow hover:shadow-card-hover">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+          <Building2 class="h-5 w-5" />
+        </span>
+        <p id="stat-listings" class="mt-4 text-3xl font-extrabold text-slate-900">–</p>
+        <p class="text-sm font-semibold text-slate-500">Total listings</p>
+      </a>
+      <a href="/owner/listings" class="card p-5 transition-shadow hover:shadow-card-hover">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+          <TrendingUp class="h-5 w-5" />
+        </span>
+        <p id="stat-active" class="mt-4 text-3xl font-extrabold text-slate-900">–</p>
+        <p class="text-sm font-semibold text-slate-500">Live on PG Hunter</p>
+      </a>
+      <a href="/owner/leads" class="card p-5 transition-shadow hover:shadow-card-hover">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+          <Inbox class="h-5 w-5" />
+        </span>
+        <p class="mt-4 flex items-center gap-2">
+          <span id="stat-leads" class="text-3xl font-extrabold text-slate-900">–</span>
+          <span id="stat-newleads" class="badge hidden bg-brand-100 text-brand-800"></span>
+        </p>
+        <p class="text-sm font-semibold text-slate-500">Enquiries received</p>
+      </a>
+      <a href="/owner/verification" class="card p-5 transition-shadow hover:shadow-card-hover">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-100 text-accent-500">
+          <BadgeCheck class="h-5 w-5" />
+        </span>
+        <p id="stat-verification" class="mt-4 text-3xl font-extrabold text-slate-900">–</p>
+        <p class="text-sm font-semibold text-slate-500">Verification</p>
+      </a>
+    </div>
+
+    <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <section class="card lg:col-span-2" aria-labelledby="analytics-heading">
+        <div class="border-b border-slate-100 px-5 py-4">
+          <h2 id="analytics-heading" class="text-base font-bold text-slate-900">Enquiries and reach</h2>
+        </div>
+        <div class="grid grid-cols-1 gap-5 px-5 py-5 lg:grid-cols-2">
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <p class="text-sm font-bold text-slate-800">Last 14 days</p>
+              <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">Enquiries</span>
+            </div>
+            <div id="enquiry-chart" class="h-44"></div>
+          </div>
+          <div>
+            <div class="mb-3 flex items-center justify-between">
+              <p class="text-sm font-bold text-slate-800">PG reach</p>
+              <span id="stat-reach" class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">0 views</span>
+            </div>
+            <div id="reach-chart" class="h-44"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="pg-health-heading">
+        <div class="border-b border-slate-100 px-5 py-4">
+          <h2 id="pg-health-heading" class="text-base font-bold text-slate-900">PG stats</h2>
+        </div>
+        <div class="space-y-4 px-5 py-5">
+          <div id="status-bars" class="space-y-3"></div>
+          <div class="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
+            <div class="rounded-xl bg-slate-50 p-3">
+              <p id="stat-rooms" class="text-xl font-extrabold text-slate-900">0</p>
+              <p class="text-xs font-semibold text-slate-500">Available rooms</p>
+            </div>
+            <div class="rounded-xl bg-slate-50 p-3">
+              <p id="stat-photos" class="text-xl font-extrabold text-slate-900">0</p>
+              <p class="text-xs font-semibold text-slate-500">Photos uploaded</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card lg:col-span-2" aria-labelledby="recent-listings-heading">
+        <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <h2 id="recent-listings-heading" class="text-base font-bold text-slate-900">Your PGs</h2>
+          <a href="/owner/listings" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+            Manage
+            <ArrowRight class="h-4 w-4" />
+          </a>
+        </div>
+        <div id="recent-listings" class="divide-y divide-slate-100"></div>
+      </section>
+
+      <section class="card" aria-labelledby="recent-leads-heading">
+        <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <h2 id="recent-leads-heading" class="text-base font-bold text-slate-900">Latest enquiries</h2>
+          <a href="/owner/leads" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
+            View all
+            <ArrowRight class="h-4 w-4" />
+          </a>
+        </div>
+        <div id="recent-leads" class="divide-y divide-slate-100"></div>
+      </section>
+    </div>
+
+    <section class="card mt-6" aria-labelledby="status-guide-heading">
+      <div class="border-b border-slate-100 px-5 py-4">
+        <h2 id="status-guide-heading" class="text-base font-bold text-slate-900">Listing statuses</h2>
+      </div>
+      <div class="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-2 lg:grid-cols-4">
+        {(Object.keys(listingStatusMeta) as (keyof typeof listingStatusMeta)[]).map((key) => (
+          <div class="rounded-xl border border-slate-200 p-4">
+            <span class:list={['badge', listingStatusMeta[key].classes]}>
+              <span class:list={['h-1.5 w-1.5 rounded-full', listingStatusMeta[key].dot]}></span>
+              {listingStatusMeta[key].label}
+            </span>
+            <p class="mt-2 text-xs leading-relaxed text-slate-500">{listingStatusMeta[key].hint}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  </div>
+</OwnerLayout>
+
+<script>
+  import { getOwnerOverview } from '@/lib/auth';
+  import type { Listing } from '@/lib/auth';
+  import {
+    listingStatusMeta,
+    leadStatusLabel,
+    rentRangeOf,
+    formatRelativeDate,
+  } from '@/lib/owner';
+
+  const loading = document.getElementById('dash-loading')!;
+  const root = document.getElementById('dash-root')!;
+  const nameEl = document.getElementById('dash-name')!;
+  const statListings = document.getElementById('stat-listings')!;
+  const statActive = document.getElementById('stat-active')!;
+  const statLeads = document.getElementById('stat-leads')!;
+  const statNewLeads = document.getElementById('stat-newleads')!;
+  const statVerification = document.getElementById('stat-verification')!;
+  const listingsEl = document.getElementById('recent-listings')!;
+  const leadsEl = document.getElementById('recent-leads')!;
+  const enquiryChart = document.getElementById('enquiry-chart')!;
+  const reachChart = document.getElementById('reach-chart')!;
+  const statusBars = document.getElementById('status-bars')!;
+  const statReach = document.getElementById('stat-reach')!;
+  const statRooms = document.getElementById('stat-rooms')!;
+  const statPhotos = document.getElementById('stat-photos')!;
+
+  const statusBadge = (status: Listing['status']) => {
+    const meta = listingStatusMeta[status];
+    return `<span class="badge ${meta.classes}">
+      <span class="h-1.5 w-1.5 rounded-full ${meta.dot}"></span>${meta.label}</span>`;
+  };
+
+  const listingRow = (l: Listing) => {
+    const rejection = l.status === 'rejected' && l.rejectionReason
+      ? `<p class="mt-1 flex items-center gap-1 text-xs text-rose-600"><span class="inline-flex h-3 w-3 items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>${l.rejectionReason}</p>` : '';
+    return `
+    <div class="flex items-center gap-4 px-5 py-4">
+      <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <a href="/owner/listings/${l.id}/edit" class="truncate text-sm font-bold text-slate-900 hover:text-brand-700">${l.name}</a>
+        <p class="mt-0.5 text-xs font-medium text-slate-500">${rentRangeOf(l)} · ${formatRelativeDate(l.updatedAt)}</p>
+        ${rejection}
+      </div>
+      <div class="hidden sm:block">${statusBadge(l.status)}</div>
+    </div>`;
+  };
+
+  const leadRow = (lead: any) => `
+    <div class="px-5 py-4">
+      <div class="flex items-center justify-between gap-2">
+        <p class="truncate text-sm font-bold text-slate-900">${lead.student_name ?? 'Enquiry'}</p>
+        <span class="badge bg-brand-100 text-brand-800">${leadStatusLabel(lead.status)}</span>
+      </div>
+      <p class="mt-0.5 truncate text-xs font-medium text-slate-500">${lead.property_name ?? 'Your PG'} · ${formatRelativeDate(lead.created_at)}</p>
+    </div>`;
+
+  const empty = (text: string) => `
+    <div class="px-5 py-8 text-center">
+      <p class="text-sm font-semibold text-slate-500">${text}</p>
+    </div>`;
+
+  const verificationLabel = (status: 'none' | 'pending' | 'approved') =>
+    status === 'approved' ? 'Approved' : status === 'pending' ? 'Pending' : 'Not started';
+
+  const renderLineChart = (
+    el: HTMLElement,
+    rows: { date: string; count?: number; views?: number }[],
+    key: 'count' | 'views',
+    color: string
+  ) => {
+    const values = rows.map((row) => Number(row[key] ?? 0));
+    const max = Math.max(1, ...values);
+    const points = values
+      .map((value, index) => {
+        const x = values.length === 1 ? 0 : (index / (values.length - 1)) * 300;
+        const y = 120 - (value / max) * 100;
+        return `${x},${y}`;
+      })
+      .join(' ');
+    const bars = values
+      .map((value, index) => {
+        const x = values.length === 1 ? 0 : (index / Math.max(1, values.length - 1)) * 300;
+        const y = 120 - (value / max) * 100;
+        return `<circle cx="${x}" cy="${y}" r="3.5" fill="${color}"><title>${rows[index].date}: ${value}</title></circle>`;
+      })
+      .join('');
+    el.innerHTML = `
+      <svg viewBox="0 0 300 130" class="h-full w-full overflow-visible" role="img" aria-label="Analytics line chart">
+        <line x1="0" y1="120" x2="300" y2="120" stroke="#e2e8f0" stroke-width="2" />
+        <polyline points="${points}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        ${bars}
+      </svg>`;
+  };
+
+  const renderStatusBars = (rows: { status: Listing['status']; count: number }[]) => {
+    const max = Math.max(1, ...rows.map((row) => row.count));
+    statusBars.innerHTML = rows
+      .map((row) => {
+        const meta = listingStatusMeta[row.status];
+        const width = Math.max(6, (row.count / max) * 100);
+        return `
+          <div>
+            <div class="mb-1 flex items-center justify-between text-xs font-semibold text-slate-500">
+              <span>${meta.label}</span><span>${row.count}</span>
+            </div>
+            <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div class="h-full rounded-full bg-brand-600" style="width: ${width}%"></div>
+            </div>
+          </div>`;
+      })
+      .join('');
+  };
+
+  const init = async () => {
+    const overview = await getOwnerOverview();
+    nameEl.textContent = overview.user.name.split(' ')[0];
+    statListings.textContent = String(overview.stats.listings);
+    statActive.textContent = String(overview.stats.activeListings);
+    statLeads.textContent = String(overview.stats.leads);
+    statVerification.textContent = verificationLabel(overview.stats.verification.status);
+    statReach.textContent = `${overview.stats.analytics.totals.views} views`;
+    statRooms.textContent = String(overview.stats.analytics.totals.availableRooms);
+    statPhotos.textContent = String(overview.stats.analytics.totals.photos);
+    renderLineChart(enquiryChart, overview.stats.analytics.enquiriesByDay, 'count', '#2563eb');
+    renderLineChart(reachChart, overview.stats.analytics.reachByDay, 'views', '#059669');
+    renderStatusBars(overview.stats.analytics.listingStatuses);
+
+    if (overview.stats.newLeads > 0) {
+      statNewLeads.textContent = `${overview.stats.newLeads} new`;
+      statNewLeads.classList.remove('hidden');
+    }
+
+    listingsEl.innerHTML = overview.listings.length
+      ? overview.listings.slice(0, 4).map(listingRow).join('')
+      : empty('No PGs yet — add your first listing to start receiving enquiries.');
+    leadsEl.innerHTML = overview.leads.length
+      ? overview.leads.slice(0, 5).map(leadRow).join('')
+      : empty('No enquiries yet. When students enquire, they appear here.');
+
+    loading.classList.add('hidden');
+    root.classList.remove('hidden');
+  };
+
+  void init();
+</script>

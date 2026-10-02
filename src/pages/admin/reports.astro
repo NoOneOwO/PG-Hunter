@@ -1,0 +1,57 @@
+---
+export const prerender = false;
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { getDb } from '@/lib/server/auth';
+const url = new URL(Astro.request.url);
+const status = url.searchParams.get('status')?.trim() ?? '';
+const valid=['open','reviewing','resolved','dismissed'];
+const filter = valid.includes(status) ? status : '';
+const db = getDb();
+const res = await db.prepare(
+  `SELECT r.*, u.name as reporter_name, u.email as reporter_email
+   FROM reports r LEFT JOIN users u ON u.id=r.reporter_id
+   ${filter ? 'WHERE r.status=?' : ''}
+   ORDER BY r.created_at DESC LIMIT 100`
+).bind(...(filter? [filter]:[])).all();
+---
+
+<AdminLayout title="Reports — Admin" active="reports">
+  <h1 class="text-2xl font-extrabold">Reports</h1>
+  <p class="mt-1 text-sm text-slate-500">Users can report experiences/PGs via “Report” on Student Experiences. Guest reporting unavailable. Foundation only.</p>
+
+  <div class="mt-4 flex gap-2">
+    <a href="/admin/reports" class:list={['rounded-lg px-3 py-2 text-sm font-semibold', !filter ? 'bg-slate-900 text-white' : 'bg-white border text-slate-700']}>All</a>
+    {valid.map(v=>(
+      <a href={`/admin/reports?status=${v}`} class:list={['rounded-lg px-3 py-2 text-sm font-semibold', v===filter ? 'bg-slate-900 text-white' : 'bg-white border text-slate-700']}>{v}</a>
+    ))}
+  </div>
+
+  <div class="mt-6 space-y-3">
+    {res.results.length===0 ? <p class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">No reports — “No data yet”.</p> : res.results.map((r:any)=>(
+      <div class="card p-5">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-bold">{r.target_type} {r.target_id} — {r.reason}</p>
+            <p class="text-xs text-slate-500">{r.reporter_name ?? 'anon'} {r.reporter_email ?? ''} · {new Date(r.created_at).toLocaleDateString()} · <span class="badge bg-slate-100 text-slate-700">{r.status}</span></p>
+            {r.description ? <p class="mt-2 text-sm text-slate-700">{r.description}</p> : null}
+          </div>
+          <div class="flex gap-2">
+            <button data-review={r.id} class="btn-secondary px-3 py-1.5 text-xs">Reviewing</button>
+            <button data-resolve={r.id} class="btn-primary px-3 py-1.5 text-xs">Resolve</button>
+            <button data-dismiss={r.id} class="btn-secondary px-3 py-1.5 text-xs">Dismiss</button>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+</AdminLayout>
+
+<script>
+  const post = async (id:string, action:string)=>{
+    const res=await fetch(`/api/admin/reports/${encodeURIComponent(id)}`,{method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action})});
+    if(res.ok) location.reload(); else alert('Failed');
+  };
+  document.querySelectorAll('[data-review]').forEach(b=> b.addEventListener('click', ()=> post((b as HTMLElement).dataset.review!,'reviewing')));
+  document.querySelectorAll('[data-resolve]').forEach(b=> b.addEventListener('click', ()=> post((b as HTMLElement).dataset.resolve!,'resolved')));
+  document.querySelectorAll('[data-dismiss]').forEach(b=> b.addEventListener('click', ()=> post((b as HTMLElement).dataset.dismiss!,'dismissed')));
+</script>

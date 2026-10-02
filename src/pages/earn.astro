@@ -1,0 +1,82 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { Camera, Video, Building2, Utensils, MapPin, ShieldCheck, Wallet, Check, ArrowRight } from '@lucide/astro';
+---
+
+<BaseLayout
+  title="Earn with PG Hunter — Campus Creator Program"
+  description="Become a PG Hunter Campus Creator. Visit PGs, create verified ground-level content and earn. Paid assignments, clear quality rules, and a simple workflow."
+>
+  <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-3xl text-center">
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-700">
+        <Wallet class="h-3.5 w-3.5" /> Earn with PG Hunter
+      </span>
+      <h1 class="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+        Become a PG Hunter Partner
+      </h1>
+      <p class="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+        Go to the PGs we assign you and get them on PG Hunter. That’s it.
+      </p>
+      <div class="mt-6 flex flex-wrap justify-center gap-3">
+        <a href="/login?mode=signup" class="btn-primary px-8">Apply as Creator <ArrowRight class="h-4 w-4" /></a>
+      </div>
+    </div>
+
+    <div class="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2">
+      <div class="card p-6">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-700"><Camera class="h-5 w-5" /></span>
+        <h2 class="mt-4 text-sm font-bold text-slate-900">What partners do</h2>
+        <ol class="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-relaxed text-slate-600 marker:font-semibold marker:text-brand-600">
+          <li>Choose PGs near you that we assign you.</li>
+          <li>Make their walkthrough videos.</li>
+          <li>Do minor touch-ups and take pictures.</li>
+          <li>Interview the PG owner or manager.</li>
+          <li>Get reviews from students already staying there.</li>
+          <li>Collect information about nearby facilities.</li>
+        </ol>
+      </div>
+      <div class="card p-6">
+        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><Check class="h-5 w-5" /></span>
+        <h2 class="mt-4 text-sm font-bold text-slate-900">How you get work?</h2>
+        <ol class="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-relaxed text-slate-600 marker:font-semibold marker:text-brand-600">
+          <li>Apply</li>
+          <li>Share your resume and previous photography/videography projects.</li>
+          <li>Admin approves your application.</li>
+          <li>Visit the PG and shoot.</li>
+          <li>Upload everything through our platform.</li>
+          <li>Admin reviews and publishes it.</li>
+          <li>Get paid.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-6 lg:grid-cols-2">
+      <section class="card p-6">
+        <h2 class="text-base font-bold text-slate-900">Expectations in your work</h2>
+        <ul class="mt-4 grid grid-cols-1 gap-2 text-sm text-slate-600 sm:grid-cols-2">
+          <li class="flex items-center gap-2"><Building2 class="h-4 w-4 text-brand-600" /> Room photos</li>
+          <li class="flex items-center gap-2"><Camera class="h-4 w-4 text-brand-600" /> PG exterior photos</li>
+          <li class="flex items-center gap-2"><Video class="h-4 w-4 text-brand-600" /> Room walkthrough</li>
+          <li class="flex items-center gap-2"><Video class="h-4 w-4 text-brand-600" /> Common area video</li>
+          <li class="flex items-center gap-2"><MapPin class="h-4 w-4 text-brand-600" /> Nearby-area video</li>
+          <li class="flex items-center gap-2"><Utensils class="h-4 w-4 text-brand-600" /> Mess / food review</li>
+          <li class="flex items-center gap-2"><ShieldCheck class="h-4 w-4 text-brand-600" /> Safety & environment notes</li>
+          <li class="flex items-center gap-2"><Building2 class="h-4 w-4 text-brand-600" /> Owner / student interview</li>
+          <li class="flex items-center gap-2"><MapPin class="h-4 w-4 text-brand-600" /> Transport & college connectivity</li>
+          <li class="flex items-center gap-2"><Camera class="h-4 w-4 text-brand-600" /> Nearby shops & facilities</li>
+        </ul>
+      </section>
+
+      <section class="card p-6">
+        <h2 class="text-base font-bold text-slate-900">Quality & content rules</h2>
+        <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-slate-600">
+          <li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600"></span> Natural light, steady shots, no heavy filters. Show the real room as students will see it.</li>
+          <li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600"></span> No personal data in photos (IDs, faces without consent). Get verbal consent for interviews.</li>
+          <li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600"></span> Honest narration only — no exaggerated claims. Safety and cleanliness observations must be factual.</li>
+          <li class="flex gap-2"><span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600"></span> By uploading you grant PG Hunter permission to use, edit and publish the content per the Creator Agreement (simple consent on upload; lawyer review pending).</li>
+        </ul>
+      </section>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,36 @@
+---
+export const prerender = false;
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { currentUser } from '@/lib/server/auth';
+const user = await currentUser(Astro as any);
+---
+
+<AdminLayout title="Settings — Admin" active="settings">
+  <h1 class="text-2xl font-extrabold">Settings</h1>
+  <p class="mt-1 text-sm text-slate-500">Minimal foundation — no destructive controls.</p>
+
+  <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <section class="card p-6">
+      <h2 class="text-sm font-bold">Admin account</h2>
+      <dl class="mt-3 space-y-2 text-sm">
+        <div class="flex justify-between"><dt class="text-slate-500">Name</dt><dd class="font-semibold">{user?.name ?? '—'}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Email</dt><dd class="font-semibold">{user?.email ?? '—'}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Role</dt><dd class="font-semibold">{user?.role ?? '—'}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Admin</dt><dd class="font-semibold">{user?.is_admin ? 'yes' : 'no'}</dd></div>
+      </dl>
+    </section>
+    <section class="card p-6">
+      <h2 class="text-sm font-bold">Platform</h2>
+      <p class="mt-2 text-sm text-slate-600">Astro + Cloudflare Workers + D1 + R2. Admin via <code>is_admin</code> flag (no third role).</p>
+      <ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-600">
+        <li>Auth: <code>requireAdmin()</code> server-side on every <code>/api/admin/*</code></li>
+        <li>Moderation audit: <code>moderation_actions</code></li>
+        <li>Reports: <code>reports</code></li>
+      </ul>
+    </section>
+    <section class="card p-6 lg:col-span-2">
+      <h2 class="text-sm font-bold">System status</h2>
+      <p class="mt-2 text-sm text-slate-600">If data is missing, admin shows “No data yet” rather than fake numbers. Event history preserved. No secret management UI in this phase.</p>
+    </section>
+  </div>
+</AdminLayout>

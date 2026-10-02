@@ -1,0 +1,651 @@
+---
+import { Plus, CloudUpload, Save, Send, Info, Link as LinkIcon } from '@lucide/astro';
+import { amenities } from '@/data/amenities';
+import { propertyTypeOptions, genderOptions, foodTypeOptions } from '@/lib/owner';
+
+interface Props {
+  mode: 'create' | 'edit';
+  listingId?: string;
+}
+
+const { mode, listingId } = Astro.props;
+const edit = mode === 'edit';
+---
+
+<section class="card" aria-labelledby="listing-form-heading">
+  <div class="border-b border-slate-100 px-5 py-4">
+    <h2 id="listing-form-heading" class="text-base font-bold text-slate-900">
+      {edit ? 'Edit listing' : 'Add a PG'}
+    </h2>
+    <p class="mt-0.5 text-sm text-slate-500">
+      Save a draft any time — submit for review when you're ready.
+    </p>
+  </div>
+
+  <form
+    id="listing-form"
+    class="grid grid-cols-1 gap-6 px-5 py-6"
+    data-mode={mode}
+    data-listing-id={listingId ?? ''}
+  >
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="sm:col-span-2">
+        <label for="f-name" class="mb-1.5 block text-sm font-semibold text-slate-700">PG / property name *</label>
+        <input id="f-name" type="text" name="name" placeholder="e.g. Sunrise Boys PG" required
+          class="field w-full" />
+      </div>
+
+      <div>
+        <label for="f-type" class="mb-1.5 block text-sm font-semibold text-slate-700">Property type</label>
+        <select id="f-type" name="propertyType" class="field w-full appearance-none">
+          {propertyTypeOptions.map((o) => <option value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+
+      <div>
+        <label for="f-gender" class="mb-1.5 block text-sm font-semibold text-slate-700">Gender</label>
+        <select id="f-gender" name="gender" class="field w-full appearance-none">
+          {genderOptions.map((o) => <option value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+
+      <div class="sm:col-span-2">
+        <label for="f-address" class="mb-1.5 block text-sm font-semibold text-slate-700">Full address</label>
+        <input id="f-address" type="text" name="address" placeholder="e.g. C-9/56, Sector 7, Rohini, Delhi"
+          class="field w-full" />
+      </div>
+
+      <div>
+        <label for="f-locality" class="mb-1.5 block text-sm font-semibold text-slate-700">Locality / area</label>
+        <input id="f-locality" type="text" name="locality" placeholder="e.g. Rohini" class="field w-full" />
+      </div>
+
+      <div>
+        <label for="f-city" class="mb-1.5 block text-sm font-semibold text-slate-700">City</label>
+        <input id="f-city" type="text" name="city" placeholder="e.g. Delhi" value="Delhi" class="field w-full" />
+      </div>
+
+      <div class="sm:col-span-2">
+        <label for="f-description" class="mb-1.5 block text-sm font-semibold text-slate-700">Description</label>
+        <textarea id="f-description" name="description" rows="4"
+          placeholder="What makes this PG great? Nearby colleges, food, crowd, vibe…"
+          class="w-full resize-none rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none"></textarea>
+      </div>
+    </div>
+
+    <!-- Rooms -------------------------------------------------------- -->
+    <fieldset class="border-t border-slate-100 pt-5">
+      <legend class="text-sm font-bold text-slate-900">Rooms & pricing</legend>
+      <p class="mt-0.5 text-xs text-slate-500">Add at least one room with a monthly rent.</p>
+      <div id="rooms-editor" class="mt-4 space-y-3"></div>
+      <button type="button" id="add-room-btn" class="btn-secondary mt-3">
+        <Plus class="h-4 w-4" /> Add room
+      </button>
+    </fieldset>
+
+    <!-- Amenities ---------------------------------------------------- -->
+    <fieldset class="border-t border-slate-100 pt-5">
+      <legend class="text-sm font-bold text-slate-900">Amenities</legend>
+      <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {amenities.map((a) => (
+          <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800">
+            <input type="checkbox" value={a.slug} class="sr-only" />
+            {a.label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+
+    <!-- Food --------------------------------------------------------- -->
+    <fieldset class="border-t border-slate-100 pt-5">
+      <legend class="text-sm font-bold text-slate-900">Food & mess</legend>
+      <label class="mt-3 flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800">
+        <input id="f-food-available" type="checkbox" class="sr-only" />
+        Mess / food available
+      </label>
+      <div id="food-details" class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label for="f-food-type" class="mb-1.5 block text-sm font-semibold text-slate-700">Type</label>
+          <select id="f-food-type" class="field w-full appearance-none">
+            {foodTypeOptions.map((o) => <option value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label for="f-food-cost" class="mb-1.5 block text-sm font-semibold text-slate-700">Monthly cost (₹)</label>
+          <input id="f-food-cost" type="number" min="0" step="100" placeholder="e.g. 4500" class="field w-full" />
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- Rules & curfew ----------------------------------------------- -->
+    <fieldset class="border-t border-slate-100 pt-5">
+      <legend class="text-sm font-bold text-slate-900">Rules & curfew</legend>
+      <div id="rules-editor" class="mt-3 space-y-3"></div>
+      <button type="button" id="add-rule-btn" class="btn-secondary mt-3">
+        <Plus class="h-4 w-4" /> Add rule
+      </button>
+      <div class="mt-4">
+        <label for="f-curfew" class="mb-1.5 block text-sm font-semibold text-slate-700">Curfew (optional)</label>
+        <input id="f-curfew" type="text" placeholder="e.g. 11:00 PM on weekdays" class="field w-full" />
+      </div>
+    </fieldset>
+
+    <!-- Photos ------------------------------------------------------- -->
+    <fieldset class="border-t border-slate-100 pt-5">
+      <legend class="flex items-center gap-2 text-sm font-bold text-slate-900">
+        Photos <span class="text-xs font-medium text-slate-400">(stored on Cloudflare R2)</span>
+      </legend>
+      <div id="photo-grid" class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
+      <label class="mt-4 flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 text-slate-500 transition-colors hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700">
+        <CloudUpload class="h-6 w-6" />
+        <span class="text-sm font-semibold">Upload photos</span>
+        <span class="text-xs">JPEG / PNG / WebP, up to 10 MB each</span>
+        <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple class="sr-only" />
+      </label>
+      {!edit && (
+        <p class="mt-2 flex items-start gap-2 rounded-xl bg-brand-50 px-4 py-3 text-sm font-medium text-brand-800">
+          <Info class="mt-0.5 h-4 w-4 shrink-0" />
+          Photos upload now and attach automatically when you save the draft.
+        </p>
+      )}
+      <p id="upload-status" class="mt-2 hidden text-sm font-medium text-emerald-700" role="status"></p>
+    </fieldset>
+    <!-- Videos ------------------------------------------------------- -->
+    {edit && (
+      <fieldset class="border-t border-slate-100 pt-5">
+        <legend class="flex items-center gap-2 text-sm font-bold text-slate-900">
+          Videos <span class="text-xs font-medium text-slate-400">(YouTube)</span>
+        </legend>
+        <div id="video-grid" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2"></div>
+        <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p class="mb-3 text-xs font-semibold text-slate-600">Add a video walkthrough</p>
+          <div class="flex flex-col gap-3 sm:flex-row">
+            <input
+              id="video-url-input"
+              type="url"
+            placeholder="Paste a YouTube link or video ID…"
+              class="field flex-1"
+            />
+            <input
+              id="video-title-input"
+              type="text"
+              placeholder="Title (optional)"
+              class="field w-full sm:w-48"
+            />
+            <button type="button" id="add-video-btn" class="btn-primary shrink-0">
+              <LinkIcon class="h-4 w-4" /> Add video
+            </button>
+          </div>
+          <p id="video-status" class="mt-2 hidden text-sm font-medium text-emerald-700" role="status"></p>
+          <p class="mt-2 text-xs text-slate-400">
+            Supported: YouTube full URLs, Shorts links, embeds, or bare video IDs.
+          </p>
+        </div>
+      </fieldset>
+    )}
+
+    <div id="form-error" class="hidden rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700" role="alert"></div>
+    <div id="form-success" class="hidden rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700" role="status"></div>
+
+    <div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 pt-5">
+      <button type="button" id="save-draft-btn" class="btn-secondary">
+        <Save class="h-4 w-4" /> {edit ? 'Save changes' : 'Save draft'}
+      </button>
+      <button type="button" id="submit-btn" class="btn-primary">
+        <Send class="h-4 w-4" /> Submit for review
+      </button>
+    </div>
+  </form>
+</section>
+
+<style>
+  @reference "../styles/global.css";
+</style>
+
+<script>
+  import {
+    createListing,
+    updateListing,
+    submitListing,
+    uploadFile,
+    getOwnerListing,
+    addVideo,
+    deleteMedia,
+  } from '@/lib/auth';
+  import type { Listing, ListingInput, ListingMedia } from '@/lib/auth';
+  import { roomTypeOptions } from '@/lib/owner';
+
+  const form = document.getElementById('listing-form') as HTMLFormElement;
+  const mode = form.dataset.mode as 'create' | 'edit';
+  const listingId = form.dataset.listingId || undefined;
+  const roomsEl = document.getElementById('rooms-editor')!;
+  const addRoomBtn = document.getElementById('add-room-btn') as HTMLButtonElement;
+  const rulesEl = document.getElementById('rules-editor')!;
+  const addRuleBtn = document.getElementById('add-rule-btn') as HTMLButtonElement;
+  const errorEl = document.getElementById('form-error')!;
+  const successEl = document.getElementById('form-success')!;
+  const saveBtn = document.getElementById('save-draft-btn') as HTMLButtonElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const foodCheckbox = form.querySelector<HTMLInputElement>('#f-food-available')!;
+  const foodDetails = document.getElementById('food-details')!;
+
+  const flash = (el: HTMLElement, show: boolean) => el.classList.toggle('hidden', !show);
+  const setStatus = (el: HTMLElement, msg: string) => {
+    el.textContent = msg;
+    flash(el, true);
+  };
+
+  /* ---- Room editor -------------------------------------------------- */
+  const emptyRoom = () => ({
+    roomType: 'double',
+    occupancy: 'Double sharing',
+    rent: 0,
+    deposit: 0,
+    available: true,
+  });
+
+  const occupancyFor = (roomType: string): string =>
+    roomTypeOptions.find((o) => o.value === roomType)?.occupancy ?? 'Sharing';
+
+  const roomRow = (room: any = emptyRoom()) => {
+    const row = document.createElement('div');
+    row.className = 'rounded-xl border border-slate-200 p-3';
+    row.innerHTML = `
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div class="col-span-2 sm:col-span-1">
+          <label class="mb-1 block text-xs font-semibold text-slate-500">Room type</label>
+          <select data-r="roomType" class="field w-full appearance-none !min-h-9 px-2.5 py-1.5 text-xs">
+            ${roomTypeOptions
+              .map((o) => `<option value="${o.value}" ${o.value === room.roomType ? 'selected' : ''}>${o.label}</option>`)
+              .join('')}
+          </select>
+        </div>
+        <div class="col-span-2 sm:col-span-1">
+          <label class="mb-1 block text-xs font-semibold text-slate-500">Sharing</label>
+          <input data-r="occupancy" value="${room.occupancy}" class="field w-full !min-h-9 px-2.5 py-1.5 text-xs" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-slate-500">Rent (₹/mo)</label>
+          <input data-r="rent" type="number" min="0" value="${room.rent || ''}" placeholder="0" class="field w-full !min-h-9 px-2.5 py-1.5 text-xs" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold text-slate-500">Deposit (₹)</label>
+          <input data-r="deposit" type="number" min="0" value="${room.deposit || ''}" placeholder="0" class="field w-full !min-h-9 px-2.5 py-1.5 text-xs" />
+        </div>
+        <div class="flex items-end justify-between gap-2">
+          <label class="flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 text-xs font-semibold text-slate-600">
+            <input data-r="available" type="checkbox" ${room.available !== false ? 'checked' : ''} /> Available
+          </label>
+          <button type="button" data-rm-room class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600" aria-label="Remove room">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </div>`;
+
+    row.querySelector<HTMLSelectElement>('[data-r="roomType"]')!.addEventListener('change', (e) => {
+      const select = e.target as HTMLSelectElement;
+      row.querySelector<HTMLInputElement>('[data-r="occupancy"]')!.value = occupancyFor(select.value);
+    });
+    row.querySelector<HTMLButtonElement>('[data-rm-room]')!.addEventListener('click', () => row.remove());
+    return row;
+  };
+
+  const readRooms = () =>
+    Array.from(roomsEl.querySelectorAll(':scope > div')).map((row) => ({
+      roomType: row.querySelector<HTMLSelectElement>('[data-r="roomType"]')!.value,
+      occupancy: row.querySelector<HTMLInputElement>('[data-r="occupancy"]')!.value,
+      rent: Number(row.querySelector<HTMLInputElement>('[data-r="rent"]')!.value) || 0,
+      deposit: Number(row.querySelector<HTMLInputElement>('[data-r="deposit"]')!.value) || 0,
+      available: row.querySelector<HTMLInputElement>('[data-r="available"]')!.checked,
+    }));
+
+  addRoomBtn.addEventListener('click', () => roomsEl.appendChild(roomRow()));
+
+  /* ---- Rules editor -------------------------------------------------- */
+  const ruleRow = (value = '') => {
+    const wrap = document.createElement('div');
+    wrap.className = 'flex items-center gap-2';
+    wrap.innerHTML = `
+      <input value="${value}" placeholder="e.g. No outside visitors after 10 PM" class="field w-full" />
+      <button type="button" data-rm-rule class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600" aria-label="Remove rule">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>`;
+    wrap.querySelector<HTMLButtonElement>('[data-rm-rule]')!.addEventListener('click', () => wrap.remove());
+    return wrap;
+  };
+  addRuleBtn.addEventListener('click', () => rulesEl.appendChild(ruleRow()));
+
+  /* ---- Input assembly ------------------------------------------------ */
+  const collect = (): ListingInput => ({
+    name: (form.querySelector<HTMLInputElement>('#f-name')!.value || '').trim(),
+    propertyType: (form.querySelector<HTMLSelectElement>('#f-type')!.value || 'pg') as any,
+    gender: (form.querySelector<HTMLSelectElement>('#f-gender')!.value || 'co-ed') as any,
+    address: (form.querySelector<HTMLInputElement>('#f-address')!.value || '').trim(),
+    locality: (form.querySelector<HTMLInputElement>('#f-locality')!.value || '').trim(),
+    city: (form.querySelector<HTMLInputElement>('#f-city')!.value || '').trim(),
+    description: (form.querySelector<HTMLTextAreaElement>('#f-description')!.value || '').trim(),
+    amenitySlugs: Array.from(form.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'))
+      .filter((c) => c.checked && c.value && c.name !== 'food')
+      .map((c) => c.value),
+    rules: Array.from(rulesEl.querySelectorAll<HTMLInputElement>('input'))
+      .map((i) => i.value.trim())
+      .filter(Boolean),
+    curfew: (form.querySelector<HTMLInputElement>('#f-curfew')!.value || '').trim() || undefined,
+    food: {
+      available: form.querySelector<HTMLInputElement>('#f-food-available')!.checked,
+      type: (form.querySelector<HTMLSelectElement>('#f-food-type')!.value || 'both') as any,
+      monthlyCost: Number(form.querySelector<HTMLInputElement>('#f-food-cost')!.value) || undefined,
+    },
+    rooms: readRooms(),
+    pendingMediaIds,
+  });
+
+  /* ---- Media state --------------------------------------------------- */
+  let media: ListingMedia[] = [];
+  let pendingMediaIds: string[] = [];
+
+  /* ---- Photo management --------------------------------------------- */
+  const renderPhotos = () => {
+    const grid = document.getElementById('photo-grid');
+    if (!grid) return;
+    const photos = media.filter((m) => m.type === 'photo');
+    grid.innerHTML = photos
+      .map(
+        (m) => `
+        <div class="group relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-100" data-media-id="${m.id}">
+          <img src="${m.url ?? m.externalId}" alt="${m.title}" loading="lazy" decoding="async" class="h-full w-full object-cover" />
+          <div class="absolute inset-0 flex items-start justify-between bg-gradient-to-b from-black/40 via-transparent to-black/40 p-2 opacity-0 transition-opacity group-hover:opacity-100">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-slate-500 cursor-grab active:cursor-grabbing" data-drag-handle title="Drag to reorder">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m8 6 4-4 4 4"/><path d="m8 18 4 4 4-4"/></svg>
+            </span>
+            <button type="button" data-delete-media="${m.id}" class="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-rose-500 transition-colors hover:bg-rose-500 hover:text-white" aria-label="Delete photo">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+        </div>`
+      )
+      .join('');
+
+    // Wire up delete buttons
+    grid.querySelectorAll<HTMLButtonElement>('[data-delete-media]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const mediaId = btn.dataset.deleteMedia!;
+        if (mode === 'create') {
+          media = media.filter((m) => m.id !== mediaId);
+          pendingMediaIds = pendingMediaIds.filter((id) => id !== mediaId);
+          renderPhotos();
+          return;
+        }
+        if (!confirm('Delete this photo?')) return;
+        btn.disabled = true;
+        try {
+          await deleteMedia(listingId!, mediaId);
+          media = media.filter((m) => m.id !== mediaId);
+          renderPhotos();
+          renderVideos();
+        } catch (err) {
+          alert((err as Error).message);
+        }
+      });
+    });
+  };
+
+  const photoInput = document.getElementById('photo-input') as HTMLInputElement | null;
+  const uploadStatus = document.getElementById('upload-status') as HTMLElement | null;
+  photoInput?.addEventListener('change', async () => {
+    if (!uploadStatus) return;
+    flash(uploadStatus, false);
+    const files = Array.from(photoInput.files ?? []);
+    if (!files.length) return;
+    uploadStatus.className = 'mt-2 text-sm font-medium text-slate-500';
+    setStatus(uploadStatus, `Uploading ${files.length} photo${files.length > 1 ? 's' : ''}…`);
+    photoInput.disabled = true;
+    for (const file of files) {
+      try {
+        const result = await uploadFile('listing-images', file, listingId ? { listingId } : undefined);
+        if (!listingId) {
+          pendingMediaIds.push(result.file.id);
+          media.push({
+            id: result.file.id,
+            type: 'photo',
+            provider: 'r2',
+            externalId: result.file.key,
+            url: result.file.url,
+            title: result.file.fileName,
+          });
+        }
+      } catch (err) {
+        uploadStatus.className = 'mt-2 text-sm font-medium text-rose-700';
+        setStatus(uploadStatus, `Could not upload ${file.name}: ${(err as Error).message}`);
+        photoInput.disabled = false;
+        return;
+      }
+    }
+    if (listingId) {
+      const fresh = await getOwnerListing(listingId);
+      media = fresh.listing.media;
+    }
+    renderPhotos();
+    renderVideos();
+    uploadStatus.className = 'mt-2 text-sm font-medium text-emerald-700';
+    setStatus(uploadStatus, 'Photos uploaded successfully.');
+    photoInput.disabled = false;
+    photoInput.value = '';
+  });
+
+  /* ---- Video management --------------------------------------------- */
+  const ytThumb = (id: string) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+  const renderVideos = () => {
+    const grid = document.getElementById('video-grid');
+    if (!grid) return;
+    const videos = media.filter((m) => m.type === 'video');
+    if (videos.length === 0) {
+      grid.innerHTML = `<p class="col-span-full py-4 text-center text-sm text-slate-400">No videos added yet.</p>`;
+      return;
+    }
+    grid.innerHTML = videos
+      .map((m) => {
+        const thumb = m.provider === 'youtube' ? ytThumb(m.externalId) : '';
+        const link = m.provider === 'youtube' ? `https://www.youtube.com/watch?v=${m.externalId}` : '#';
+        return `
+        <div class="group relative overflow-hidden rounded-xl bg-slate-900" data-media-id="${m.id}">
+          <div class="aspect-video">
+            ${thumb
+              ? `<img src="${thumb}" alt="${m.title}" loading="lazy" decoding="async" class="h-full w-full object-cover opacity-80" />`
+              : `<div class="flex h-full items-center justify-center bg-slate-800 text-slate-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </div>`
+            }
+            <div class="absolute inset-0 flex items-center justify-center">
+              <a href="${link}" target="_blank" rel="noopener" class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-brand-700 shadow-lg transition-transform hover:scale-110">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </a>
+            </div>
+          </div>
+          <div class="flex items-center justify-between px-3 py-2">
+            <div class="min-w-0">
+              <p class="truncate text-xs font-semibold text-white">${m.title}</p>
+              <p class="text-[10px] font-medium text-slate-400 capitalize">${m.provider}</p>
+            </div>
+            <button type="button" data-delete-media="${m.id}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-500/20 hover:text-rose-400" aria-label="Remove video">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+        </div>`;
+      })
+      .join('');
+
+    // Wire up delete
+    grid.querySelectorAll<HTMLButtonElement>('[data-delete-media]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const mediaId = btn.dataset.deleteMedia!;
+        if (!confirm('Remove this video?')) return;
+        btn.disabled = true;
+        try {
+          await deleteMedia(listingId!, mediaId);
+          media = media.filter((m) => m.id !== mediaId);
+          renderVideos();
+          renderPhotos();
+        } catch (err) {
+          alert((err as Error).message);
+        }
+      });
+    });
+  };
+
+  // Add video button
+  const videoUrlInput = document.getElementById('video-url-input') as HTMLInputElement | null;
+  const videoTitleInput = document.getElementById('video-title-input') as HTMLInputElement | null;
+  const addVideoBtn = document.getElementById('add-video-btn') as HTMLButtonElement | null;
+  const videoStatus = document.getElementById('video-status') as HTMLElement | null;
+
+  addVideoBtn?.addEventListener('click', async () => {
+    if (!videoUrlInput || !videoStatus || !listingId) return;
+    flash(videoStatus, false);
+    const url = videoUrlInput.value.trim();
+    if (!url) {
+      videoStatus.className = 'mt-2 text-sm font-medium text-rose-700';
+      setStatus(videoStatus, 'Please enter a video URL.');
+      return;
+    }
+
+    addVideoBtn.disabled = true;
+    addVideoBtn.textContent = 'Adding…';
+
+    try {
+      const result = await addVideo({
+        listingId,
+        url,
+        title: videoTitleInput?.value.trim() || 'Room tour',
+      });
+      media.push(result.media);
+      renderVideos();
+      videoUrlInput.value = '';
+      if (videoTitleInput) videoTitleInput.value = '';
+      videoStatus.className = 'mt-2 text-sm font-medium text-emerald-700';
+      setStatus(videoStatus, 'Video added!');
+    } catch (err) {
+      videoStatus.className = 'mt-2 text-sm font-medium text-rose-700';
+      setStatus(videoStatus, (err as Error).message);
+    } finally {
+      addVideoBtn.disabled = false;
+      addVideoBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Add video';
+    }
+  });
+
+  // Enter key in URL input triggers add
+  videoUrlInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addVideoBtn?.click();
+    }
+  });
+
+  /* ---- Save + submit -------------------------------------------------- */
+  const persist = async (): Promise<Listing> => {
+    const input = collect();
+    if (!input.name) throw new Error('Please enter a name for the PG.');
+    if (!input.rooms.length) throw new Error('Add at least one room with a monthly rent.');
+    if (input.rooms.some((r) => !r.rent || r.rent < 0)) throw new Error('Each room needs a valid monthly rent.');
+    if (mode === 'edit' && listingId) {
+      const { listing } = await updateListing(listingId, input);
+      return listing;
+    }
+    const { listing } = await createListing(input);
+    return listing;
+  };
+
+  const save = async () => {
+    flash(errorEl, false);
+    flash(successEl, false);
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    try {
+      const listing = await persist();
+      flash(successEl, true);
+      setStatus(successEl, mode === 'edit' ? 'Changes saved.' : 'Draft saved with your photos.');
+      if (mode === 'create') {
+        setTimeout(() => {
+          window.location.href = `/owner/listings/${listing.id}/edit`;
+        }, 1200);
+      }
+    } catch (err) {
+      setStatus(errorEl, (err as Error).message);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = mode === 'edit' ? 'Save changes' : 'Save draft';
+    }
+  };
+
+  const submit = async () => {
+    flash(errorEl, false);
+    flash(successEl, false);
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+    try {
+      const listing = await persist();
+      await submitListing(listing.id);
+      setStatus(successEl, 'Submitted for review! Our team will review your listing shortly.');
+      setTimeout(() => {
+        window.location.href = '/owner/listings';
+      }, 1500);
+    } catch (err) {
+      setStatus(errorEl, (err as Error).message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit for review';
+    }
+  };
+
+  saveBtn.addEventListener('click', save);
+  submitBtn.addEventListener('click', submit);
+
+  /* ---- Populate (edit mode) -------------------------------------------- */
+  const populate = (l: Listing) => {
+    form.querySelector<HTMLInputElement>('#f-name')!.value = l.name;
+    form.querySelector<HTMLSelectElement>('#f-type')!.value = l.propertyType;
+    form.querySelector<HTMLSelectElement>('#f-gender')!.value = l.gender;
+    form.querySelector<HTMLInputElement>('#f-address')!.value = l.address;
+    form.querySelector<HTMLInputElement>('#f-locality')!.value = l.locality;
+    form.querySelector<HTMLInputElement>('#f-city')!.value = l.city;
+    form.querySelector<HTMLTextAreaElement>('#f-description')!.value = l.description;
+
+    form.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((c) => {
+      if (!c.value || c.name === 'food') return;
+      c.checked = l.amenitySlugs.includes(c.value);
+    });
+
+    l.rules.forEach((r) => rulesEl.appendChild(ruleRow(r)));
+    if (l.rules.length === 0) rulesEl.appendChild(ruleRow());
+
+    form.querySelector<HTMLInputElement>('#f-curfew')!.value = l.curfew ?? '';
+    form.querySelector<HTMLInputElement>('#f-food-available')!.checked = Boolean(l.food?.available);
+    if (l.food?.type) form.querySelector<HTMLSelectElement>('#f-food-type')!.value = l.food.type;
+    if (l.food?.monthlyCost) form.querySelector<HTMLInputElement>('#f-food-cost')!.value = String(l.food.monthlyCost);
+    foodDetails.classList.toggle('hidden', !l.food?.available);
+
+    l.rooms.forEach((r) => roomsEl.appendChild(roomRow(r)));
+    if (l.rooms.length === 0) roomsEl.appendChild(roomRow());
+
+    media = l.media;
+    renderPhotos();
+    renderVideos();
+  };
+
+  foodCheckbox.addEventListener('change', () => foodDetails.classList.toggle('hidden', !foodCheckbox.checked));
+
+  if (mode === 'edit' && listingId) {
+    getOwnerListing(listingId)
+      .then(({ listing }) => populate(listing))
+      .catch((err) => {
+        setStatus(errorEl, (err as Error).message);
+        roomsEl.appendChild(roomRow());
+        rulesEl.appendChild(ruleRow());
+      });
+  } else {
+    roomsEl.appendChild(roomRow());
+    rulesEl.appendChild(ruleRow());
+  }
+</script>
+

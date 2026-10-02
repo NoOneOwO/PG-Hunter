@@ -1,0 +1,93 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { Bookmark, ArrowRight } from '@lucide/astro';
+---
+
+<BaseLayout
+  title="Saved PGs — Your Shortlist | PG Hunter"
+  description="Save and compare PGs you like. Login required to build your shortlist on PG Hunter."
+>
+  <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div id="saved-guest" class="mx-auto max-w-3xl text-center">
+      <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
+        <Bookmark class="h-8 w-8" />
+      </span>
+      <h1 class="mt-6 text-3xl font-extrabold tracking-tight text-slate-900">
+        Your saved PGs
+      </h1>
+      <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600 sm:text-base">
+        Save the PGs you like and compare them side by side. This feature needs an account so
+        your shortlist follows you.
+      </p>
+      <a href="/login?next=/saved" class="btn-primary mt-8 px-8">
+        Login to view saved PGs
+        <ArrowRight class="h-4 w-4" />
+      </a>
+    </div>
+
+    <div id="saved-root" class="hidden">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Your saved PGs</h1>
+          <p class="mt-1 text-sm text-slate-500">
+            <span id="saved-count">0</span> PGs in your shortlist
+          </p>
+        </div>
+        <a href="/pgs-near-you" class="btn-secondary">
+          Browse more PGs
+          <ArrowRight class="h-4 w-4" />
+        </a>
+      </div>
+
+      <div id="saved-empty" class="mt-10 hidden rounded-xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center">
+        <p class="text-lg font-bold text-slate-900">Nothing saved yet</p>
+        <p class="mt-1 text-sm text-slate-500">Tap the bookmark icon on any PG to add it to your shortlist.</p>
+        <a href="/pgs-near-you" class="btn-primary mt-6">Browse PGs near you</a>
+      </div>
+
+      <div id="saved-grid" class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"></div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { getSession, getSavedIds, toggleSaved } from '@/lib/auth';
+  import { renderSavedGrid } from '@/lib/savedPgs';
+
+  const guest = document.getElementById('saved-guest')!;
+  const root = document.getElementById('saved-root')!;
+  const grid = document.getElementById('saved-grid')!;
+  const empty = document.getElementById('saved-empty')!;
+  const countEl = document.getElementById('saved-count')!;
+
+  const render = async () => {
+    const ids = await getSavedIds();
+    countEl.textContent = String(ids.length);
+    const count = renderSavedGrid(grid, ids, { removable: true });
+    empty.classList.toggle('hidden', count > 0);
+  };
+
+  grid.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-remove-saved]');
+    if (!btn) return;
+    await toggleSaved(btn.dataset.removeSaved ?? '');
+    await render();
+  });
+
+  const init = async () => {
+    const user = await getSession();
+    if (!user) {
+      // Logged out: keep the login CTA visible.
+      guest.classList.remove('hidden');
+      return;
+    }
+    guest.classList.add('hidden');
+    root.classList.remove('hidden');
+    await render();
+  };
+
+  void init();
+
+  // Live updates when a card is saved/removed elsewhere (e.g. another tab).
+  window.addEventListener('pghunter:saved', () => void render());
+</script>

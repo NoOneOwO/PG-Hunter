@@ -1,0 +1,130 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import {
+  BadgeCheck,
+  MessagesSquare,
+  TrendingUp,
+  Video,
+  Building2,
+  ArrowRight,
+  Phone,
+} from '@lucide/astro';
+
+const steps = [
+  { n: '1', title: 'Create your owner account', body: 'Sign up in a couple of minutes with your details.' },
+  { n: '2', title: 'Add your property', body: 'Rooms, rent, availability, amenities, rules, food and photos.' },
+  { n: '3', title: 'Receive enquiries', body: 'Students send enquiries and you respond — numbers stay private.' },
+];
+
+const benefits = [
+  { Icon: Video, title: 'Video-first listings', body: 'Stand out with walkthrough videos and owner interviews that students actually watch.' },
+  { Icon: MessagesSquare, title: 'Qualified student leads', body: 'Receive genuine enquiries from students near your property — without exposing your number publicly.' },
+  { Icon: TrendingUp, title: 'Full control', body: 'Manage rooms, rents, availability and media from your own dashboard whenever you want.' },
+  { Icon: BadgeCheck, title: 'Earn trust with verification', body: 'Listings verified by PG Hunter get a trust badge students look for.' },
+];
+---
+
+<BaseLayout
+  title="For Owners — List Your PG & Get Student Leads | PG Hunter"
+  description="List your PG, rooms or co-living space on PG Hunter. Receive enquiries from students near your property. No broker, no hidden charges."
+>
+  <section class="bg-gradient-to-b from-brand-50 via-brand-50/40 to-white">
+    <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <div class="mx-auto max-w-3xl text-center">
+        <span class="badge bg-brand-100 text-brand-800">
+          <Building2 class="h-3.5 w-3.5" /> For Owners
+        </span>
+        <h1 class="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
+          Empty beds cost you money every month.
+        </h1>
+        <p class="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
+          List your PG on PG Hunter and get discovered by students looking for accommodation
+          near your property. You stay in control — we bring the enquiries.
+        </p>
+        <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <a href="/login?role=owner&next=/owner/plans" class="btn-primary px-8">List your PG</a>
+          <a href="mailto:hello@pghunter.in" class="btn-secondary px-8">
+            <Phone class="h-4 w-4" /> Talk to us
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="how-heading" class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <h2 id="how-heading" class="text-center text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+      How it works
+    </h2>
+    <div class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-3">
+      {steps.map((s) => (
+        <div class="relative card p-6">
+          <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-lg font-extrabold text-white">
+            {s.n}
+          </span>
+          <h3 class="mt-4 text-base font-bold text-slate-900">{s.title}</h3>
+          <p class="mt-1 text-sm leading-relaxed text-slate-600">{s.body}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section aria-labelledby="benefits-heading" class="border-t border-slate-100 bg-slate-50/60">
+    <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <h2 id="benefits-heading" class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+        Why list on PG Hunter
+      </h2>
+      <div class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {benefits.map(({ Icon, title, body }) => (
+          <div class="card p-5">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+              <Icon class="h-5 w-5" />
+            </span>
+            <h3 class="mt-4 text-sm font-bold text-slate-900">{title}</h3>
+            <p class="mt-1 text-sm leading-relaxed text-slate-600">{body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section id="verification" aria-labelledby="verification-heading" class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <h2 id="verification-heading" class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+      Verification — honest by default
+    </h2>
+    <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+      Listing your property does not automatically make it "verified". Verification is earned
+      through a real review process so students can trust what they see.
+    </p>
+    <div class="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="rounded-xl border border-slate-200 p-5">
+        <h3 class="text-sm font-bold text-slate-900">Listed</h3>
+        <p class="mt-1 text-sm text-slate-600">Owner-submitted. Live publicly but not yet reviewed by us.</p>
+      </div>
+      <div class="rounded-xl border border-brand-200 bg-brand-50/50 p-5">
+        <h3 class="text-sm font-bold text-brand-800">PG Hunter Verified</h3>
+        <p class="mt-1 text-sm text-brand-900/70">Reviewed by the PG Hunter team against our checklist.</p>
+      </div>
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5">
+        <h3 class="text-sm font-bold text-emerald-800">Rishabh IRL Verified</h3>
+        <p class="mt-1 text-sm text-emerald-900/70">Personally visited and verified by Rishabh on camera.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="border-t border-slate-100">
+    <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div class="card flex flex-col items-start gap-6 bg-brand-600 p-8 text-white lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">Ready to fill your beds?</h2>
+          <p class="mt-2 text-sm text-brand-100 sm:text-base">
+            Listings are currently being set up — drop your details and we'll reach out.
+          </p>
+        </div>
+        <a href="/login?role=owner&next=/owner/plans" class="btn-accent shrink-0 px-8">
+          Get started
+          <ArrowRight class="h-4 w-4" />
+        </a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,43 @@
+---
+import { Video, Mic, BadgeCheck, ShieldCheck } from '@lucide/astro';
+
+const features = [
+  {
+    Icon: Video,
+    title: 'Video Walkthroughs',
+    body: 'See the room, washroom and building before you visit.',
+  },
+  {
+    Icon: Mic,
+    title: 'Owner Interviews',
+    body: 'Real owners talk about the PG — rules, food and vibes.',
+  },
+  {
+    Icon: BadgeCheck,
+    title: 'Verified Listings',
+    body: 'Listings carry their real verification status, nothing more.',
+  },
+  {
+    Icon: ShieldCheck,
+    title: 'Safety First',
+    body: 'Area safety, girls PG zones and student-focused guidance.',
+  },
+];
+---
+
+<section aria-labelledby="trust-heading" class="px-4 py-12 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-7xl overflow-hidden rounded-3xl border border-brand-200/80 bg-brand-50 shadow-card">
+    <h2 id="trust-heading" class="sr-only">Why use PG Hunter</h2>
+    <ul class="grid grid-cols-1 gap-px bg-brand-200/70 sm:grid-cols-2 lg:grid-cols-4">
+      {features.map(({ Icon, title, body }) => (
+        <li class="bg-brand-50 p-7 sm:p-8 lg:p-10">
+          <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-100 text-brand-600 ring-1 ring-brand-200/70">
+            <Icon class="h-6 w-6" />
+          </span>
+          <h3 class="mt-5 text-base font-bold tracking-tight text-slate-900">{title}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-600">{body}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

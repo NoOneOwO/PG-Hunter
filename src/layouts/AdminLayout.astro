@@ -1,0 +1,172 @@
+---
+import '@/styles/global.css';
+import {
+  LayoutDashboard,
+  Building2,
+  Users,
+  GraduationCap,
+  BadgeCheck,
+  Star,
+  Flag,
+  Image as ImageIcon,
+  BarChart3,
+  Settings,
+  LogOut,
+  Shield,
+  Menu,
+  X,
+} from '@lucide/astro';
+import { currentUser, isAdmin } from '@/lib/server/auth';
+
+interface Props {
+  title?: string;
+  description?: string;
+  active?: 'dashboard' | 'pgs' | 'owners' | 'students' | 'verification' | 'experiences' | 'reports' | 'content' | 'analytics' | 'settings';
+}
+
+const { title = 'Admin — PG Hunter', description = 'PG Hunter admin control room.', active = 'dashboard' } = Astro.props;
+
+// Server-side admin guard: never trust client alone. This runs at request time (prerender=false on pages).
+const user = await currentUser(Astro as any);
+const isAuthedAdmin = Boolean(user && isAdmin(user));
+
+if (!user) {
+  Astro.response.status = 401;
+} else if (!isAuthedAdmin) {
+  Astro.response.status = 403;
+}
+
+const nav = [
+  { key: 'dashboard', label: 'Dashboard', href: '/admin', Icon: LayoutDashboard },
+  { key: 'pgs', label: 'PGs', href: '/admin/pgs', Icon: Building2 },
+  { key: 'owners', label: 'Owners', href: '/admin/owners', Icon: Users },
+  { key: 'students', label: 'Students', href: '/admin/students', Icon: GraduationCap },
+  { key: 'verification', label: 'Verification', href: '/admin/verification', Icon: BadgeCheck },
+  { key: 'experiences', label: 'Experiences', href: '/admin/experiences', Icon: Star },
+  { key: 'reports', label: 'Reports', href: '/admin/reports', Icon: Flag },
+  { key: 'content', label: 'Content', href: '/admin/content', Icon: ImageIcon },
+  { key: 'analytics', label: 'Analytics', href: '/admin/analytics', Icon: BarChart3 },
+  { key: 'settings', label: 'Settings', href: '/admin/settings', Icon: Settings },
+] as const;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#7a42e6" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
+    {isAuthedAdmin ? (
+      <div class="flex min-h-screen">
+        {/* Desktop sidebar */}
+        <aside class="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
+          <div class="flex h-16 items-center gap-2 border-b border-slate-100 px-5">
+            <img src="/favicon.svg" alt="" width="28" height="28" class="h-7 w-7" />
+            <span class="text-sm font-extrabold tracking-tight text-slate-900">PG<span class="text-brand-600">Hunter</span> <span class="ml-1 rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Admin</span></span>
+          </div>
+          <nav class="flex-1 overflow-y-auto px-3 py-4" aria-label="Admin">
+            <div class="space-y-1">
+              {nav.map((item) => (
+                <a
+                  href={item.href}
+                  class:list={[
+                    'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
+                    active === item.key ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+                  ]}
+                  aria-current={active === item.key ? 'page' : undefined}
+                >
+                  <item.Icon class="h-4 w-4" /> {item.label}
+                </a>
+              ))}
+            </div>
+          </nav>
+          <div class="border-t border-slate-100 p-4">
+            <div class="flex items-center gap-3">
+              <span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-xs font-extrabold text-white">{user?.name?.slice(0,2).toUpperCase() ?? 'AD'}</span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold text-slate-900">{user?.name ?? 'Admin'}</p>
+                <p class="truncate text-xs text-slate-500">{user?.email ?? ''}</p>
+              </div>
+            </div>
+            <button data-logout class="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <LogOut class="h-4 w-4" /> Logout
+            </button>
+          </div>
+        </aside>
+
+        <div class="flex min-w-0 flex-1 flex-col">
+          {/* Mobile header */}
+          <header class="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:hidden">
+            <button id="admin-menu-toggle" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-700" aria-expanded="false" aria-controls="admin-mobile-nav">
+              <Menu id="admin-icon-open" class="h-5 w-5" />
+              <X id="admin-icon-close" class="hidden h-5 w-5" />
+            </button>
+            <span class="flex items-center gap-2 text-sm font-extrabold">PG<span class="text-brand-600">Hunter</span> <span class="rounded bg-slate-900 px-1.5 py-0.5 text-[10px] text-white">ADMIN</span></span>
+            <span class="ml-auto flex items-center gap-2 text-xs font-medium text-slate-500"><Shield class="h-4 w-4 text-brand-600" /> {user?.name?.split(' ')[0] ?? 'Admin'}</span>
+          </header>
+          <div id="admin-mobile-nav" class="hidden border-b border-slate-200 bg-white px-3 py-3 lg:hidden">
+            <nav class="grid grid-cols-2 gap-2">
+              {nav.map((item) => (
+                <a href={item.href} class:list={['flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold', active===item.key ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-700']}>
+                  <item.Icon class="h-4 w-4" /> {item.label}
+                </a>
+              ))}
+            </nav>
+          </div>
+
+          {/* Top bar desktop */}
+          <div class="hidden items-center justify-between border-b border-slate-200 bg-white px-6 py-3 lg:flex">
+            <p class="text-sm font-semibold text-slate-500">Admin control room</p>
+            <p class="text-xs text-slate-400">Signed in as {user?.email ?? ''} · {user?.role ?? ''}</p>
+          </div>
+
+          <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+            <slot />
+          </main>
+        </div>
+      </div>
+    ) : (
+      <div class="mx-auto max-w-lg px-6 py-24 text-center">
+        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700"><Shield class="h-6 w-6" /></div>
+        <h1 class="mt-4 text-2xl font-extrabold text-slate-900">Access denied</h1>
+        <p class="mt-2 text-sm text-slate-600">You need admin access to view this page. If you are an admin, make sure your email is in <code class="rounded bg-slate-100 px-1 py-0.5">ADMIN_EMAILS</code>.</p>
+        <a href="/login" class="btn-primary mt-6">Go to login</a>
+      </div>
+    )}
+
+    <script>
+      import { signOut, getSession } from '@/lib/auth';
+      const toggle = document.getElementById('admin-menu-toggle') as HTMLButtonElement | null;
+      const navEl = document.getElementById('admin-mobile-nav') as HTMLElement | null;
+      const openIcon = document.getElementById('admin-icon-open') as HTMLElement | null;
+      const closeIcon = document.getElementById('admin-icon-close') as HTMLElement | null;
+      toggle?.addEventListener('click', () => {
+        const hidden = navEl?.classList.contains('hidden');
+        navEl?.classList.toggle('hidden', !hidden);
+        openIcon?.classList.toggle('hidden', !!hidden);
+        closeIcon?.classList.toggle('hidden', !hidden);
+        toggle.setAttribute('aria-expanded', String(!!hidden));
+      });
+      document.querySelectorAll('[data-logout]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          await signOut();
+          window.location.href = '/login';
+        });
+      });
+      // Keep header name in sync for client hydration (admin email may change)
+      getSession().then((u) => {
+        if (!u) return;
+        // no-op, server already rendered correct user
+      });
+    </script>
+  </body>
+</html>

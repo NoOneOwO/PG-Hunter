@@ -1,0 +1,86 @@
+---
+import OwnerHeader from '@/components/OwnerHeader.astro';
+import '@/styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Slug of the active nav item: 'dashboard' | 'listings' | 'leads' | 'verification' | 'profile'. */
+  active?: 'dashboard' | 'listings' | 'leads' | 'verification' | 'profile';
+}
+
+const {
+  title = 'Owner Dashboard — PG Hunter',
+  description = 'Manage your PGs on PG Hunter: listings, enquiries and verification.',
+  active = 'dashboard',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#7a42e6" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    />
+  </head>
+  <body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
+    <OwnerHeader active={active} />
+
+    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div id="owner-loading" class="mx-auto max-w-md py-24 text-center" role="status">
+        <span class="mx-auto flex h-12 w-12 animate-spin items-center justify-center rounded-full border-4 border-brand-100 border-t-brand-600"></span>
+        <p class="mt-4 text-sm font-medium text-slate-500">Loading your owner space…</p>
+      </div>
+      <div id="owner-root" class="hidden">
+        <slot />
+      </div>
+    </main>
+
+    <footer class="border-t border-slate-200/70 bg-white">
+      <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:px-6 lg:px-8">
+        <p>© {new Date().getFullYear()} PG Hunter · Owner space</p>
+        <div class="flex items-center gap-4">
+          <a href="/for-owners" class="hover:text-brand-700">For Owners</a>
+          <a href="/pgs-near-you" class="hover:text-brand-700">Browse PGs</a>
+          <a href="mailto:hello@pghunter.in" class="hover:text-brand-700">Support</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<script>
+  import { getSession, onAuthChange, redirectToLogin } from '@/lib/auth';
+  import type { AppUser } from '@/lib/auth';
+
+  const loading = document.getElementById('owner-loading')!;
+  const root = document.getElementById('owner-root')!;
+
+  const guard = (user: AppUser | null) => {
+    // A logged-in owner (or admin) may use the owner space. Everyone else is
+    // routed away — students never see the owner experience and vice-versa.
+    if (!user) return redirectToLogin(window.location.pathname + window.location.search);
+    if (user.role !== 'owner' && !user.isAdmin) {
+      window.location.replace('/');
+      return;
+    }
+    loading.classList.add('hidden');
+    root.classList.remove('hidden');
+  };
+
+  getSession().then(guard);
+  onAuthChange((user) => {
+    if (!user) redirectToLogin(window.location.pathname);
+  });
+</script>

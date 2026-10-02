@@ -1,0 +1,185 @@
+---
+import OwnerLayout from '@/layouts/OwnerLayout.astro';
+import { UserRound, Phone, LogOut, Check, ShieldCheck, Building2, Mail } from '@lucide/astro';
+import { colleges } from '@/data/colleges';
+
+const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortName, name: c.name }));
+---
+
+<OwnerLayout title="Profile — Owner Dashboard — PG Hunter" active="profile">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="text-sm font-semibold text-brand-700">Owner profile</p>
+      <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Your account</h1>
+      <p class="mt-1 text-sm font-medium text-slate-500">Owner information, contact details and verification. This stays inside your owner workspace — you never lose the dashboard nav.</p>
+    </div>
+    <a href="/owner/verification" class="btn-secondary">
+      <ShieldCheck class="h-4 w-4" /> Verification
+    </a>
+  </div>
+
+  <div id="profile-loading" class="mx-auto max-w-md py-16 text-center" role="status">
+    <span class="mx-auto flex h-12 w-12 animate-spin items-center justify-center rounded-full border-4 border-brand-100 border-t-brand-600"></span>
+    <p class="mt-4 text-sm font-medium text-slate-500">Loading your profile…</p>
+  </div>
+
+  <div id="profile-root" class="hidden">
+    <div class="mt-6 card border border-slate-200 p-6 sm:p-8">
+      <div class="flex flex-wrap items-center gap-4">
+        <span id="profile-avatar" class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 text-2xl font-extrabold text-white">?</span>
+        <div class="min-w-0 flex-1">
+          <h2 id="profile-name" class="truncate text-2xl font-extrabold tracking-tight text-slate-900">—</h2>
+          <p id="profile-email" class="truncate text-sm text-slate-500">—</p>
+          <p class="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+            <span id="profile-role" class="badge bg-brand-100 text-brand-800">Owner</span>
+            <span id="profile-provider" class="badge bg-slate-100 text-slate-600">Email</span>
+            <span id="profile-since" class="font-medium text-slate-400"></span>
+          </p>
+        </div>
+        <a href="/owner/listings" class="btn-secondary">
+          <Building2 class="h-4 w-4" /> My PGs
+        </a>
+      </div>
+
+      <form id="profile-form" class="mt-8 grid grid-cols-1 gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2">
+        <div>
+          <label for="profile-name-input" class="mb-1.5 block text-sm font-semibold text-slate-700">Full name</label>
+          <label class="field">
+            <UserRound class="h-5 w-5 shrink-0 text-brand-600" />
+            <span class="sr-only">Full name</span>
+            <input id="profile-name-input" type="text" name="name" autocomplete="name" class="w-full bg-transparent outline-none" required />
+          </label>
+        </div>
+        <div>
+          <label for="profile-phone-input" class="mb-1.5 block text-sm font-semibold text-slate-700">Phone <span class="font-normal text-slate-400">(optional)</span></label>
+          <label class="field">
+            <Phone class="h-5 w-5 shrink-0 text-brand-600" />
+            <span class="sr-only">Phone</span>
+            <input id="profile-phone-input" type="tel" name="phone" placeholder="+91 …" autocomplete="tel" class="w-full bg-transparent outline-none" />
+          </label>
+        </div>
+        <div class="sm:col-span-2">
+          <label for="profile-college-select" class="mb-1.5 block text-sm font-semibold text-slate-700">Your city / college area</label>
+          <select id="profile-college-select" name="college" class="field appearance-none">
+            <option value="">Not linked to a college</option>
+            {collegeOptions.map((c) => (
+              <option value={c.slug}>{c.name}</option>
+            ))}
+          </select>
+          <p class="mt-1.5 text-xs text-slate-500">Helps us surface nearby enquiries. Visible only to you.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 sm:col-span-2">
+          <button type="submit" class="btn-primary">
+            <Check class="h-4 w-4" /> Save changes
+          </button>
+          <p id="profile-saved-note" class="hidden rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700" role="status">
+            Profile updated.
+          </p>
+          <p id="profile-error" class="hidden rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700" role="alert"></p>
+        </div>
+      </form>
+    </div>
+
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <section class="card p-6 lg:col-span-2">
+        <h3 class="flex items-center gap-2 text-sm font-bold text-slate-900"><Mail class="h-4 w-4 text-brand-600" /> Contact & account</h3>
+        <p class="mt-2 text-sm leading-relaxed text-slate-600">Your enquiries show your name and phone to interested students. Keep them up to date. Verification documents are reviewed separately under <a href="/owner/verification" class="font-semibold text-brand-700 hover:underline">Verification</a>.</p>
+      </section>
+      <section class="card p-6">
+        <h3 class="text-sm font-bold text-slate-900">Need help?</h3>
+        <p class="mt-2 text-sm leading-relaxed text-slate-600">Questions about listings or enquiries? Contact support.</p>
+        <a href="mailto:hello@pghunter.in" class="btn-secondary mt-4 w-full justify-center">Support</a>
+      </section>
+    </div>
+
+    <div class="mt-6 flex items-center justify-between gap-4 border-t border-slate-100 pt-6">
+      <p class="text-xs text-slate-400">Signed in to your owner workspace.</p>
+      <button id="logout-btn" type="button" class="btn-secondary text-rose-600 hover:bg-rose-50">
+        <LogOut class="h-4 w-4" /> Log out
+      </button>
+    </div>
+  </div>
+</OwnerLayout>
+
+<script>
+  import {
+    getSession,
+    updateProfile,
+    signOut,
+    redirectToLogin,
+    initialsOf,
+  } from '@/lib/auth';
+
+  const loading = document.getElementById('profile-loading')!;
+  const root = document.getElementById('profile-root')!;
+  const avatar = document.getElementById('profile-avatar')!;
+  const nameEl = document.getElementById('profile-name')!;
+  const emailEl = document.getElementById('profile-email')!;
+  const roleEl = document.getElementById('profile-role')!;
+  const providerEl = document.getElementById('profile-provider')!;
+  const sinceEl = document.getElementById('profile-since')!;
+  const form = document.getElementById('profile-form') as HTMLFormElement;
+  const nameInput = document.getElementById('profile-name-input') as HTMLInputElement;
+  const phoneInput = document.getElementById('profile-phone-input') as HTMLInputElement;
+  const collegeSelect = document.getElementById('profile-college-select') as HTMLSelectElement;
+  const savedNote = document.getElementById('profile-saved-note')!;
+  const profileError = document.getElementById('profile-error')!;
+  const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement;
+
+  const flash = (el: HTMLElement, show: boolean) => el.classList.toggle('hidden', !show);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    flash(savedNote, false);
+    flash(profileError, false);
+    const { user, error } = await updateProfile({
+      name: nameInput.value,
+      phone: phoneInput.value,
+      collegeSlug: collegeSelect.value || undefined,
+    });
+    if (error) {
+      profileError.textContent = error;
+      flash(profileError, true);
+      return;
+    }
+    if (user) {
+      nameEl.textContent = user.name;
+      avatar.textContent = initialsOf(user.name);
+      flash(savedNote, true);
+      setTimeout(() => flash(savedNote, false), 2500);
+    }
+  });
+
+  logoutBtn.addEventListener('click', async () => {
+    await signOut();
+    window.location.href = '/';
+  });
+
+  const init = async () => {
+    const user = await getSession();
+    if (!user) return redirectToLogin('/owner/profile');
+    // Keep students on their own profile; owners/admins stay here.
+    if (user.role !== 'owner' && !user.isAdmin) {
+      window.location.replace('/profile');
+      return;
+    }
+
+    avatar.textContent = initialsOf(user.name);
+    nameEl.textContent = user.name;
+    emailEl.textContent = user.email;
+    roleEl.textContent = user.isAdmin ? 'Admin' : 'Owner';
+    providerEl.textContent = user.provider === 'google' ? 'Google' : 'Email';
+    sinceEl.textContent = user.createdAt
+      ? `· Member since ${new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}`
+      : '';
+
+    nameInput.value = user.name;
+    phoneInput.value = user.phone ?? '';
+    collegeSelect.value = user.collegeSlug ?? '';
+
+    flash(loading, false);
+    flash(root, true);
+  };
+
+  void init();
+</script>

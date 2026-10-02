@@ -1,0 +1,70 @@
+---
+import { MapPin, Phone, Mail } from '@lucide/astro';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-slate-100 bg-slate-50">
+  <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div class="grid gap-10 md:grid-cols-4">
+      <div class="md:col-span-2">
+        <a href="/" class="flex items-center gap-2">
+          <img src="/favicon.svg" alt="" width="32" height="32" class="h-8 w-8" />
+          <span class="text-lg font-extrabold tracking-tight text-slate-900">
+            PG<span class="text-brand-600">Hunter</span>
+          </span>
+        </a>
+        <p class="mt-4 max-w-md text-sm leading-relaxed text-slate-600">
+          Student-first accommodation discovery. Find PGs, rooms, hostels and co-living
+          spaces near your college — with video walkthroughs, transparent pricing and
+          no broker, no hidden charges.
+        </p>
+        <div class="mt-6 flex flex-col gap-2 text-sm text-slate-600">
+          <span class="flex items-center gap-2"><MapPin class="h-4 w-4 text-brand-600" /> New Delhi, India</span>
+          <span class="flex items-center gap-2"><Mail class="h-4 w-4 text-brand-600" /> hello@pghunter.in</span>
+          <span class="flex items-center gap-2"><Phone class="h-4 w-4 text-brand-600" /> +91 98XXX XXXXX (not live)</span>
+        </div>
+      </div>
+
+      <nav aria-label="Discover">
+        <h3 class="text-sm font-bold uppercase tracking-wide text-slate-900">Discover</h3>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li><a href="/pgs-near-you" class="text-slate-600 transition-colors hover:text-brand-700">PGs Near You</a></li>
+          <li><a href="/colleges" class="text-slate-600 transition-colors hover:text-brand-700">Colleges</a></li>
+          <li><a href="/colleges/dtu" class="text-slate-600 transition-colors hover:text-brand-700">PGs near DTU</a></li>
+          <li><a href="/colleges/nsut" class="text-slate-600 transition-colors hover:text-brand-700">PGs near NSUT</a></li>
+        </ul>
+      </nav>
+
+      <nav aria-label="For Owners">
+        <h3 class="text-sm font-bold uppercase tracking-wide text-slate-900">For Owners</h3>
+        <ul class="mt-4 space-y-2 text-sm">
+          <li><a href="/for-owners" class="text-slate-600 transition-colors hover:text-brand-700">List your PG</a></li>
+          <li><a href="/for-owners" class="text-slate-600 transition-colors hover:text-brand-700">Owner login</a></li>
+          <li><a href="/for-owners#verification" class="text-slate-600 transition-colors hover:text-brand-700">Verification</a></li>
+        </ul>
+        <p id="footer-owner-cta" class="mt-4 rounded-xl border border-brand-100 bg-brand-50 px-3 py-2.5 text-xs leading-relaxed text-brand-800">
+          Own a PG? <a href="/for-owners" class="font-semibold underline decoration-brand-300 hover:text-brand-700">List it on PG Hunter</a> — reach verified students near your property.
+        </p>
+      </nav>
+    </div>
+
+    <div class="mt-10 flex flex-col gap-3 border-t border-slate-200 pt-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+      <p>© {year} PG Hunter. All rights reserved.</p>
+      <p class="rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700">
+        Development preview — all listings shown are mock data.
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Subtle CTA visibility: hide for owners (they already list), show for students/guests.
+  import { getSession } from '@/lib/auth';
+  const cta = document.getElementById('footer-owner-cta');
+  if (cta) {
+    getSession().then((u) => {
+      if (u?.role === 'owner' || u?.isAdmin) cta.classList.add('hidden');
+    });
+  }
+</script>

@@ -1,0 +1,109 @@
+---
+export const prerender = false;
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { getDb } from '@/lib/server/auth';
+const db = getDb();
+
+// Raw event counts by day (last 14 days) from pg_engagement_events
+const rows = await db.prepare(
+  `SELECT substr(created_at,1,10) as day, event_type, COUNT(*) as c
+   FROM pg_engagement_events
+   WHERE created_at >= date('now','-14 days')
+   GROUP BY day, event_type
+   ORDER BY day DESC, event_type`
+).all<{day:string,event_type:string,c:number}>().catch(()=>({results:[]} as any));
+
+const leadsByDay = await db.prepare(
+  `SELECT substr(created_at,1,10) as day, COUNT(*) as c FROM leads WHERE created_at >= date('now','-14 days') GROUP BY day ORDER BY day DESC`
+).all<{day:string,c:number}>().catch(()=>({results:[]} as any));
+
+const expsByDay = await db.prepare(
+  `SELECT substr(created_at,1,10) as day, COUNT(*) as c FROM pg_experiences WHERE created_at >= date('now','-14 days') GROUP BY day ORDER BY day DESC`
+).all<{day:string,c:number}>().catch(()=>({results:[]} as any));
+
+// Totals
+const totals = await db.prepare(`SELECT event_type, COUNT(*) as c FROM pg_engagement_events GROUP BY event_type`).all<{event_type:string,c:number}>().catch(()=>({results:[]} as any));
+const byType = (t:string)=> totals.results.find((r:any)=>r.event_type===t)?.c ?? 0;
+
+// Simple day list last 7
+const last7 = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-i); return d.toISOString().slice(0,10); }).reverse();
+---
+
+<AdminLayout title="Analytics — Admin" active="analytics">
+  <h1 class="text-2xl font-extrabold">Analytics</h1>
+  <p class="mt-1 text-sm text-slate-500">Simple tables from <code>pg_engagement_events</code> (source for historical engagement). No external service, no warehouse.</p>
+
+  <div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="card p-5"><p class="text-xs uppercase tracking-wide text-slate-500">Views</p><p class="mt-2 text-2xl font-extrabold">{byType('VIEW')}</p></div>
+    <div class="card p-5"><p class="text-xs uppercase tracking-wide text-slate-500">Saves</p><p class="mt-2 text-2xl font-extrabold">{byType('SAVE')}</p></div>
+    <div class="card p-5"><p class="text-xs uppercase tracking-wide text-slate-500">Likes</p><p class="mt-2 text-2xl font-extrabold">{byType('LIKE')}</p></div>
+    <div class="card p-5"><p class="text-xs uppercase tracking-wide text-slate-500">Dislikes</p><p class="mt-2 text-2xl font-extrabold">{byType('DISLIKE')}</p></div>
+  </div>
+  <div class="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="card p-5"><p class="text-xs uppercase tracking-wide text-slate-500">Enquiries</p><p class="mt-2 text-xl font-extrabold">{leadsByDay.results.reduce((a:any,c:any)=>a+c.c,0)}</p></div>
+    <div class="card p-5"><p class="text-xs uppercase tracking-wide text-slate-500">Experiences</p><p class="mt-2 text-xl font-extrabold">{expsByDay.results.reduce((a:any,c:any)=>a+c.c,0)}</p></div>
+    <div class="card p-5"><p class="text-xs uppercase tracking-wide text-slate-500">Enquiry events</p><p class="mt-2 text-xl font-extrabold">{byType('ENQUIRY')}</p></div>
+    <div class="card p-5"><p class="text-xs uppercase tracking-wide text-slate-500">Total events</p><p class="mt-2 text-xl font-extrabold">{totals.results.reduce((a:any,c:any)=>a+c.c,0)}</p></div>
+  </div>
+
+  <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <section class="card">
+      <div class="border-b border-slate-100 px-5 py-3"><h2 class="text-sm font-bold">Views by day (14d)</h2></div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-2">Day</th><th class="px-4 py-2">Count</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {last7.map(day=>{
+              const c = rows.results.find((r:any)=> r.day===day && r.event_type==='VIEW')?.c ?? 0;
+              return <tr><td class="px-4 py-2 text-xs">{day}</td><td class="px-4 py-2 font-semibold">{c}</td></tr>;
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="card">
+      <div class="border-b border-slate-100 px-5 py-3"><h2 class="text-sm font-bold">Saves by day (14d)</h2></div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-2">Day</th><th class="px-4 py-2">Count</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {last7.map(day=>{
+              const c = rows.results.find((r:any)=> r.day===day && r.event_type==='SAVE')?.c ?? 0;
+              return <tr><td class="px-4 py-2 text-xs">{day}</td><td class="px-4 py-2 font-semibold">{c}</td></tr>;
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="card">
+      <div class="border-b border-slate-100 px-5 py-3"><h2 class="text-sm font-bold">Reactions by day</h2></div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-2">Day</th><th class="px-4 py-2">Likes</th><th class="px-4 py-2">Dislikes</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {last7.map(day=>{
+              const l = rows.results.find((r:any)=> r.day===day && r.event_type==='LIKE')?.c ?? 0;
+              const d = rows.results.find((r:any)=> r.day===day && r.event_type==='DISLIKE')?.c ?? 0;
+              return <tr><td class="px-4 py-2 text-xs">{day}</td><td class="px-4 py-2">{l}</td><td class="px-4 py-2">{d}</td></tr>;
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="card">
+      <div class="border-b border-slate-100 px-5 py-3"><h2 class="text-sm font-bold">Enquiries & Experiences by day</h2></div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-2">Day</th><th class="px-4 py-2">Enquiries</th><th class="px-4 py-2">Experiences</th></tr></thead>
+          <tbody class="divide-y divide-slate-100">
+            {last7.map(day=>{
+              const e = leadsByDay.results.find((r:any)=> r.day===day)?.c ?? 0;
+              const ex = expsByDay.results.find((r:any)=> r.day===day)?.c ?? 0;
+              return <tr><td class="px-4 py-2 text-xs">{day}</td><td class="px-4 py-2">{e}</td><td class="px-4 py-2">{ex}</td></tr>;
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</AdminLayout>

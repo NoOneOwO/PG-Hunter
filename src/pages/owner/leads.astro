@@ -1,0 +1,83 @@
+---
+import OwnerLayout from '@/layouts/OwnerLayout.astro';
+import { Inbox } from '@lucide/astro';
+---
+
+<OwnerLayout title="Enquiries — PG Hunter" active="leads">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Enquiries</h1>
+      <p class="mt-1 text-sm font-medium text-slate-500">
+        Students interested in your PGs. Reach out to them directly.
+      </p>
+    </div>
+  </div>
+
+  <div id="leads-loading" class="mx-auto max-w-md py-20 text-center" role="status">
+    <span class="mx-auto flex h-12 w-12 animate-spin items-center justify-center rounded-full border-4 border-brand-100 border-t-brand-600"></span>
+    <p class="mt-4 text-sm font-medium text-slate-500">Loading enquiries…</p>
+  </div>
+
+  <div id="leads-root" class="hidden">
+    <div id="leads-empty" class="card mt-6 hidden p-12 text-center">
+      <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
+        <Inbox class="h-8 w-8" />
+      </span>
+      <h2 class="mt-6 text-xl font-extrabold tracking-tight text-slate-900">No enquiries yet</h2>
+      <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
+        When students send enquiries on your listings, they'll show up here with their
+        budget and move-in details.
+      </p>
+      <a href="/owner/listings/new" class="btn-primary mt-8 px-8">Add a PG</a>
+    </div>
+
+    <div id="leads-list" class="card mt-6 divide-y divide-slate-100"></div>
+  </div>
+</OwnerLayout>
+
+<script>
+  import { getOwnerLeads } from '@/lib/auth';
+  import type { OwnerLead } from '@/lib/auth';
+  import { leadStatusLabel, budgetLabel, moveInLabel, formatShortDate } from '@/lib/owner';
+
+  const loading = document.getElementById('leads-loading')!;
+  const root = document.getElementById('leads-root')!;
+  const empty = document.getElementById('leads-empty')!;
+  const list = document.getElementById('leads-list')!;
+
+  const leadCard = (lead: OwnerLead) => `
+    <article class="px-5 py-5">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-slate-900">${lead.student_name ?? 'Student'}</p>
+            <p class="text-xs font-medium text-slate-500">
+              ${lead.property_name ?? 'Your PG'} · ${formatShortDate(lead.created_at)}
+            </p>
+          </div>
+        </div>
+        <span class="badge bg-brand-100 text-brand-800">${leadStatusLabel(lead.status)}</span>
+      </div>
+
+      <div class="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+        <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600">Budget: ${budgetLabel(lead.budget)}</span>
+        <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600">Move-in: ${moveInLabel(lead.move_in_month)}</span>
+        <span class="rounded-lg bg-slate-100 px-2.5 py-1 capitalize text-slate-600">Source: ${lead.source}</span>
+      </div>
+
+      ${lead.message ? `<p class="mt-3 rounded-xl bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700">${lead.message}</p>` : ''}
+    </article>`;
+
+  const init = async () => {
+    const { leads } = await getOwnerLeads();
+    empty.classList.toggle('hidden', leads.length > 0);
+    list.innerHTML = leads.map(leadCard).join('');
+    loading.classList.add('hidden');
+    root.classList.remove('hidden');
+  };
+
+  void init();
+</script>

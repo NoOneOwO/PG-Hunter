@@ -1,0 +1,50 @@
+---
+import { BadgeCheck, ShieldCheck, CircleCheck } from '@lucide/astro';
+import type { VerificationStatus } from '@/data/types';
+
+interface Props {
+  status: VerificationStatus;
+  /** Compact variant for cards. */
+  compact?: boolean;
+}
+
+const { status, compact = false } = Astro.props;
+
+const config: Record<
+  VerificationStatus,
+  { label: string; classes: string; Icon: typeof BadgeCheck; title: string }
+> = {
+  listed: {
+    label: 'Listed',
+    classes: 'bg-slate-100 text-slate-600',
+    Icon: ShieldCheck,
+    title: 'Submitted listing — verification pending',
+  },
+  pg_hunter_verified: {
+    label: 'PG Hunter Verified',
+    classes: 'bg-brand-100 text-brand-800',
+    Icon: BadgeCheck,
+    title: 'Verified by PG Hunter',
+  },
+  rishabh_irl_verified: {
+    label: 'Rishabh IRL Verified',
+    classes: 'bg-emerald-100 text-emerald-800',
+    Icon: CircleCheck,
+    title: 'Verified by Rishabh IRL — personally verified',
+  },
+};
+
+const { label, classes, Icon, title } = config[status];
+---
+
+<span
+  class:list={[
+    'badge',
+    classes,
+    compact ? 'px-2 py-0.5 text-[11px]' : '',
+  ]}
+  title={title}
+>
+  <Icon class="h-3.5 w-3.5" />
+  {label}
+</span>

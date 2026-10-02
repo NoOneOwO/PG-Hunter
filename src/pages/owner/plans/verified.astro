@@ -1,0 +1,122 @@
+---
+import OwnerLayout from '@/layouts/OwnerLayout.astro';
+import {
+  Camera,
+  Video,
+  CalendarCheck,
+  MapPin,
+  ShieldCheck,
+  ArrowRight,
+  Info,
+} from '@lucide/astro';
+import { formatINR } from '@/lib/format';
+---
+
+<OwnerLayout title="PG Hunter Verified — Checkout | PG Hunter" active="listings">
+  <div class="mx-auto max-w-5xl">
+    <a href="/owner/plans" class="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-brand-700">
+      <span aria-hidden="true">←</span> Back to plans
+    </a>
+
+    <div class="mt-4 grid grid-cols-1 gap-8 lg:grid-cols-[1.6fr_1fr]">
+      <!-- Left: what you get -->
+      <div>
+        <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+          PG Hunter Verified
+        </h1>
+        <p class="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base">
+          We physically visit your PG, photograph it, shoot a walkthrough video and
+          verify it on camera — so students trust what they see.
+        </p>
+
+        <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="card p-5">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+              <MapPin class="h-5 w-5" />
+            </span>
+            <h3 class="mt-4 text-sm font-bold text-slate-900">Physical visit</h3>
+            <p class="mt-1 text-sm text-slate-600">A team member visits your PG in person to inspect it.</p>
+          </div>
+          <div class="card p-5">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+              <Camera class="h-5 w-5" />
+            </span>
+            <h3 class="mt-4 text-sm font-bold text-slate-900">Photography</h3>
+            <p class="mt-1 text-sm text-slate-600">Professional photos of rooms, common areas and the property.</p>
+          </div>
+          <div class="card p-5">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+              <Video class="h-5 w-5" />
+            </span>
+            <h3 class="mt-4 text-sm font-bold text-slate-900">Video walkthrough</h3>
+            <p class="mt-1 text-sm text-slate-600">A walkthrough video students can watch before they visit.</p>
+          </div>
+          <div class="card p-5">
+            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+              <CalendarCheck class="h-5 w-5" />
+            </span>
+            <h3 class="mt-4 text-sm font-bold text-slate-900">1-year validity</h3>
+            <p class="mt-1 text-sm text-slate-600">Your Verified badge stays active on the listing for 1 year.</p>
+          </div>
+        </div>
+
+        <div class="card mt-6 bg-brand-50 p-5 ring-1 ring-brand-100">
+          <h3 class="flex items-center gap-2 text-sm font-bold text-brand-800">
+            <ShieldCheck class="h-4 w-4" /> Visit & refund policy
+          </h3>
+          <p class="mt-2 text-sm leading-relaxed text-brand-900/70">
+            We aim to complete your visit within 7–10 days of payment. If we're unable
+            to schedule a visit within that window, we'll refund the verification fee in full.
+          </p>
+        </div>
+      </div>
+
+      <!-- Right: price summary -->
+      <aside class="lg:sticky lg:top-24 lg:self-start">
+        <div class="card border border-slate-200 p-6">
+          <h2 class="text-base font-bold text-slate-900">Price summary</h2>
+          <dl class="mt-4 space-y-3 text-sm">
+            <div class="flex items-center justify-between gap-3">
+              <dt class="text-slate-500">Verification fee (1 year)</dt>
+              <dd class="font-semibold text-slate-900">{formatINR(1499)}</dd>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <dt class="flex items-center gap-1 text-slate-500">
+                Travel charge
+                <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-100" title="Calculated based on your location at booking">
+                  <Info class="h-3 w-3" />
+                </span>
+              </dt>
+              <dd class="text-slate-400">Calculated at booking</dd>
+            </div>
+            <div class="border-t border-slate-200 pt-3">
+              <div class="flex items-center justify-between gap-3">
+                <dt class="font-bold text-slate-900">Total</dt>
+                <dd class="text-lg font-extrabold text-brand-700">
+                  {formatINR(1499)}
+                  <span class="text-xs font-medium text-slate-400">+ travel*</span>
+                </dd>
+              </div>
+              <p class="mt-1 text-xs text-slate-500">*Travel charge placeholder — final amount shown before payment.</p>
+            </div>
+          </dl>
+
+          <div role="alert" class="mt-5 rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+            <strong>Online payment is not available yet.</strong> This checkout is ready to
+            plug into a payment gateway. You can continue to the listing form and prepare
+            your PG in the meantime.
+          </div>
+
+          <a href="/owner/listings/new" class="btn-primary mt-5 w-full">
+            Continue to listing form
+            <ArrowRight class="h-4 w-4" />
+          </a>
+
+          <p class="mt-4 text-center text-xs leading-relaxed text-slate-500">
+            Once payments are enabled, you'll complete your booking and select a visit slot here.
+          </p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</OwnerLayout>

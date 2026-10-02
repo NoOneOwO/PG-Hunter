@@ -1,0 +1,328 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { Mail, Lock, ArrowRight, UserRound, GraduationCap, Building2 } from '@lucide/astro';
+
+const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82Z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24Z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29A11.86 11.86 0 0 0 0 12c0 1.94.47 3.76 1.29 5.38l3.98-3.09Z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75Z"/></svg>`;
+
+---
+
+<BaseLayout
+  title="Login / Sign up — PG Hunter"
+  description="Log in or create a free account on PG Hunter to save PGs, send enquiries and message owners."
+>
+  <section class="mx-auto max-w-md px-4 py-10 sm:px-6">
+    <div class="card border border-slate-200 p-8">
+      <img src="/favicon.svg" alt="" width="40" height="40" class="h-10 w-10" />
+      <h1 id="auth-title" class="mt-4 text-2xl font-extrabold tracking-tight text-slate-900">
+        Welcome back
+      </h1>
+      <p id="auth-subtitle" class="mt-1 text-sm text-slate-500">
+        Log in to save PGs, send enquiries and message owners.
+      </p>
+
+      <div id="auth-error" class="mt-4 hidden rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-700" role="alert"></div>
+      <div id="auth-success" class="mt-4 hidden rounded-xl bg-emerald-50 px-3.5 py-2.5 text-sm font-medium text-emerald-700" role="status"></div>
+
+      <!-- Google is the primary, server-side OAuth — presented first per Phase 2 -->
+      <button id="google-btn" type="button" class="btn-secondary mt-6 w-full border-slate-200 bg-white shadow-sm hover:bg-slate-50">
+        <Fragment set:html={googleMark} />
+        Continue with Google
+      </button>
+      <p class="mt-2 text-center text-xs text-slate-500">Works for both students and owners. New accounts respect your selected role.</p>
+
+      <div class="my-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-slate-400">
+        <span class="h-px flex-1 bg-slate-200" aria-hidden="true"></span>
+        or
+        <span class="h-px flex-1 bg-slate-200" aria-hidden="true"></span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Account access">
+        <button
+          id="tab-login"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          data-tab="login"
+          class="rounded-lg py-2 text-sm font-semibold transition-colors"
+        >
+          Log in
+        </button>
+        <button
+          id="tab-signup"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-tab="signup"
+          class="rounded-lg py-2 text-sm font-semibold transition-colors"
+        >
+          Sign up free
+        </button>
+      </div>
+
+      <form id="login-form" class="mt-6 flex flex-col gap-4">
+        <label class="field">
+          <Mail class="h-5 w-5 shrink-0 text-brand-600" />
+          <span class="sr-only">Email</span>
+          <input
+            type="email"
+            name="email"
+            placeholder="Email address"
+            autocomplete="email"
+            class="w-full bg-transparent outline-none"
+            required
+          />
+        </label>
+        <label class="field">
+          <Lock class="h-5 w-5 shrink-0 text-brand-600" />
+          <span class="sr-only">Password</span>
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            autocomplete="current-password"
+            class="w-full bg-transparent outline-none"
+            required
+          />
+        </label>
+        <button type="submit" class="btn-primary w-full">
+          Login
+          <ArrowRight class="h-4 w-4" />
+        </button>
+      </form>
+
+      <form id="signup-form" class="mt-6 hidden flex flex-col gap-4">
+        <label class="field">
+          <UserRound class="h-5 w-5 shrink-0 text-brand-600" />
+          <span class="sr-only">Full name</span>
+          <input
+            type="text"
+            name="name"
+            placeholder="Full name"
+            autocomplete="name"
+            class="w-full bg-transparent outline-none"
+            required
+          />
+        </label>
+        <label class="field">
+          <Mail class="h-5 w-5 shrink-0 text-brand-600" />
+          <span class="sr-only">Email</span>
+          <input
+            type="email"
+            name="email"
+            placeholder="Email address"
+            autocomplete="email"
+            class="w-full bg-transparent outline-none"
+            required
+          />
+        </label>
+        <label class="field">
+          <Lock class="h-5 w-5 shrink-0 text-brand-600" />
+          <span class="sr-only">Password</span>
+          <input
+            type="password"
+            name="password"
+            placeholder="Create a password (min 6 characters)"
+            autocomplete="new-password"
+            class="w-full bg-transparent outline-none"
+            minlength="6"
+            required
+          />
+        </label>
+        <div class="mt-1 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Account type">
+          <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
+            <input type="radio" name="role" value="student" class="sr-only" checked />
+            <GraduationCap class="h-4 w-4" />
+            Student
+          </label>
+          <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
+            <input type="radio" name="role" value="owner" class="sr-only" />
+            <Building2 class="h-4 w-4" />
+            Owner
+          </label>
+        </div>
+        <button type="submit" class="btn-primary w-full">
+          Create free account
+          <ArrowRight class="h-4 w-4" />
+        </button>
+      </form>
+
+      <p class="mt-6 text-center text-sm text-slate-500">
+        <span id="switch-hint">Don't have an account?</span>{' '}
+        <a href="#switch" id="switch-link" class="font-semibold text-brand-700 hover:underline">Sign up free</a>
+      </p>
+      <p class="mt-3 rounded-lg bg-slate-50 px-3 py-2.5 text-center text-xs text-slate-500">
+        Your account and shortlist are stored securely on Cloudflare.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import {
+    getSession,
+    login,
+    register,
+    signInWithGoogle,
+    onAuthChange,
+  } from '@/lib/auth';
+
+  const params = new URLSearchParams(window.location.search);
+  const next = params.get('next') ?? '/';
+  const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/';
+  // ?role=owner opens the sign-up tab with the Owner account type pre-selected
+  // (used by the For Owners flow).
+  const requestedRole = params.get('role');
+  const forceOwner = requestedRole === 'owner';
+
+  const tabLogin = document.getElementById('tab-login') as HTMLButtonElement;
+  const tabSignup = document.getElementById('tab-signup') as HTMLButtonElement;
+  const loginForm = document.getElementById('login-form') as HTMLFormElement;
+  const signupForm = document.getElementById('signup-form') as HTMLFormElement;
+  const title = document.getElementById('auth-title') as HTMLElement;
+  const subtitle = document.getElementById('auth-subtitle') as HTMLElement;
+  const errorEl = document.getElementById('auth-error') as HTMLElement;
+  const successEl = document.getElementById('auth-success') as HTMLElement;
+  const switchLink = document.getElementById('switch-link') as HTMLAnchorElement;
+  const switchHint = document.getElementById('switch-hint') as HTMLElement;
+  const googleBtn = document.getElementById('google-btn') as HTMLButtonElement;
+  const loginSubmit = loginForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+  const signupSubmit = signupForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+  const showError = (message: string) => {
+    errorEl.textContent = message;
+    errorEl.classList.remove('hidden');
+    successEl.classList.add('hidden');
+  };
+
+  const showSuccess = (message: string) => {
+    successEl.textContent = message;
+    successEl.classList.remove('hidden');
+    errorEl.classList.add('hidden');
+  };
+
+  const clearMessages = () => {
+    errorEl.classList.add('hidden');
+    successEl.classList.add('hidden');
+  };
+
+  const setMode = (mode: 'login' | 'signup') => {
+    const isSignup = mode === 'signup';
+    title.textContent = isSignup ? 'Create your account' : 'Welcome back';
+    subtitle.textContent = isSignup
+      ? 'Free forever. Save PGs, send enquiries and manage your listings.'
+      : 'Log in to save PGs, send enquiries and message owners.';
+    loginForm.classList.toggle('hidden', isSignup);
+    signupForm.classList.toggle('hidden', !isSignup);
+    tabLogin.setAttribute('aria-selected', String(!isSignup));
+    tabSignup.setAttribute('aria-selected', String(isSignup));
+    tabLogin.classList.toggle('bg-white', !isSignup);
+    tabLogin.classList.toggle('shadow-card', !isSignup);
+    tabSignup.classList.toggle('bg-white', isSignup);
+    tabSignup.classList.toggle('shadow-card', isSignup);
+    switchLink.textContent = isSignup ? 'Log in' : 'Sign up free';
+    switchHint.textContent = isSignup ? 'Already have an account?' : "Don't have an account?";
+    clearMessages();
+  };
+
+  tabLogin.addEventListener('click', () => setMode('login'));
+  tabSignup.addEventListener('click', () => setMode('signup'));
+  switchLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    setMode(tabSignup.getAttribute('aria-selected') === 'true' ? 'login' : 'signup');
+  });
+
+  // Honor ?mode=signup from the URL.
+  setMode((params.get('mode') ?? 'login') === 'signup' ? 'signup' : 'login');
+
+  // ?role=owner: open sign-up and pre-select Owner so the For Owners flow lands
+  // the user in the right account type.
+  if (forceOwner) {
+    setMode('signup');
+    const ownerRadio = signupForm.querySelector<HTMLInputElement>('input[name="role"][value="owner"]');
+    const studentRadio = signupForm.querySelector<HTMLInputElement>('input[name="role"][value="student"]');
+    if (ownerRadio) {
+      ownerRadio.checked = true;
+      studentRadio?.removeAttribute('checked');
+    }
+  }
+
+  // Server-side redirects can land here with an error, e.g. Google not configured.
+  const urlError = params.get('error');
+  if (urlError === 'google-not-configured') {
+    showError('Google sign-in is not set up yet. Use email/password, or add your Google credentials (see CLOUDFLARE_SETUP.md).');
+  } else if (urlError === 'google-denied') {
+    showError('Google sign-in was cancelled.');
+  } else if (urlError === 'google-failed') {
+    showError('Could not complete Google sign-in. Please try again.');
+  }
+
+  const finish = () => {
+    window.location.href = safeNext;
+  };
+
+  // Already signed in? Go straight to the destination.
+  getSession().then((user) => {
+    if (user) finish();
+  });
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMessages();
+    loginSubmit.disabled = true;
+    loginSubmit.textContent = 'Logging in...';
+    const data = new FormData(loginForm);
+    const { user, error } = await login({
+      email: String(data.get('email') ?? ''),
+      password: String(data.get('password') ?? ''),
+    });
+    loginSubmit.disabled = false;
+    loginSubmit.innerHTML = 'Login <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
+    if (error) return showError(error);
+    if (user) finish();
+  });
+
+  signupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMessages();
+    signupSubmit.disabled = true;
+    signupSubmit.textContent = 'Creating account...';
+    const data = new FormData(signupForm);
+    const { user, needsConfirmation, error } = await register({
+      name: String(data.get('name') ?? ''),
+      email: String(data.get('email') ?? ''),
+      password: String(data.get('password') ?? ''),
+      role: (data.get('role') as 'student' | 'owner') ?? 'student',
+    });
+    signupSubmit.disabled = false;
+    signupSubmit.innerHTML = 'Create free account <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
+    if (error) return showError(error);
+    if (needsConfirmation) {
+      showSuccess('Almost there — check your inbox and click the confirmation link to activate your account.');
+      return;
+    }
+    if (user) {
+      showSuccess(`Account created — welcome, ${user.name.split(' ')[0]}!`);
+      setTimeout(finish, 600);
+    }
+  });
+
+  googleBtn.addEventListener('click', async () => {
+    clearMessages();
+    const original = googleBtn.innerHTML;
+    googleBtn.disabled = true;
+    googleBtn.textContent = 'Redirecting to Google…';
+    const selectedRole = (document.querySelector('input[name="role"]:checked') as HTMLInputElement | null)?.value;
+    const roleForGoogle = (forceOwner || selectedRole === 'owner') ? ('owner' as const) : undefined;
+    const { error } = await signInWithGoogle(safeNext, roleForGoogle);
+    if (error) {
+      googleBtn.disabled = false;
+      googleBtn.innerHTML = original;
+      showError(error);
+    }
+  });
+
+  // If OAuth completes back on this page (rather than the callback), finish here.
+  onAuthChange((user) => {
+    if (user) finish();
+  });
+</script>

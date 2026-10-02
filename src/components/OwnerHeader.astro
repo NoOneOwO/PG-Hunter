@@ -1,0 +1,152 @@
+---
+import { LayoutDashboard, Building2, Inbox, BadgeCheck, UserRound, LogOut, ExternalLink, Menu, X } from '@lucide/astro';
+
+interface Props {
+  /** Slug of the active nav item. */
+  active?: 'dashboard' | 'listings' | 'leads' | 'verification' | 'profile';
+}
+
+const { active = 'dashboard' } = Astro.props;
+
+// The owner navbar is used only on /owner/* routes (via OwnerLayout).
+// Public routes always use PublicHeader, so these two navigation sets never mix.
+const navItems = [
+  { key: 'dashboard', label: 'Dashboard', href: '/owner', Icon: LayoutDashboard },
+  { key: 'listings', label: 'My PGs', href: '/owner/listings', Icon: Building2 },
+  { key: 'leads', label: 'Enquiries', href: '/owner/leads', Icon: Inbox },
+  { key: 'verification', label: 'Verification', href: '/owner/verification', Icon: BadgeCheck },
+  { key: 'profile', label: 'Profile', href: '/owner/profile', Icon: UserRound },
+];
+---
+
+<header class="sticky top-0 z-40 border-b border-slate-200/70 bg-white/95 backdrop-blur">
+  <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+    <a href="/owner" class="flex items-center gap-2" aria-label="PG Hunter owner dashboard">
+      <img src="/favicon.svg" alt="" width="32" height="32" class="h-8 w-8" />
+      <span class="text-lg font-extrabold tracking-tight text-slate-900">
+        PG<span class="text-brand-600">Hunter</span>
+        <span class="ml-1 rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand-700">
+          Owner
+        </span>
+      </span>
+    </a>
+
+    <nav class="hidden items-center gap-1 lg:flex" aria-label="Owner">
+      {navItems.map((item) => (
+        <a
+          href={item.href}
+          class:list={[
+            'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors',
+            active === item.key
+              ? 'bg-brand-50 text-brand-700'
+              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+          ]}
+          aria-current={active === item.key ? 'page' : undefined}
+        >
+          <item.Icon class="h-4 w-4" />
+          {item.label}
+        </a>
+      ))}
+      <button
+        type="button"
+        data-logout
+        class="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-600"
+      >
+        <LogOut class="h-4 w-4" /> Log out
+      </button>
+    </nav>
+
+    <div class="ml-auto flex items-center gap-2">
+      <a
+        href="/"
+        title="View public site"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-colors hover:bg-slate-50"
+        aria-label="View public site"
+      >
+        <ExternalLink class="h-5 w-5" />
+      </a>
+      <a
+        href="/owner/profile"
+        class="inline-flex h-11 items-center gap-2 rounded-full border border-slate-200 py-1 pl-1 pr-3 transition-colors hover:bg-slate-50"
+        aria-label="Your profile"
+      >
+        <span id="owner-avatar" class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-xs font-extrabold text-white">?</span>
+        <span id="owner-name" class="hidden max-w-28 truncate text-sm font-semibold text-slate-800 sm:block"></span>
+      </a>
+      <button
+        id="owner-menu-toggle"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-50 lg:hidden"
+        aria-expanded="false"
+        aria-controls="owner-mobile-menu"
+        aria-label="Open menu"
+      >
+        <Menu id="owner-icon-open" class="h-5 w-5" />
+        <X id="owner-icon-close" class="hidden h-5 w-5" />
+      </button>
+    </div>
+  </div>
+
+  <nav
+    id="owner-mobile-menu"
+    class="hidden border-t border-slate-100 bg-white px-4 pb-4 pt-2 lg:hidden"
+    aria-label="Owner mobile"
+  >
+    <div class="mx-auto flex max-w-7xl flex-col gap-1">
+      {navItems.map((item) => (
+        <a
+          href={item.href}
+          class:list={[
+            'flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+            active === item.key ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
+          ]}
+        >
+          <item.Icon class="h-4 w-4" />
+          {item.label}
+        </a>
+      ))}
+      <button
+        type="button"
+        data-logout
+        class="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+      >
+        <LogOut class="h-4 w-4" /> Log out
+      </button>
+      <a href="/" class="mt-1 flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+        <ExternalLink class="h-4 w-4" /> View public site
+      </a>
+    </div>
+  </nav>
+</header>
+
+<script>
+  import { getSession, signOut, initialsOf } from '@/lib/auth';
+
+  const avatar = document.getElementById('owner-avatar')!;
+  const nameEl = document.getElementById('owner-name')!;
+  const menuToggle = document.getElementById('owner-menu-toggle') as HTMLButtonElement;
+  const mobileMenu = document.getElementById('owner-mobile-menu') as HTMLElement;
+  const iconOpen = document.getElementById('owner-icon-open') as HTMLElement;
+  const iconClose = document.getElementById('owner-icon-close') as HTMLElement;
+
+  menuToggle.addEventListener('click', () => {
+    const open = mobileMenu.classList.contains('hidden');
+    mobileMenu.classList.toggle('hidden', !open);
+    iconOpen.classList.toggle('hidden', open);
+    iconClose.classList.toggle('hidden', !open);
+    menuToggle.setAttribute('aria-expanded', String(open));
+  });
+
+  document.querySelectorAll('[data-logout]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      await signOut();
+      window.location.href = '/';
+    });
+  });
+
+  getSession().then((user) => {
+    if (user) {
+      avatar.textContent = initialsOf(user.name);
+      nameEl.textContent = user.name.split(' ')[0];
+    }
+  });
+</script>
