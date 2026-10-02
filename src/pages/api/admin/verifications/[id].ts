@@ -1,6 +1,7 @@
 import type { APIContext } from 'astro';
 import { getDb, json, nowIso, readBody, requireAdmin } from '@/lib/server/auth';
 import { mediaUrl } from '@/lib/server/media';
+import { effectiveVerificationStatus } from '@/lib/verificationRules';
 
 export const prerender = false;
 
@@ -38,14 +39,34 @@ export async function PUT(context: APIContext) {
     .bind(decision, notes, nowIso(), id)
     .run();
 
-  // Approving a document marks the related listing verified (when one is set).
-  if (decision === 'approved' && doc.listing_id) {
-    await db
+  // Approving a document does NOT verify the listing.
+  //
+  // It used to, and that was wrong twice over: it granted a trust badge as a
+  // side effect of a paperwork decision, and it bypassed the verification
+  // ledger entirely, leaving no record of who claimed what or on what
+  // evidence. A reviewer who has genuinely established the claim grants it
+  // explicitly through PUT /api/admin/listings/:id with action=grant,
+  // which writes an auditable ledger row. The response reports whether that
+  // step is still outstanding so the UI can prompt for it.
+  let listingVerificationStatus: string | null = null;
+  if (doc.listing_id) {
+    const listing = await db
       .prepare(
-        `UPDATE owner_listings SET verification_status = 'pg_hunter_verified', updated_at = ? WHERE id = ? AND verification_status = 'unverified'`
+        'SELECT verification_status, verification_expires_at FROM owner_listings WHERE id = ?'
       )
-      .bind(nowIso(), doc.listing_id)
-      .run();
+      .bind(doc.listing_id)
+      .first<{ verification_status: string; verification_expires_at: string | null }>();
+    // Report the EFFECTIVE status, not the stored column. A pre-hardening
+    // badge may still sit in `verification_status` with an expiry in the past
+    // (those rows have no ledger entry at all). Reporting the raw column would
+    // tell an admin "verified" while the public listing correctly shows no
+    // badge — exactly the kind of mismatch that made verification untrustworthy.
+    listingVerificationStatus = listing
+      ? effectiveVerificationStatus({
+          verification_status: listing.verification_status,
+          verification_expires_at: listing.verification_expires_at,
+        })
+      : null;
   }
 
   const updated = await db
@@ -71,5 +92,11 @@ export async function PUT(context: APIContext) {
       notes,
       url: updated ? mediaUrl(updated.file_key as string) : null,
     },
+    // Present when the document was tied to a specific listing: tells the
+    // admin whether an explicit verification grant is still required.
+    listingId: doc.listing_id,
+    listingVerificationStatus,
+    verificationGrantRequired:
+      decision === 'approved' && Boolean(doc.listing_id) && listingVerificationStatus === 'unverified',
   });
 }

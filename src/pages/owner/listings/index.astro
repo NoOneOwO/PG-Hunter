@@ -46,6 +46,8 @@ import { Plus, Building2, ArrowRight } from '@lucide/astro';
   import type { Listing } from '@/lib/auth';
   import { listingStatusMeta, minRentOf, formatShortDate } from '@/lib/owner';
   import { formatINR } from '@/lib/format';
+  // Listing fields and the admin's rejection reason are rendered via innerHTML.
+  import { escapeHtml } from '@/lib/html';
 
   const loading = document.getElementById('listings-loading')!;
   const root = document.getElementById('listings-root')!;
@@ -98,13 +100,13 @@ import { Plus, Building2, ArrowRight } from '@lucide/astro';
       <div class="flex flex-1 flex-col gap-2 p-4">
         <div class="flex items-start justify-between gap-2">
           <h2 class="min-w-0 text-base font-bold leading-snug text-slate-900">
-            <a href="/owner/listings/${l.id}/edit" class="hover:text-brand-700">${l.name}</a>
+            <a href="/owner/listings/${encodeURIComponent(l.id)}/edit" class="hover:text-brand-700">${escapeHtml(l.name)}</a>
           </h2>
-          <span class="shrink-0 text-xs font-medium text-slate-400">${formatShortDate(l.updatedAt)}</span>
+          <span class="shrink-0 text-xs font-medium text-slate-400">${escapeHtml(formatShortDate(l.updatedAt))}</span>
         </div>
 
         <p class="text-xs font-medium text-slate-500">
-          ${l.locality ? `${l.locality} · ` : ''}${l.city ?? ''} · ${roomSummary(l)}
+          ${l.locality ? `${escapeHtml(l.locality)} · ` : ''}${escapeHtml(l.city ?? '')} · ${escapeHtml(roomSummary(l))}
         </p>
 
         <div class="flex flex-wrap items-baseline gap-x-2">
@@ -113,7 +115,7 @@ import { Plus, Building2, ArrowRight } from '@lucide/astro';
         </div>
 
         ${l.status === 'rejected' && l.rejectionReason
-          ? `<p class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">${l.rejectionReason}</p>`
+          ? `<p class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">${escapeHtml(l.rejectionReason)}</p>`
           : ''}
 
         <div class="mt-auto grid grid-cols-1 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-2">
@@ -151,7 +153,7 @@ import { Plus, Building2, ArrowRight } from '@lucide/astro';
       render(listings);
     } catch (err) {
       empty.classList.add('hidden');
-      grid.innerHTML = `<div class="card col-span-full p-8 text-center text-sm font-semibold text-rose-700">${(err as Error).message}</div>`;
+      grid.innerHTML = `<div class="card col-span-full p-8 text-center text-sm font-semibold text-rose-700">${escapeHtml((err as Error).message)}</div>`;
     } finally {
       loading.classList.add('hidden');
       root.classList.remove('hidden');

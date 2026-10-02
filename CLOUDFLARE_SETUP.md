@@ -196,9 +196,11 @@ you want your own domain:
 |--------|------|------|-------|
 | GET | `/api/admin/stats` | — | Users / listings / leads / verifications / tour counts |
 | GET | `/api/admin/listings?status=` | — | All listings, optional status filter |
-| PUT | `/api/admin/listings/:id` | `{ status, verificationStatus?, rejectionReason? }` | Approve (`active`) / reject / verify |
+| PUT | `/api/admin/listings/:id` | `{ status, rejectionReason?, plan? }` | Moderate: approve (`active`) / `pending` / reject. **Never grants verification.** Approving opens the plan window (Basic 15 days, Verified 365) and rejecting clears it. |
+| PUT | `/api/admin/listings/:id` | `{ action: 'grant', tier, method, evidence, note? }` | **Grant verification.** Requires `evidence` of a real verification process and writes an auditable `listing_verifications` row. `tier` ∈ `pg_hunter_verified` \| `rishabh_irl_verified`; `method` ∈ `document_review` \| `video_review` \| `physical_visit`. |
+| PUT | `/api/admin/listings/:id` | `{ action: 'revoke', reason }` | **Withdraw verification.** Marks the ledger row revoked (never deletes it) and returns the listing to `pending`. |
 | GET | `/api/admin/verifications?status=` | — | Owner verification documents |
-| PUT | `/api/admin/verifications/:id` | `{ decision: approved\|rejected, notes? }` | Review a document (approval marks the listing verified) |
+| PUT | `/api/admin/verifications/:id` | `{ decision: approved\|rejected, notes? }` | Review a document. **This does not verify the listing** — an approved document only clears the paperwork; the response reports `verificationGrantRequired` so the UI can prompt for an explicit grant. |
 | GET | `/api/admin/tours` | — | All room-tour videos |
 | POST | `/api/admin/tours` | `{ listingId, videoId, title? }` | Attach a YouTube room tour to a listing |
 | DELETE | `/api/admin/tours/:id` | — | Remove a room tour |
@@ -208,9 +210,36 @@ you want your own domain:
 - `db/migrations/0001_init.sql` — `users`, `sessions`, `saved_pgs`, `leads`
 - `db/migrations/0002_owner_admin.sql` — `is_admin` on users, `owner_listings`,
   `listing_rooms`, `media` (photos + YouTube tours), `verification_documents`
+- `db/migrations/0003_owner_analytics.sql` — legacy `listing_events`
+- `db/migrations/0004_pg_engagement.sql` — `pg_engagement_events`, `pg_reactions`,
+  `pg_experiences`
+- `db/migrations/0005_admin_moderation.sql` — `moderation_actions`, `reports`
+- `db/migrations/0006_verification_and_expiry.sql` — `listing_verifications`
+  (the audit ledger) plus `plan` / `plan_started_at` / `expires_at` and the
+  denormalised `verification_*` cache on `owner_listings`
+- `db/migrations/0007_rate_limits.sql` — `rate_limits` counters
 
 Apply with `wrangler d1 migrations apply pg_hunter --local|--remote`.
-Add future migrations as `db/migrations/0003_*.sql`.
+Add future migrations as `db/migrations/0008_*.sql`.
+
+### Publication vs verification
+
+These are separate facts and must stay separate:
+
+| | Column | Values |
+|---|---|---|
+| Moderation / publication | `owner_listings.status` | `draft`, `pending`, `active`, `rejected` |
+| Verification | `owner_listings.verification_status` | `unverified`, `pg_hunter_verified`, `rishabh_irl_verified` |
+
+Publishing a listing (`status = 'active'`) must never set a verification tier.
+`verification_status` is a read cache of the newest approved row in
+`listing_verifications`, and only `src/lib/server/verification.ts` may write it.
+
+A public listing is visible only when it is **both** `active` **and** inside its
+plan window (`expires_at` in the future, or `NULL` for legacy rows). Expiry is
+enforced in `GET /api/listings`; expired listings are hidden but never deleted,
+so owners can renew. A lapsed verification is reported as `unverified` on the
+way out, so a stale badge cannot render even if the stored column says otherwise.
 
 Room-tour videos are YouTube ids for the MVP (per `/ai/MASTER_ARCHITECTURE.md`
 — raw video upload needs Cloudflare Stream, which is deferred). Admins attach

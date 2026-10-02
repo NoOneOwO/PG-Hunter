@@ -2,8 +2,30 @@ import type { APIContext } from 'astro';
 import { getDb, json, nowIso, readBody, requireAuth } from '@/lib/server/auth';
 import { fetchListing, listingDto, type MediaRow } from '@/lib/server/listings';
 import { deleteObject, mediaUrl } from '@/lib/server/media';
+import { ensurePlanWindow } from '@/lib/server/listingPlans';
 
 export const prerender = false;
+
+/**
+ * Fields that decide what was actually verified.
+ *
+ * A physical-visit verification attests to a specific property at a specific
+ * address with specific rooms at specific rents. Changing any of those makes
+ * the existing attestation false, so an edited listing goes back through
+ * moderation and the badge is withdrawn until it is re-established.
+ *
+ * Deliberately NOT in this list: description, amenities, curfew, food and the
+ * listing's name. Those are presentation, and re-queueing a live listing for
+ * review because someone fixed a typo would punish the owner for improving
+ * their own listing.
+ */
+const VERIFICATION_SENSITIVE_FIELDS = [
+  ['address', 'address'],
+  ['locality', 'locality'],
+  ['city', 'city'],
+  ['latitude', 'latitude'],
+  ['longitude', 'longitude'],
+] as const;
 
 const str = (v: unknown, fallback = ''): string => (typeof v === 'string' ? v.trim() : fallback);
 const num = (v: unknown): number | null =>
@@ -68,23 +90,79 @@ export async function PUT(context: APIContext) {
   const id = result.listing!.id;
   const now = nowIso();
 
+  // What the listing looked like before this edit decides both whether it stays
+  // published and whether the existing verification still holds.
+  const before = await db
+    .prepare('SELECT status, verification_status, address, locality, city, latitude, longitude FROM owner_listings WHERE id = ?')
+    .bind(id)
+    .first<{
+      status: string;
+      verification_status: string;
+      address: string;
+      locality: string;
+      city: string;
+      latitude: number | null;
+      longitude: number | null;
+    }>();
+  if (!before) return json({ error: 'Listing not found.' }, 404);
+
+  const nextValues: Record<string, string | number | null> = {
+    address: str(body.address),
+    locality: str(body.locality),
+    city: str(body.city, 'Delhi'),
+    latitude: num(body.latitude),
+    longitude: num(body.longitude),
+  };
+
+  const changedSensitive = VERIFICATION_SENSITIVE_FIELDS.filter(
+    ([key]) => {
+      const previous = (before as unknown as Record<string, unknown>)[key];
+      const next = nextValues[key];
+      // Loose comparison on purpose: SQLite stores latitude as REAL, and null
+      // must match null rather than "NaN" or "0".
+      return (previous ?? null) !== (next ?? null);
+    }
+  ).map(([key]) => key);
+
+  const markedVerified = before.verification_status !== 'unverified';
+  const verificationWasInvalidated = markedVerified && changedSensitive.length > 0;
+
+  /**
+   * Publication state after an edit.
+   *
+   *   draft   -> stays draft (never auto-submits)
+   *   rejected-> back to draft so the owner can act on the rejection and
+   *              resubmit deliberately
+   *   pending -> stays pending
+   *   active  -> STAYS ACTIVE. The previous code forced 'draft' here, which
+   *              silently unpublished a live, approved listing on any edit.
+   *              If a verification-sensitive field changed we still keep it
+   *              published but drop the badge and re-queue it for review, so
+   *              nothing untruthful is displayed in the meantime.
+   */
+  const nextStatus = verificationWasInvalidated
+    ? 'pending'
+    : before.status === 'rejected'
+      ? 'draft'
+      : before.status;
+
   await db
     .prepare(
       `UPDATE owner_listings SET
         name = ?, property_type = ?, gender = ?, address = ?, locality = ?, city = ?,
         latitude = ?, longitude = ?, description = ?, rules = ?, curfew = ?, food = ?,
-        amenity_slugs = ?, status = 'draft', rejection_reason = NULL, updated_at = ?
+        amenity_slugs = ?, status = ?, rejection_reason = ?, updated_at = ?
        WHERE id = ?`
     )
     .bind(
       name,
       str(body.propertyType, 'pg'),
       str(body.gender, 'co-ed'),
-      str(body.address),
-      str(body.locality),
-      str(body.city, 'Delhi'),
-      num(body.latitude),
-      num(body.longitude),
+      nextValues.address,
+      nextValues.locality,
+      nextValues.city,
+      nextValues.latitude,
+      nextValues.longitude,
       str(body.description),
       JSON.stringify(strArr(body.rules)),
       str(body.curfew) || null,
@@ -98,10 +176,39 @@ export async function PUT(context: APIContext) {
           : { available: false }
       ),
       JSON.stringify(strArr(body.amenitySlugs)),
+      nextStatus,
+      // Editing always clears the old rejection reason: the owner has acted on
+      // it, and the listing is no longer sitting in a rejected state.
+      null,
       now,
       id
     )
     .run();
+
+  if (verificationWasInvalidated) {
+    // Withdraw the claim, keeping the reason visible to the owner. The old
+    // ledger row is left intact and its revocation is recorded when the next
+    // grant supersedes it — this only clears the read cache so no stale badge
+    // renders on a listing whose details changed under it.
+    await db
+      .prepare(
+        `UPDATE owner_listings
+            SET verification_status = 'unverified',
+                verified_at = NULL,
+                verified_by = NULL,
+                verification_method = NULL,
+                verification_evidence = NULL,
+                verification_expires_at = NULL
+          WHERE id = ?`
+      )
+      .bind(id)
+      .run();
+  }
+
+  if (nextStatus === 'active') {
+    // Preserve the existing window; an edit must not silently extend it.
+    await ensurePlanWindow(db, { listingId: id, plan: 'basic', renew: false });
+  }
 
   await db.prepare('DELETE FROM listing_rooms WHERE listing_id = ?').bind(id).run();
   for (const r of parsedRooms) {

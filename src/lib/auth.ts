@@ -501,11 +501,43 @@ export const setListingStatus = (
   id: string,
   patch: {
     status: 'pending' | 'active' | 'rejected';
-    verificationStatus?: string;
+    /** Optional plan for the publication window opened by approving. */
+    plan?: 'basic' | 'verified';
     rejectionReason?: string;
   }
 ): Promise<{ listing: Listing }> =>
   api(`/api/admin/listings/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(patch) });
+
+/**
+ * Grant a verification badge.
+ *
+ * Deliberately separate from `setListingStatus`: approving a listing is never
+ * the same act as verifying it, and the server rejects a grant that does not
+ * carry evidence of a real verification process.
+ */
+export const grantListingVerification = (
+  id: string,
+  grant: {
+    tier: 'pg_hunter_verified' | 'rishabh_irl_verified';
+    method: 'document_review' | 'video_review' | 'physical_visit';
+    evidence: string;
+    note?: string;
+  }
+): Promise<{ listing: Listing }> =>
+  api(`/api/admin/listings/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ action: 'grant', ...grant }),
+  });
+
+/** Withdraw a verification badge. The reason is recorded on the ledger. */
+export const revokeListingVerification = (
+  id: string,
+  reason: string
+): Promise<{ listing: Listing }> =>
+  api(`/api/admin/listings/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ action: 'revoke', reason }),
+  });
 
 export const getAdminVerifications = (status?: string): Promise<{ documents: AdminVerificationDoc[] }> =>
   api(`/api/admin/verifications${status ? `?status=${encodeURIComponent(status)}` : ''}`);

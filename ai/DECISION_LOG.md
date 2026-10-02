@@ -272,3 +272,110 @@ Leads should initially flow through PG Hunter.
 ## Architecture Principle
 
 Use Cloudflare-native infrastructure where it provides clear value, while deliberately postponing advanced services until real product requirements justify them.
+---
+
+## Decision #008 — Publication and Verification Are Separate Facts
+
+### Decision
+Publishing a listing (`owner_listings.status = 'active'`) never grants a
+verification badge. Verification may only be granted through an explicit admin
+action that records who verified, by what method, on what evidence, and until
+when — written to the `listing_verifications` ledger (migration 0006).
+Revocation is a status change on that ledger row, never a DELETE.
+
+### Date
+2026-10-02
+
+### Reason
+The pre-hardening admin approval path set `verification_status =
+'pg_hunter_verified'` as a side effect of approving a listing, and admin
+document approval did the same. That made the badge mean "somebody clicked
+approve" rather than "a verification process happened", which violates
+`ai/TRUTH_POLICY.md` and `ai/SECURITY_RULEBOOK.md` ("a verification badge is a
+trust claim"). It also left no audit trail: pre-hardening badges have no ledger
+row at all, so re-verification and revocation were impossible to reason about.
+
+### Alternatives
+- Keep auto-verification but rename the badge to something like "Listed".
+  Rejected: the badge is a paid product (₹1,499 + travel) and the brand claim
+  ("PG Hunter Verified", "Rishabh IRL Verified") must mean what it says.
+- Store verification only as columns on `owner_listings`. Rejected: no history,
+  so revocation and re-verification cannot be audited.
+- Trust the stored column in API responses. Rejected: a badge that outlives its
+  evidence is exactly the failure this decision exists to prevent.
+
+### Impact
+- `PUT /api/admin/listings/:id` now takes `action: 'grant' | 'revoke'` for
+  verification, and `{ status }` purely for moderation. There is deliberately
+  no field that writes `verification_status` directly.
+- `verification_status` on `owner_listings` is a read cache of the newest
+  approved ledger row; only `src/lib/server/verification.ts` may write it.
+- A lapsed verification is reported as `unverified` in API responses, so a
+  stale badge cannot render.
+- Pre-hardening badges with no ledger row and an expiry in the past are
+  reported as unverified. Re-verifying them requires a real verification.
+- Revocation also returns the listing to `pending`, since a listing whose trust
+  claim was withdrawn should not stay publicly published.
+
+### Status
+Approved
+
+---
+
+## Decision #009 — Listing Expiry Is Enforced on Read
+
+### Decision
+Basic listings are public for 15 days; Verified listings for 365. Visibility
+requires `status = 'active'` AND a live plan window. Expired listings are kept
+in D1 and hidden from public results so the owner can renew.
+
+### Date
+2026-10-02
+
+### Reason
+Migration 0006 added `plan` / `expires_at` but nothing read them, so an approved
+listing was public forever and the paid tier had no operational difference from
+the free one.
+
+### Impact
+- `GET /api/listings` filters on the window and gained `limit`/`offset` plus a
+  `total`, so responses are bounded and pageable.
+- Budget and room-type filters moved into SQL (`EXISTS` / correlated `MIN`)
+  so they compose with pagination instead of filtering a page after the fact.
+- Rows with no window recorded are treated as unexpired rather than hidden, so
+  legacy listings cannot vanish silently.
+- Renewal extends the window; an owner editing a listing does NOT, otherwise
+  editing every two weeks would replace the reason to upgrade.
+
+### Status
+Approved
+
+---
+
+## Decision #010 — Verification-Sensitive Edits Re-Queue a Listing
+
+### Decision
+Editing a listing preserves its publication state. But if a field that the
+verification attested to changes (address, locality, city, coordinates), the
+listing goes back to `pending` and the badge is withdrawn until re-verified.
+Changes to presentation only (name, description, rules, amenities, food,
+curfew) keep the listing live and verified.
+
+### Date
+2026-10-02
+
+### Reason
+The owner `PUT` handler forced `status = 'draft'` on every edit, silently
+unpublishing a live listing — and for an active `'draft'` listing the submit
+guard then refused resubmission, so the owner could not recover. Conversely,
+letting an address change ride on an existing physical-visit verification would
+mean the badge attested to a property that had changed underneath it.
+
+### Alternatives
+- Re-queue on every edit. Rejected: punishes owners for fixing typos and makes
+  the review queue useless.
+- Never re-queue. Rejected: lets a verified listing be repointed at a different
+  property while keeping the badge.
+
+### Status
+Approved

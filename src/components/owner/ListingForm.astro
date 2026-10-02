@@ -214,6 +214,10 @@ const edit = mode === 'edit';
   } from '@/lib/auth';
   import type { Listing, ListingInput, ListingMedia } from '@/lib/auth';
   import { roomTypeOptions } from '@/lib/owner';
+  // Media titles, ids and URLs are database values rendered into attributes via
+  // innerHTML. Attribute positions need escaping, or a quote breaks out of the
+  // attribute and becomes markup.
+  import { escapeAttr, escapeHtml, safeImageSrc, safeUrl, youTubeId } from '@/lib/html';
 
   const form = document.getElementById('listing-form') as HTMLFormElement;
   const mode = form.dataset.mode as 'create' | 'edit';
@@ -306,7 +310,7 @@ const edit = mode === 'edit';
     const wrap = document.createElement('div');
     wrap.className = 'flex items-center gap-2';
     wrap.innerHTML = `
-      <input value="${value}" placeholder="e.g. No outside visitors after 10 PM" class="field w-full" />
+      <input value="${escapeAttr(value)}" placeholder="e.g. No outside visitors after 10 PM" class="field w-full" />
       <button type="button" data-rm-rule class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600" aria-label="Remove rule">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>`;
@@ -352,13 +356,13 @@ const edit = mode === 'edit';
     grid.innerHTML = photos
       .map(
         (m) => `
-        <div class="group relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-100" data-media-id="${m.id}">
-          <img src="${m.url ?? m.externalId}" alt="${m.title}" loading="lazy" decoding="async" class="h-full w-full object-cover" />
+        <div class="group relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-100" data-media-id="${escapeAttr(m.id)}">
+          <img src="${escapeAttr(safeImageSrc(m.url ?? m.externalId) ?? '')}" alt="${escapeAttr(m.title)}" loading="lazy" decoding="async" class="h-full w-full object-cover" />
           <div class="absolute inset-0 flex items-start justify-between bg-gradient-to-b from-black/40 via-transparent to-black/40 p-2 opacity-0 transition-opacity group-hover:opacity-100">
             <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-slate-500 cursor-grab active:cursor-grabbing" data-drag-handle title="Drag to reorder">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m8 6 4-4 4 4"/><path d="m8 18 4 4 4-4"/></svg>
             </span>
-            <button type="button" data-delete-media="${m.id}" class="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-rose-500 transition-colors hover:bg-rose-500 hover:text-white" aria-label="Delete photo">
+            <button type="button" data-delete-media="${escapeAttr(m.id)}" class="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-rose-500 transition-colors hover:bg-rose-500 hover:text-white" aria-label="Delete photo">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
@@ -435,7 +439,6 @@ const edit = mode === 'edit';
   });
 
   /* ---- Video management --------------------------------------------- */
-  const ytThumb = (id: string) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
   const renderVideos = () => {
     const grid = document.getElementById('video-grid');
     if (!grid) return;
@@ -446,27 +449,30 @@ const edit = mode === 'edit';
     }
     grid.innerHTML = videos
       .map((m) => {
-        const thumb = m.provider === 'youtube' ? ytThumb(m.externalId) : '';
-        const link = m.provider === 'youtube' ? `https://www.youtube.com/watch?v=${m.externalId}` : '#';
+        // Validate the YouTube id before it reaches a URL, so a stored value
+        // cannot inject path or query content into the embed/thumbnail link.
+        const ytId = m.provider === 'youtube' ? youTubeId(m.externalId) : null;
+        const thumb = ytId ? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg` : '';
+        const link = ytId ? `https://www.youtube.com/watch?v=${ytId}` : '#';
         return `
-        <div class="group relative overflow-hidden rounded-xl bg-slate-900" data-media-id="${m.id}">
+        <div class="group relative overflow-hidden rounded-xl bg-slate-900" data-media-id="${escapeAttr(m.id)}">
           <div class="aspect-video">
             ${thumb
-              ? `<img src="${thumb}" alt="${m.title}" loading="lazy" decoding="async" class="h-full w-full object-cover opacity-80" />`
+              ? `<img src="${escapeAttr(safeImageSrc(thumb) ?? '')}" alt="${escapeAttr(m.title)}" loading="lazy" decoding="async" class="h-full w-full object-cover opacity-80" />`
               : `<div class="flex h-full items-center justify-center bg-slate-800 text-slate-500">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 </div>`
             }
             <div class="absolute inset-0 flex items-center justify-center">
-              <a href="${link}" target="_blank" rel="noopener" class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-brand-700 shadow-lg transition-transform hover:scale-110">
+              <a href="${escapeAttr(safeUrl(link) ?? '#')}" target="_blank" rel="noopener" class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-brand-700 shadow-lg transition-transform hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               </a>
             </div>
           </div>
           <div class="flex items-center justify-between px-3 py-2">
             <div class="min-w-0">
-              <p class="truncate text-xs font-semibold text-white">${m.title}</p>
-              <p class="text-[10px] font-medium text-slate-400 capitalize">${m.provider}</p>
+              <p class="truncate text-xs font-semibold text-white">${escapeHtml(m.title)}</p>
+              <p class="text-[10px] font-medium text-slate-400 capitalize">${escapeHtml(m.provider)}</p>
             </div>
             <button type="button" data-delete-media="${m.id}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-500/20 hover:text-rose-400" aria-label="Remove video">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>

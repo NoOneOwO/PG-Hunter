@@ -155,6 +155,9 @@ import { listingStatusMeta } from '@/lib/owner';
 <script>
   import { getOwnerOverview } from '@/lib/auth';
   import type { Listing } from '@/lib/auth';
+  // Enquiry and listing text is other people's input rendered into this
+  // owner's session via innerHTML. Escape every interpolated value.
+  import { escapeHtml } from '@/lib/html';
   import {
     listingStatusMeta,
     leadStatusLabel,
@@ -187,15 +190,15 @@ import { listingStatusMeta } from '@/lib/owner';
 
   const listingRow = (l: Listing) => {
     const rejection = l.status === 'rejected' && l.rejectionReason
-      ? `<p class="mt-1 flex items-center gap-1 text-xs text-rose-600"><span class="inline-flex h-3 w-3 items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>${l.rejectionReason}</p>` : '';
+      ? `<p class="mt-1 flex items-center gap-1 text-xs text-rose-600"><span class="inline-flex h-3 w-3 items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>${escapeHtml(l.rejectionReason)}</p>` : '';
     return `
     <div class="flex items-center gap-4 px-5 py-4">
       <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
       </span>
       <div class="min-w-0 flex-1">
-        <a href="/owner/listings/${l.id}/edit" class="truncate text-sm font-bold text-slate-900 hover:text-brand-700">${l.name}</a>
-        <p class="mt-0.5 text-xs font-medium text-slate-500">${rentRangeOf(l)} · ${formatRelativeDate(l.updatedAt)}</p>
+        <a href="/owner/listings/${encodeURIComponent(l.id)}/edit" class="truncate text-sm font-bold text-slate-900 hover:text-brand-700">${escapeHtml(l.name)}</a>
+        <p class="mt-0.5 text-xs font-medium text-slate-500">${escapeHtml(rentRangeOf(l))} · ${escapeHtml(formatRelativeDate(l.updatedAt))}</p>
         ${rejection}
       </div>
       <div class="hidden sm:block">${statusBadge(l.status)}</div>
@@ -205,10 +208,10 @@ import { listingStatusMeta } from '@/lib/owner';
   const leadRow = (lead: any) => `
     <div class="px-5 py-4">
       <div class="flex items-center justify-between gap-2">
-        <p class="truncate text-sm font-bold text-slate-900">${lead.student_name ?? 'Enquiry'}</p>
-        <span class="badge bg-brand-100 text-brand-800">${leadStatusLabel(lead.status)}</span>
+        <p class="truncate text-sm font-bold text-slate-900">${escapeHtml(lead.student_name ?? 'Enquiry')}</p>
+        <span class="badge bg-brand-100 text-brand-800">${escapeHtml(leadStatusLabel(lead.status))}</span>
       </div>
-      <p class="mt-0.5 truncate text-xs font-medium text-slate-500">${lead.property_name ?? 'Your PG'} · ${formatRelativeDate(lead.created_at)}</p>
+      <p class="mt-0.5 truncate text-xs font-medium text-slate-500">${escapeHtml(lead.property_name ?? 'Your PG')} · ${escapeHtml(formatRelativeDate(lead.created_at))}</p>
     </div>`;
 
   const empty = (text: string) => `
