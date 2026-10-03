@@ -148,7 +148,46 @@ you want your own domain:
 
 ---
 
-## 5. API reference (all same-origin, session = `ph_session` cookie)
+## 5. Automatic deploys from Git (Workers Builds)
+
+Once connected, every push to `main` rebuilds and redeploys. Configure under
+**Workers & Pages → `pg-hunter` → Settings → Builds → Connect**.
+
+| Setting | Value | Why |
+|---|---|---|
+| Git account | your GitHub account | — |
+| Git repository | `NoOneOwO/PG-Hunter` | — |
+| Git branch | `main` | production branch |
+| Build command | `npm run build` | Astro must run before Wrangler uploads |
+| Deploy command | `npx wrangler deploy` | default; reads `dist/server/wrangler.json` |
+| Root directory | *(leave empty)* | `wrangler.toml` is at the repo root |
+
+The Worker name in the dashboard must match `name = "pg-hunter"` in
+`wrangler.toml`, or builds fail. Preview builds (any non-`main` branch) default
+to `npx wrangler preview`; clear the Preview command if you don't want them.
+
+### What CI cannot fix for you
+
+Workers Builds runs `npm ci` and the build command only. It does **not** apply
+D1 migrations or set secrets — a build never migrates the production database.
+So before the first auto-deploy, make sure these are already done:
+
+- `npx wrangler d1 migrations apply pg_hunter --remote` (migrations 0001–0008)
+- `npx wrangler secret put RATE_LIMIT_SALT` — without it, rate limiting falls
+  back to an unkeyed SHA-256 digest, which is brute-forceable
+- `npx wrangler secret put GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+- `ADMIN_EMAILS` set, or nobody can reach the admin panel
+
+Because `/api/listings` has no fallback for a missing `expires_at` column
+(migration 0006), deploying ahead of the migrations returns a hard 500 on the
+main listings page.
+
+Requires Node ≥ 22.12 (Astro 6's floor); `.node-version` and the `engines`
+field pin it.
+
+---
+
+## 6. API reference (all same-origin, session = `ph_session` cookie)
 
 **Auth + student**
 
@@ -202,7 +241,7 @@ you want your own domain:
 | POST | `/api/admin/tours` | `{ listingId, videoId, title? }` | Attach a YouTube room tour to a listing |
 | DELETE | `/api/admin/tours/:id` | — | Remove a room tour |
 
-## 6. Schema
+## 7. Schema
 
 - `db/migrations/0001_init.sql` — `users`, `sessions`, `saved_pgs`, `leads`
 - `db/migrations/0002_owner_admin.sql` — `is_admin` on users, `owner_listings`,
