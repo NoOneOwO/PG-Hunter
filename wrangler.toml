@@ -13,15 +13,27 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "pg_hunter"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "3a37cc78-3512-4fda-92c7-b53bc6850a72"
 migrations_dir = "db/migrations"
 
 # Object storage for owner-uploaded images/documents.
 # Production: `npx wrangler r2 bucket create pg-hunter-media`
 # Local: created automatically by Miniflare.
-[[r2_buckets]]
-binding = "MEDIA"
-bucket_name = "pg-hunter-media"
+#
+# TEMPORARILY DISABLED: R2 is not enabled on this Cloudflare account yet, and a
+# binding to a non-existent bucket fails the whole `wrangler deploy` upload.
+# Until it is enabled, deploy without it. Nothing that renders a page or serves
+# an API response reads this binding — `mediaUrl()` builds a plain URL string —
+# so listings, search, auth and admin all work. Only uploads and media fetches
+# need it, and they fail with a clear error until R2 is connected.
+#
+# TO RE-ENABLE (once R2 is active on the account):
+#   1. npx wrangler r2 bucket create pg-hunter-media
+#   2. Uncomment the two lines below.
+#   3. Redeploy. No code changes required.
+# [[r2_buckets]]
+# binding = "MEDIA"
+# bucket_name = "pg-hunter-media"
 
 # Comma-separated emails that get admin access automatically (register/login).
 # Put real values in .dev.vars / `wrangler secret put ADMIN_EMAILS`.
