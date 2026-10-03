@@ -17,23 +17,25 @@ database_id = "3a37cc78-3512-4fda-92c7-b53bc6850a72"
 migrations_dir = "db/migrations"
 
 # Object storage for owner-uploaded images/documents.
-# Production: `npx wrangler r2 bucket create pg-hunter-media`
-# Local: created automatically by Miniflare.
+# Bucket: "main" (already created on the Cloudflare account).
+# Local: emulated by the dev runtime, so local uploads never touch production.
 #
-# TEMPORARILY DISABLED: R2 is not enabled on this Cloudflare account yet, and a
-# binding to a non-existent bucket fails the whole `wrangler deploy` upload.
-# Until it is enabled, deploy without it. Nothing that renders a page or serves
-# an API response reads this binding — `mediaUrl()` builds a plain URL string —
-# so listings, search, auth and admin all work. Only uploads and media fetches
-# need it, and they fail with a clear error until R2 is connected.
+# The Worker talks to R2 through this binding only (see src/lib/server/media.ts).
+# The S3-compatible endpoint for this account is
+# https://<account-id>.r2.cloudflarestorage.com — it is only needed for external
+# tooling (S3 clients, `aws s3` CLI, backups). No S3 keys are used by the app;
+# nothing to configure here for the Worker path.
 #
-# TO RE-ENABLE (once R2 is active on the account):
-#   1. npx wrangler r2 bucket create pg-hunter-media
-#   2. Uncomment the two lines below.
-#   3. Redeploy. No code changes required.
-# [[r2_buckets]]
-# binding = "MEDIA"
-# bucket_name = "pg-hunter-media"
+# Object keys are namespaced inside the bucket by src/lib/server/media.ts:
+#   owners/{ownerId}/listing-images/...      (public photos)
+#   owners/{ownerId}/listing-documents/...   (public docs)
+#   verification/{ownerId}/...               (private, never served publicly)
+# so this bucket can be shared with other keys of yours without collisions.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "main"
+# Preview bucket keeps `wrangler dev` / preview deployments off production objects.
+preview_bucket_name = "main-preview"
 
 # Comma-separated emails that get admin access automatically (register/login).
 #
@@ -49,6 +51,34 @@ migrations_dir = "db/migrations"
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "404-page"
+
+# Cloudflare's asset router treats a top-level browser navigation
+# (`Sec-Fetch-Mode: navigate`) as "serve a page": when the path matches no
+# static asset it returns the 404 page and NEVER invokes the Worker. That
+# silently broke every on-demand route reached by navigation, because these
+# routes have no .html asset of their own:
+#   - the Google OAuth handshake: /api/auth/google and the callback Google
+#     redirects back to — sign-in landed on "This page wandered off campus".
+#   - every /admin/* page and the on-demand /owner/* pages (edit, plans).
+# `fetch()` calls send `Sec-Fetch-Mode: cors` and were unaffected, which is why
+# email/password sign-in worked and only the redirect-based flows failed.
+#
+# These patterns make the Worker run first for exactly those on-demand routes.
+# Prerendered pages are not matched, so they keep being served straight from the
+# asset store (no added Worker invocations); the Worker also falls back to the
+# ASSETS binding itself, so an overlapping match would still be harmless.
+#
+# Keep this list in sync with `prerender = false` routes outside /api/*.
+run_worker_first = [
+  "/api/*",
+  # Bare index paths need their own entry: `/admin/*` does not match `/admin`.
+  "/admin",
+  "/admin/*",
+  "/owner/plans",
+  "/owner/plans/*",
+  "/owner/listings/*/edit",
+  "/owner/listings/*/edit/*",
+]
 
 # Override the site URL used for OAuth redirect URIs. Leave unset to derive
 # it from each request's origin (recommended for local + custom domains).
