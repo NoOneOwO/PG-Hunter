@@ -36,9 +36,13 @@ migrations_dir = "db/migrations"
 # bucket_name = "pg-hunter-media"
 
 # Comma-separated emails that get admin access automatically (register/login).
-# Put real values in .dev.vars / `wrangler secret put ADMIN_EMAILS`.
+#
+# Deliberately NOT set here. This repo is public, so a plaintext var would
+# publish the admin address. It is stored as an encrypted Worker secret
+# instead: `npx wrangler secret put ADMIN_EMAILS`.
+# Cloudflare rejects a secret whose name collides with a plaintext var, so the
+# var must stay absent.
 [vars]
-ADMIN_EMAILS = ""
 
 # Static assets built by Astro (served by the Worker via the ASSETS binding).
 [assets]
