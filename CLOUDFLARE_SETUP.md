@@ -33,9 +33,6 @@ What the backend does today:
 For **local development you only need #1 and #5**. D1 + R2 run locally with zero
 Cloudflare setup (no account, no login).
 
-For **local development you only need #1**. D1 runs locally with zero Cloudflare
-setup (no account, no login).
-
 ---
 
 ## 2. Google OAuth — the only keys you must create
@@ -218,9 +215,10 @@ you want your own domain:
   (the audit ledger) plus `plan` / `plan_started_at` / `expires_at` and the
   denormalised `verification_*` cache on `owner_listings`
 - `db/migrations/0007_rate_limits.sql` — `rate_limits` counters
+- `db/migrations/0008_plans_pricing.sql` — `plans` table + seeded plan catalogue
 
 Apply with `wrangler d1 migrations apply pg_hunter --local|--remote`.
-Add future migrations as `db/migrations/0008_*.sql`.
+Add future migrations as `db/migrations/0009_*.sql`.
 
 ### Publication vs verification
 

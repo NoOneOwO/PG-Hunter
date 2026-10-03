@@ -30,6 +30,9 @@ worker-configuration.d.ts
 *.log
 npm-debug.log*
 
+# local toolchain shim (git built from source on this machine only)
+.shim-curl-config
+
 # os / editor
 .DS_Store
 Thumbs.db
