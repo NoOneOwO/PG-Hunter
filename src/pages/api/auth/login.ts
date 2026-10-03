@@ -3,13 +3,12 @@ import {
   SESSION_COOKIE,
   createSession,
   getDb,
-  hashPassword,
   json,
   publicUser,
   readBody,
   sessionCookieOpts,
   syncAdminFlag,
-  timingSafeEqual,
+  verifyPassword,
   type UserRow,
 } from '@/lib/server/auth';
 
@@ -31,8 +30,19 @@ export async function POST(context: APIContext) {
     return json({ error: 'This account was created with Google. Continue with Google instead.' }, 401);
   }
 
-  const hash = await hashPassword(password, user.salt);
-  if (!timingSafeEqual(hash, user.password_hash)) {
+  // verifyPassword re-derives using the iteration count recorded in the stored
+  // hash, so raising PBKDF2_ITERATIONS later cannot lock existing users out.
+  let passwordOk: boolean;
+  try {
+    passwordOk = await verifyPassword(password, user.salt, user.password_hash);
+  } catch (err) {
+    // A hashing failure is an infrastructure problem, not a wrong password.
+    // Log it and say so, instead of returning an opaque 500 the UI can only
+    // render as "Something went wrong".
+    console.error('auth_login: password verification failed', err);
+    return json({ error: 'Sign-in is temporarily unavailable. Please try again shortly.' }, 503);
+  }
+  if (!passwordOk) {
     return json({ error: 'Incorrect email or password. Please try again.' }, 401);
   }
 

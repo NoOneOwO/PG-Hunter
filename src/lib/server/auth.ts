@@ -82,42 +82,23 @@ export const randomHex = (bytes: number): string => {
 };
 
 /* ------------------------------------------------------------------ */
-/* Password hashing (PBKDF2-SHA256 via WebCrypto — workerd native)     */
+/* Password hashing                                                    */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The hashing primitives live in ./password so they stay importable from plain
+ * Node (this module pulls in `cloudflare:workers`). Re-exported here because
+ * existing callers import them from this module.
+ */
+export {
+  PBKDF2_ITERATIONS,
+  hashPassword,
+  verifyPassword,
+  parseStoredHash,
+  timingSafeEqual,
+} from './password';
+
 export const generateSalt = (): string => randomHex(16);
-
-export const hashPassword = async (password: string, saltHex: string): Promise<string> => {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(password),
-    'PBKDF2',
-    false,
-    ['deriveBits']
-  );
-  const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt: hexBytes(saltHex), iterations: 210_000, hash: 'SHA-256' },
-    key,
-    256
-  );
-  return bytesToHex(new Uint8Array(bits));
-};
-
-const hexBytes = (hex: string): Uint8Array<ArrayBuffer> => {
-  const out = new Uint8Array(new ArrayBuffer(hex.length / 2));
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  return out;
-};
-
-const bytesToHex = (bytes: Uint8Array): string =>
-  Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-
-export const timingSafeEqual = (a: string, b: string): boolean => {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-};
 
 /* ------------------------------------------------------------------ */
 /* Sessions + cookies                                                  */
