@@ -252,6 +252,12 @@ const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
     showError('Google sign-in is not set up yet. Use email/password, or add your Google credentials (see CLOUDFLARE_SETUP.md).');
   } else if (urlError === 'google-denied') {
     showError('Google sign-in was cancelled.');
+  } else if (urlError === 'google-redirect-mismatch') {
+    showError(
+      'Google rejected the sign-in because this app’s callback address is not registered ' +
+        'with the OAuth client. Add the exact redirect URI from CLOUDFLARE_SETUP.md §2 to ' +
+        '“Authorized redirect URIs”, on a Web application client.'
+    );
   } else if (urlError === 'google-failed') {
     showError('Could not complete Google sign-in. Please try again.');
   }

@@ -47,23 +47,42 @@ Cloudflare setup (no account, no login).
      origin won't match a registered URI and Google rejects it).
 4. Copy the **Client ID** and **Client secret**.
 
-### If Google shows "doesn't comply with OAuth 2.0 policy"
+### If Google shows "Error 400: redirect_uri_mismatch"
 
-That is Google's **client type** check, not a wrong redirect URI. A redirect URI
-that is merely unregistered produces a `redirect_uri_mismatch` error page, but
-the *"doesn't comply with OAuth 2.0 policy"* wording means the OAuth client was
-created with the wrong application type for a Workers app:
+Google compares the `redirect_uri` we send against the client's **Authorized
+redirect URIs** and rejects the request when it isn't an exact match (scheme,
+host, port and path must all match, and a trailing slash counts as different).
 
-- **Web application** clients are held to Google's stricter policy and are
-  rejected for this native/native-like flow.
-- Create the client as **Desktop and mobile apps** (or any native client type)
-  instead, put the same two redirect URIs in its client, and set
-  `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` to that client's credentials:
-  `npx wrangler secret put GOOGLE_CLIENT_ID` and
-  `npx wrangler secret put GOOGLE_CLIENT_SECRET`.
+The app sends exactly one URI:
 
-The redirect URI itself stays exactly `https://<your-domain>/api/auth/google/callback`
-— no code change is needed, only the client type and the credentials.
+```
+https://pghunter.in/api/auth/google/callback
+```
+
+That value comes from `SITE_URL` in `wrangler.toml`, which is **pinned on
+purpose**. Without it the Worker would build the redirect URI from whatever host
+the request arrived on, so the workers.dev URL and the custom domain would each
+send a *different* URI and only one could ever be registered.
+
+Checklist, in order:
+
+1. **Client type must be "Web application".** This is a server-side web OAuth
+   flow (the Worker performs the code exchange), so it needs a web client.
+   A **Desktop and mobile apps** client only accepts loopback URIs
+   (`http://localhost`, `http://127.0.0.1`) or custom URI schemes like
+   `com.example.app:/oauth2redirect` — it will reject
+   `https://pghunter.in/...` with exactly this error.
+2. **Copy the URI above verbatim** into the client's Authorized redirect URIs.
+   No trailing slash.
+3. **If you created a new client**, update the deployed credentials:
+   `npx wrangler secret put GOOGLE_CLIENT_ID` and
+   `npx wrangler secret put GOOGLE_CLIENT_SECRET`.
+4. If you serve the site on another hostname, either sign in on
+   `pghunter.in` or add that host's callback URI as well — `SITE_URL` decides
+   which one is sent.
+
+The login page now names this specific failure instead of reporting every Google
+error as "sign-in was cancelled".
 
 Then put them in `.dev.vars` (copy from `.dev.vars.example`):
 

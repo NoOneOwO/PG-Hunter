@@ -45,6 +45,21 @@ preview_bucket_name = "main-preview"
 # Cloudflare rejects a secret whose name collides with a plaintext var, so the
 # var must stay absent.
 [vars]
+# Canonical origin used to build OAuth redirect URIs (see getSiteUrl()).
+#
+# This MUST be pinned in production. When unset, getSiteUrl() falls back to the
+# request's own origin, so the redirect_uri sent to Google changes with the Host
+# header — the workers.dev URL, a preview URL, or a bare-IP request each send a
+# *different* redirect_uri, and Google rejects every one that is not the single
+# registered value (redirect_uri_mismatch). Pinning it makes the OAuth handshake
+# deterministic no matter which hostname served the request.
+#
+# It is deliberately a plaintext var, not a secret: the domain is public and so
+# is this repo. Local dev overrides it via SITE_URL in .dev.vars.
+#
+# NOTE: a wrong value here breaks sign-in outright, so change it only together
+# with the matching entry in the Google OAuth client's Authorized redirect URIs.
+SITE_URL = "https://pghunter.in"
 
 # Static assets built by Astro (served by the Worker via the ASSETS binding).
 [assets]

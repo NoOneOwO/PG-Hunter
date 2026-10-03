@@ -9,7 +9,14 @@ import {
   syncAdminFlag,
   type UserRow,
 } from '@/lib/server/auth';
-import { exchangeGoogleCode, oauthCallbackParams, popOAuthNext, popOAuthRole, verifyOAuthState } from '@/lib/server/oauth';
+import {
+  exchangeGoogleCode,
+  oauthCallbackParams,
+  popOAuthNext,
+  popOAuthRole,
+  verifyOAuthState,
+} from '@/lib/server/oauth';
+import { googleErrorToCode } from '@/lib/server/oauthErrors';
 
 export const prerender = false;
 
@@ -18,7 +25,9 @@ export async function GET(context: APIContext) {
   const code = params.get('code');
   const error = params.get('error');
 
-  if (error || !code) return context.redirect('/login?error=google-denied');
+  // Preserve *why* Google bounced us back (e.g. redirect_uri_mismatch) instead
+  // of reporting every failure as "cancelled" — see googleErrorToCode.
+  if (error || !code) return context.redirect(`/login?error=${googleErrorToCode(error)}`);
   if (!verifyOAuthState(context, params.get('state'))) return context.redirect('/login?error=google-failed');
 
   const profile = await exchangeGoogleCode(context, code);

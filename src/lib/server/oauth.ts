@@ -97,3 +97,8 @@ export const popOAuthRole = (context: APIContext): 'owner' | 'student' => {
 /** Convenience for the callback: parse the full query string reliably. */
 export const oauthCallbackParams = (context: APIContext): URLSearchParams =>
   getRequestUrl(context).searchParams;
+
+// `googleErrorToCode` lives in ./oauthErrors so it stays importable from plain
+// Node (this module pulls in `cloudflare:workers`). Re-exported for callers that
+// already import from here.
+export { googleErrorToCode } from './oauthErrors';
