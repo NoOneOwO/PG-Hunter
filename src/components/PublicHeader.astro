@@ -8,10 +8,15 @@ interface Props {
 const { activePath = Astro.url.pathname } = Astro.props;
 
 // Role-aware public header:
-// - Student: Explore / Saved / Earn with PG Hunter / Profile (no prominent For Owners)
-// - Guest: Explore / Saved / Earn + subtle For Owners
-// - Owner on public routes: Explore / Saved / Earn + Dashboard (profile pill routes to /owner/profile)
+// - Student: Explore / Saved / Earn with PG Hunter (no prominent For Owners)
+// - Guest:   Explore / Saved / Earn + For Owners
+// - Owner on public routes: Explore / Saved / Dashboard (Earn hidden), profile pill routes to /owner/profile
 // Owner shell itself lives in OwnerHeader (/owner/*).
+//
+// There is deliberately no Profile *tab*: the account is reached through the
+// avatar pill on the right, which is the one control that already knows whether
+// a student or an owner is signed in. A second, redundant tab made the bar
+// wider and gave two links the same destination.
 
 const isActive = (href: string): boolean =>
   href === '/' ? activePath === '/' : activePath.startsWith(href);
@@ -21,83 +26,115 @@ const isExploreActive =
   activePath.startsWith('/pgs') ||
   activePath.startsWith('/colleges') ||
   activePath.startsWith('/localities');
+
+/** Shared shape for a tab so the bar stays visually uniform. */
+const tabBase =
+  'relative inline-flex min-h-9 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold transition-colors';
+const tabActive = 'text-white';
+const tabIdle = 'text-slate-600 hover:bg-white/70 hover:text-slate-900';
+
+// Each entry drives one tab. `icon` is false for text-only labels so the bar
+// keeps a consistent rhythm instead of a ragged one.
+const tabs = [
+  {
+    key: 'explore',
+    href: '/pgs-near-you',
+    label: 'Explore',
+    icon: Compass,
+    active: isExploreActive,
+  },
+  {
+    key: 'saved',
+    href: '/saved',
+    label: 'Saved',
+    icon: Bookmark,
+    active: isActive('/saved'),
+  },
+  {
+    key: 'earn',
+    href: '/earn',
+    label: 'Earn with PG Hunter',
+    icon: Wallet,
+    active: isActive('/earn'),
+    hiddenForOwner: true,
+  },
+  {
+    key: 'for-owners',
+    href: '/for-owners',
+    label: 'For Owners',
+    active: isActive('/for-owners'),
+    guestOnly: true,
+  },
+  {
+    key: 'dashboard',
+    href: '/owner',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    active: isActive('/owner'),
+    ownerOnly: true,
+  },
+];
 ---
 
-<header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-  <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
-    <a href="/" class="flex items-center gap-2" aria-label="PG Hunter home">
-      <img src="/favicon.svg" alt="" width="32" height="32" class="h-8 w-8" />
+<header
+  id="site-header"
+  data-appbar
+  class="sticky top-0 z-40 border-b border-slate-200 bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/70"
+>
+  <div class="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+    <a href="/" class="group flex shrink-0 items-center gap-2" aria-label="PG Hunter home">
+      <img
+        src="/favicon.svg"
+        alt=""
+        width="32"
+        height="32"
+        class="h-8 w-8 transition-transform duration-200 group-hover:-rotate-6"
+      />
       <span class="text-lg font-extrabold tracking-tight text-slate-900">
         PG<span class="text-brand-600">Hunter</span>
       </span>
     </a>
 
-    <nav id="primary-nav" class="hidden items-center gap-1 lg:flex" aria-label="Primary">
-      <a
-        data-nav="explore"
-        href="/pgs-near-you"
-        class:list={[
-          'inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold transition-colors',
-          isExploreActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
-        ]}
-        aria-current={isExploreActive ? 'page' : undefined}
-      >
-        <Compass class="h-4 w-4" /> Explore
-      </a>
-      <a
-        data-nav="saved"
-        href="/saved"
-        class:list={[
-          'inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold transition-colors',
-          isActive('/saved') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
-        ]}
-        aria-current={isActive('/saved') ? 'page' : undefined}
-      >
-        <Bookmark class="h-4 w-4" /> Saved
-      </a>
-      <a
-        data-nav="earn"
-        href="/earn"
-        class:list={[
-          'inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold transition-colors',
-          isActive('/earn') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
-        ]}
-        aria-current={isActive('/earn') ? 'page' : undefined}
-      >
-        <Wallet class="h-4 w-4" /> Earn with PG Hunter
-      </a>
-      <a
-        data-nav="profile"
-        href="/profile"
-        class:list={[
-          'hidden min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold transition-colors',
-          isActive('/profile') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
-        ]}
-        aria-current={isActive('/profile') ? 'page' : undefined}
-      >
-        <UserRound class="h-4 w-4" /> Profile
-      </a>
-      <a
-        data-nav="for-owners"
-        href="/for-owners"
-        class:list={[
-          'inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold transition-colors',
-          isActive('/for-owners') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
-        ]}
-        aria-current={isActive('/for-owners') ? 'page' : undefined}
-      >
-        For Owners
-      </a>
-      <a
-        data-nav="dashboard"
-        href="/owner"
-        class="hidden min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
-      >
-        <LayoutDashboard class="h-4 w-4" /> Dashboard
-      </a>
-    </nav>
+    <!-- Tab bar. The indicator is a single element that slides between tabs,
+         so the active state reads as one continuous object rather than five
+         independently tinted links. -->
+    <div class="relative hidden min-w-0 flex-1 lg:block">
+      <span
+        data-tab-indicator
+        aria-hidden="true"
+        class="pointer-events-none absolute left-0 top-0 z-0 w-0 rounded-sm bg-brand-600"
+        style="opacity:0"
+      ></span>
 
-    <div class="ml-auto flex items-center gap-2">
+      <nav
+        id="primary-nav"
+        data-tab-bar
+        class="relative z-10 flex items-center gap-0.5 overflow-x-auto"
+        aria-label="Primary"
+      >
+        {
+          tabs.map((tab) => (
+            <a
+              data-nav={tab.key}
+              href={tab.href}
+              data-tab={tab.key}
+              class:list={[
+                tabBase,
+                tab.active ? tabActive : tabIdle,
+                tab.guestOnly && 'inline-flex',
+                tab.ownerOnly && 'hidden',
+              ]}
+              aria-current={tab.active ? 'page' : undefined}
+            >
+              {tab.icon ? <tab.icon class="h-4 w-4 shrink-0" /> : null}
+              <span class="whitespace-nowrap">{tab.label}</span>
+            </a>
+          ))
+        }
+      </nav>
+    </div>
+
+    <div class="ml-auto flex items-center gap-2 lg:ml-0">
       <div id="auth-guest" class="flex items-center gap-2">
         <a href="/login" class="btn-accent hidden sm:inline-flex" aria-label="Log in or sign up">
           Login/Sign up
@@ -120,15 +157,18 @@ const isExploreActive =
           <span
             id="header-avatar"
             class="flex h-8 w-8 items-center justify-center rounded-sm bg-brand-600 text-xs font-extrabold text-white"
-          >?</span>
-          <span id="header-name" class="max-w-28 truncate text-sm font-semibold text-slate-800"></span>
+            >?</span
+          >
+          <span id="header-name" class="max-w-28 truncate text-sm font-semibold text-slate-800"
+          ></span>
         </a>
         <a
           href="/profile"
           id="header-avatar-mobile"
           aria-label="Your profile"
           class="inline-flex h-11 w-11 items-center justify-center rounded-sm bg-brand-600 text-sm font-extrabold text-white sm:hidden"
-        >?</a>
+          >?</a
+        >
       </div>
       <button
         id="menu-toggle"
@@ -149,63 +189,22 @@ const isExploreActive =
     aria-label="Mobile"
   >
     <div class="mx-auto flex max-w-7xl flex-col">
-      <a
-        data-nav="explore-mobile"
-        href="/pgs-near-you"
-        class:list={[
-          'flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
-          isExploreActive ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
-        ]}
-      >
-        <Compass class="h-4 w-4" /> Explore
-      </a>
-      <a
-        data-nav="saved-mobile"
-        href="/saved"
-        class:list={[
-          'flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
-          isActive('/saved') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
-        ]}
-      >
-        <Bookmark class="h-4 w-4" /> Saved
-      </a>
-      <a
-        data-nav="earn-mobile"
-        href="/earn"
-        class:list={[
-          'flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
-          isActive('/earn') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
-        ]}
-      >
-        <Wallet class="h-4 w-4" /> Earn with PG Hunter
-      </a>
-      <a
-        data-nav="profile-mobile"
-        href="/profile"
-        class:list={[
-          'hidden min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
-          isActive('/profile') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
-        ]}
-      >
-        <UserRound class="h-4 w-4" /> Profile
-      </a>
-      <a
-        data-nav="for-owners-mobile"
-        href="/for-owners"
-        class:list={[
-          'flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
-          isActive('/for-owners') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
-        ]}
-      >
-        For Owners
-      </a>
-      <a
-        data-nav="dashboard-mobile"
-        href="/owner"
-        class="hidden min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-      >
-        <LayoutDashboard class="h-4 w-4" /> Dashboard
-      </a>
+      {
+        tabs.map((tab) => (
+          <a
+            data-nav={`${tab.key}-mobile`}
+            href={tab.href}
+            class:list={[
+              'flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
+              tab.active ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
+              tab.ownerOnly && 'hidden',
+            ]}
+          >
+            {tab.icon ? <tab.icon class="h-4 w-4" /> : null}
+            {tab.label}
+          </a>
+        ))
+      }
       <div id="auth-guest-mobile" class="mt-2">
         <a href="/login" class="btn-accent w-full sm:hidden">Login/Sign up</a>
       </div>
@@ -232,9 +231,65 @@ const isExploreActive =
 
   toggle.addEventListener('click', () => setOpen(menu.classList.contains('hidden')));
 
+  // ---- Tab indicator --------------------------------------------------
+  // One element slides under whichever tab is current, so the bar reads as a
+  // single object. Its resting state is set from the active tab's measured
+  // box rather than from CSS, because the tabs are a variable set: the session
+  // fetch hides Earn / For Owners / Dashboard depending on role, so the
+  // correct width is not knowable until the DOM settles.
+
+  import { animate } from 'motion';
+  import { afterFirstLayout } from '@/lib/motion/ui';
+
+  const bar = document.querySelector<HTMLElement>('[data-tab-bar]');
+  const indicator = document.querySelector<HTMLElement>('[data-tab-indicator]');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const SPRING = { type: 'spring', stiffness: 480, damping: 38, mass: 0.6 } as const;
+
+  let placed = false;
+
+  const placeIndicator = (animateMove = true) => {
+    if (!bar || !indicator) return;
+    // `:not(.hidden)` matters: hidden tabs are display:none and would
+    // otherwise report a zero-width box and collapse the indicator.
+    const current = bar.querySelector<HTMLElement>('[aria-current="page"]:not(.hidden)');
+    if (!current) {
+      indicator.style.opacity = '0';
+      placed = false;
+      return;
+    }
+
+    const left = current.offsetLeft;
+    const width = current.offsetWidth;
+    // Height/position are set directly rather than animated: every tab is the
+    // same height, so there is nothing to spring between. Only the horizontal
+    // travel ever changes, and that is the part worth animating.
+    indicator.style.top = `${current.offsetTop}px`;
+    indicator.style.height = `${current.offsetHeight}px`;
+
+    if (animateMove && placed && !reduced) {
+      animate(indicator, { x: left, width: `${width}px` }, SPRING);
+      indicator.style.opacity = '1';
+    } else {
+      indicator.style.opacity = '1';
+      indicator.style.transform = `translateX(${left}px)`;
+      indicator.style.width = `${width}px`;
+    }
+    placed = true;
+  };
+
+  // Fonts swap and role-dependent tabs appear/disappear, both of which move the
+  // tabs after first paint. Re-measure rather than trusting one measurement.
+  afterFirstLayout(() => placeIndicator(false));
+  document.fonts?.ready.then(() => placeIndicator(false));
+
+  const barObserver = new ResizeObserver(() => placeIndicator(false));
+  if (bar) barObserver.observe(bar);
+
   // ---- Role-aware navigation (student/owner/guest) --------------------
   // Visible nav is adapted client-side after session fetch; server render
-  // is intentionally guest-friendly (For Owners visible, Profile hidden).
+  // is intentionally guest-friendly (For Owners visible, Dashboard hidden).
   import { getSession, onAuthChange, initialsOf } from '@/lib/auth';
   import type { AppUser } from '@/lib/auth';
 
@@ -248,11 +303,9 @@ const isExploreActive =
   const headerProfileLink = document.getElementById('header-profile-link') as HTMLAnchorElement | null;
   const headerAvatarMobile = document.getElementById('header-avatar-mobile') as HTMLAnchorElement | null;
 
-  const navProfile = document.querySelector<HTMLElement>('[data-nav="profile"]');
   const navForOwners = document.querySelector<HTMLElement>('[data-nav="for-owners"]');
   const navDashboard = document.querySelector<HTMLElement>('[data-nav="dashboard"]');
   const navEarn = document.querySelector<HTMLElement>('[data-nav="earn"]');
-  const navProfileMobile = document.querySelector<HTMLElement>('[data-nav="profile-mobile"]');
   const navForOwnersMobile = document.querySelector<HTMLElement>('[data-nav="for-owners-mobile"]');
   const navDashboardMobile = document.querySelector<HTMLElement>('[data-nav="dashboard-mobile"]');
   const navEarnMobile = document.querySelector<HTMLElement>('[data-nav="earn-mobile"]');
@@ -272,7 +325,6 @@ const isExploreActive =
   const renderAuth = (user: AppUser | null) => {
     const loggedIn = Boolean(user);
     const isOwner = user?.role === 'owner' || Boolean(user?.isAdmin);
-    const isStudent = Boolean(user) && !isOwner;
 
     guest.classList.toggle('hidden', loggedIn);
     guest.classList.toggle('flex', !loggedIn);
@@ -282,17 +334,18 @@ const isExploreActive =
     userMobile.classList.toggle('hidden', !loggedIn);
 
     // Nav items:
-    // - Student: Explore/Saved/Earn/Profile (For Owners hidden)
-    // - Guest: Explore/Saved/Earn/For Owners (Profile hidden)
-    // - Owner on public routes: Explore/Saved/Dashboard (Earn hidden per Phase 2), profile pill points to /owner/profile
-    showFlex(navProfile, isStudent);
+    // - Student: Explore / Saved / Earn (For Owners hidden)
+    // - Guest:   Explore / Saved / Earn / For Owners
+    // - Owner:   Explore / Saved / Dashboard (Earn hidden), pill goes to /owner/profile
     showFlex(navForOwners, !loggedIn);
     showFlex(navDashboard, isOwner);
     showFlex(navEarn, !isOwner);
-    showFlexMobile(navProfileMobile, isStudent);
     showFlexMobile(navForOwnersMobile, !loggedIn);
     showFlexMobile(navDashboardMobile, isOwner);
     showFlexMobile(navEarnMobile, !isOwner);
+
+    // The tab set just changed shape, so the indicator's resting box moved.
+    placeIndicator();
 
     // Profile pill destination: owners go to their shell, students to /profile
     if (headerProfileLink) headerProfileLink.href = isOwner ? '/owner/profile' : '/profile';
