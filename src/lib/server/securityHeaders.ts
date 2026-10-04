@@ -18,10 +18,34 @@
 
 const isDev = import.meta.env?.DEV === true;
 
-/** Directives needed only by the Vite dev server (HMR socket, inline styles). */
-const DEV_ONLY = isDev
-  ? " connect-src 'self' ws: wss: http://localhost:* http://127.0.0.1:*; style-src 'self' 'unsafe-inline';"
-  : '';
+/**
+ * Directive values that differ in dev.
+ *
+ * These must REPLACE their production counterparts rather than be appended as a
+ * second copy of the same directive: CSP ignores every directive after the first
+ * occurrence of a given name, so a trailing `style-src 'self' 'unsafe-inline'`
+ * never relaxes anything and the whole dev server renders unstyled (Vite injects
+ * styles as inline <style> tags).
+ */
+const STYLE_SRC = isDev ? "'self' 'unsafe-inline'" : "'self'";
+const CONNECT_SRC = isDev
+  ? "'self' ws: wss: http://localhost:* http://127.0.0.1:*"
+  : "'self'";
+
+// Dev also has to relax script-src. Astro always emits its <astro-island>
+// runtime and its per-page bootstrap as INLINE <script> elements -- it does not
+// route them through Vite's assetsInlineLimit -- and Vite's own dev client is
+// injected inline as well. Under `script-src 'self'` every one of those is
+// refused, so hydrated React islands (see src/components/ui/*) silently never
+// hydrate on localhost.
+//
+// Production is unaffected: prerendered pages are served straight from the
+// Workers asset store without invoking the Worker, so this header never reaches
+// them. If `dist/_headers` is ever generated as this file's header claims, any
+// CSP it writes MUST allow Astro's inline island runtime -- either
+// `'unsafe-inline'` or the two SHA-256 hashes of the emitted script bodies --
+// or islands will break in production exactly the way they did in dev.
+const SCRIPT_SRC = isDev ? "'self' 'unsafe-inline'" : "'self'";
 
 /**
  * Content-Security-Policy.
@@ -31,7 +55,8 @@ const DEV_ONLY = isDev
  * - `style-src-attr 'unsafe-inline'` covers the handful of inline
  *   `style="width: N%"` progress-bar attributes. A style attribute cannot
  *   execute script, and it is deliberately scoped to attributes only so
- *   `<style>` blocks still have to come from 'self'.
+ *   `<style>` blocks still have to come from 'self' (except in dev, where
+ *   Vite has to inject them).
  * - `frame-src` is the YouTube embed host; `img-src` the YouTube thumbnail
  *   and Unsplash placeholder hosts.
  */
@@ -41,21 +66,19 @@ export const CONTENT_SECURITY_POLICY = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "script-src 'self'",
+  `script-src ${SCRIPT_SRC}`,
   "script-src-attr 'none'",
-  "style-src 'self'",
+  `style-src ${STYLE_SRC}`,
   "style-src-attr 'unsafe-inline'",
   "img-src 'self' data: blob: https://images.unsplash.com https://i.ytimg.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "media-src 'self' blob:",
-  "connect-src 'self'",
+  `connect-src ${CONNECT_SRC}`,
   'frame-src https://www.youtube-nocookie.com https://www.youtube.com',
   "manifest-src 'self'",
   "worker-src 'self' blob:",
   "upgrade-insecure-requests",
-]
-  .join('; ')
-  .concat(DEV_ONLY);
+].join('; ');
 
 /**
  * Base header set applied to every response the Worker produces, plus to

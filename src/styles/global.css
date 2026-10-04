@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* shadcn/ui ships dark: variants; the site is light-only for now, so the
+   variant is inert until a `.dark` class is ever added to <html>. */
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   /* Brand — PG Hunter purple (source of truth: approved homepage reference) */
@@ -32,7 +37,101 @@
   --shadow-popover: 0 12px 32px -8px rgb(15 10 30 / 0.16), 0 4px 12px -4px rgb(15 10 30 / 0.08);
 }
 
+/* ------------------------------------------------------------------ */
+/* shadcn/ui tokens                                                    */
+/*                                                                     */
+/* The React components in src/components/ui/* are written against the */
+/* shadcn semantic scale (bg-primary, text-muted-foreground, ...). Those */
+/* names are mapped here onto the PG Hunter palette above so the two     */
+/* systems read as one brand instead of a bolt-on. No .dark block yet:   */
+/* PG Hunter is light-only.                                             */
+/* ------------------------------------------------------------------ */
+
+:root {
+  --radius: 0.75rem;
+
+  --background: #ffffff;
+  --foreground: #0f172a; /* slate-900 */
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  --primary: #7a42e6; /* brand-600 */
+  --primary-foreground: #ffffff;
+
+  --secondary: #f1f5f9; /* slate-100 */
+  --secondary-foreground: #1e293b; /* slate-800 */
+
+  --muted: #f8fafc; /* slate-50 */
+  --muted-foreground: #64748b; /* slate-500 */
+
+  /* shadcn's `accent` is the hover surface, not the CTA yellow — the CTA
+     stays .accent-400 in the hand-written Astro components. */
+  --accent: #efe9fe; /* brand-100 */
+  --accent-foreground: #482388; /* brand-900 */
+
+  --destructive: #e11d48; /* rose-600 */
+  --destructive-foreground: #ffffff;
+
+  --border: #e2e8f0; /* slate-200 */
+  --input: #e2e8f0;
+  --ring: #8f62f1; /* brand-500 */
+
+  --chart-1: #7a42e6;
+  --chart-2: #eab308;
+  --chart-3: #10b981;
+  --chart-4: #0ea5e9;
+  --chart-5: #f43f5e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
 @layer base {
+  /* Tailwind v4 dropped the old `border-color: gray-200` default in favour of
+     `currentColor`, so a bare `border` utility renders in the text colour. The
+     shadcn components in src/components/ui/* rely on the shadcn token scale, so
+     point the bare `border` utility at it. Explicit classes (border-slate-200,
+     border-brand-100, ...) still win. */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border);
+  }
+
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;

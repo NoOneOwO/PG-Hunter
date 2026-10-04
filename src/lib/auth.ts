@@ -201,6 +201,36 @@ export const updateProfile = async (patch: {
   }
 };
 
+/**
+ * Replace the profile picture. The Worker stores the bytes in R2 and answers
+ * with the updated user, so the header avatar updates from the same event bus
+ * as everything else.
+ */
+export const uploadAvatar = async (
+  file: File
+): Promise<{ user?: AppUser; error?: string }> => {
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const { user } = await apiForm<{ user: AppUser }>('/api/profile/avatar', form);
+    emit(user);
+    return { user };
+  } catch (e) {
+    return { error: friendlyError((e as Error).message) };
+  }
+};
+
+/** Drop back to the initials avatar. */
+export const removeAvatar = async (): Promise<{ user?: AppUser; error?: string }> => {
+  try {
+    const { user } = await api<{ user: AppUser }>('/api/profile/avatar', { method: 'DELETE' });
+    emit(user);
+    return { user };
+  } catch (e) {
+    return { error: friendlyError((e as Error).message) };
+  }
+};
+
 /* ------------------------------------------------------------------ */
 /* Saved PGs                                                           */
 /* ------------------------------------------------------------------ */

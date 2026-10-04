@@ -11,6 +11,8 @@
 import { env } from 'cloudflare:workers';
 import type { APIContext } from 'astro';
 
+import { mediaUrl } from './media';
+
 /** A row from the `users` table (auth + profile in one place for the MVP). */
 export interface UserRow {
   id: string;
@@ -193,6 +195,14 @@ export const requireAdmin = async (
 /* Serialization                                                       */
 /* ------------------------------------------------------------------ */
 
+/**
+ * `users.avatar_url` stores the R2 object key (avatars/{userId}/{uuid}.webp),
+ * not a URL, so the bucket and route can change without a data migration.
+ * Hand the browser a path instead.
+ */
+const avatarUrl = (key: string | null): string | null =>
+  key ? (key.startsWith('/') ? key : mediaUrl(key)) : null;
+
 /** The app-facing user object (never includes password material). */
 export const publicUser = (u: UserRow) => ({
   id: u.id,
@@ -202,7 +212,7 @@ export const publicUser = (u: UserRow) => ({
   isAdmin: Boolean(u.is_admin),
   phone: u.phone ?? undefined,
   collegeSlug: u.college_slug ?? undefined,
-  avatar: u.avatar_url ?? null,
+  avatar: avatarUrl(u.avatar_url),
   createdAt: u.created_at,
   provider: u.provider,
 });

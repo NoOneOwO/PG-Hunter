@@ -9,11 +9,23 @@
  */
 
 import type { Property } from '@/data/types';
-import { propertyBySlug, coverImage, startingRent } from '@/data/properties';
+import { properties, propertyBySlug, coverImage, startingRent } from '@/data/properties';
 import { collegeById, localityById } from '@/data/colleges';
 import { formatINR, formatDistance } from '@/lib/format';
 import { amenityBySlug } from '@/data/amenities';
 import { escapeAttr, escapeHtml, safeImageSrc } from '@/lib/html';
+
+/**
+ * Resolve a saved property reference back to its record.
+ *
+ * `saved_pgs.property_id` is written from `data-property-id` on PropertyCard,
+ * which is `Property.id` ('prop_sunrise_rohini'), NOT the slug. Resolving only
+ * by slug meant every saved id failed to match and both /saved and /profile
+ * silently rendered an empty shortlist. Accept either form so historical rows
+ * and any slug-based caller both resolve.
+ */
+const propertyBySavedRef = (ref: string): Property | undefined =>
+  properties.find((p) => p.id === ref) ?? propertyBySlug(ref);
 
 const verificationLabel = (status: Property['verificationStatus']): string => {
   switch (status) {
@@ -38,7 +50,7 @@ const verificationClass = (status: Property['verificationStatus']): string => {
 };
 
 export const savedCardHtml = (propertyId: string, opts?: { removable?: boolean }): string => {
-  const p = propertyBySlug(propertyId);
+  const p = propertyBySavedRef(propertyId);
   if (!p) return '';
 
   const image = coverImage(p);
@@ -97,7 +109,7 @@ export const renderSavedGrid = (
   propertyIds: string[],
   opts?: { removable?: boolean }
 ): number => {
-  const valid = propertyIds.map((id) => propertyBySlug(id)).filter((p): p is Property => Boolean(p));
+  const valid = propertyIds.map((id) => propertyBySavedRef(id)).filter((p): p is Property => Boolean(p));
   container.innerHTML = valid
     .map((p) => savedCardHtml(p.id, opts))
     .join('');
