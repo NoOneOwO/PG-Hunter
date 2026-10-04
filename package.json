@@ -6,11 +6,11 @@
   "description": "PG Hunter — student housing discovery platform. Find PGs, rooms and student flats near your college.",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node --experimental-strip-types scripts/generate-static-headers.mts",
     "preview": "astro preview",
     "check": "astro check",
     "test": "node --experimental-strip-types --test test/*.test.mts",
-    "deploy": "astro build && wrangler deploy",
+    "deploy": "npm run build && wrangler deploy",
     "astro": "astro"
   },
   "engines": {

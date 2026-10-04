@@ -2,13 +2,16 @@
  * PG Hunter — security response headers.
  *
  * Single source of truth. Consumed by:
- *   - src/middleware.ts          -> on-demand routes (/api/*, /admin/*, /owner/*)
- *   - astro.config.mjs           -> writes dist/_headers for prerendered pages
+ *   - src/middleware.ts                     -> on-demand routes (/api/*, /admin/*, /owner/*)
+ *   - scripts/generate-static-headers.mts   -> writes dist/client/_headers for prerendered pages
  *
  * Astro middleware only runs for on-demand routes, so prerendered pages are
  * served straight from the Workers static asset store and never pass through
- * the Worker. `dist/_headers` is the only way to attach headers to those, and
- * generating it from this module keeps the two policies from drifting.
+ * the Worker. `dist/client/_headers` is the only way to attach headers to
+ * those, and generating it from this module keeps the two policies from
+ * drifting. The generator also injects per-build SHA-256 hashes of the inline
+ * script/style bodies, which is what lets `script-src` stay free of
+ * 'unsafe-inline' -- see SCRIPT_SRC.
  *
  * CSP is strict: no `unsafe-inline` and no `unsafe-eval` for scripts. Astro
  * inlines small script chunks by default (Vite's `assetsInlineLimit`), which
@@ -32,26 +35,34 @@ const isDev = import.meta.env?.DEV === true;
 // site silently falls back to the system stack. font-src below allows the
 // actual woff2 files on fonts.gstatic.com.
 const GOOGLE_FONTS_CSS = 'https://fonts.googleapis.com';
-const STYLE_SRC = isDev
-  ? `'self' 'unsafe-inline' ${GOOGLE_FONTS_CSS}`
-  : `'self' ${GOOGLE_FONTS_CSS}`;
+
+// 'unsafe-inline' is load-bearing in production, not sloppiness. Radix (via
+// react-remove-scroll) and the toast library both build their CSS at runtime by
+// assigning styleSheet.cssText or appendChild(<style>), and CSP blocks that
+// exactly as it blocks a static <style>. Verified against the built ProfileApp
+// chunk: without this the console fills with "Refused to apply inline style" and
+// dialogs lose their scroll lock. No build-time hash can cover it, because the
+// CSS does not exist until React mounts.
+//
+// This relaxes CSS only. `script-src` below stays hash-strict with no
+// 'unsafe-inline', and that is the directive that actually stops XSS.
+const STYLE_SRC = `'self' 'unsafe-inline' ${GOOGLE_FONTS_CSS}`;
 const CONNECT_SRC = isDev
   ? "'self' ws: wss: http://localhost:* http://127.0.0.1:*"
   : "'self'";
 
-// Dev also has to relax script-src. Astro always emits its <astro-island>
-// runtime and its per-page bootstrap as INLINE <script> elements -- it does not
-// route them through Vite's assetsInlineLimit -- and Vite's own dev client is
-// injected inline as well. Under `script-src 'self'` every one of those is
-// refused, so hydrated React islands (see src/components/ui/*) silently never
-// hydrate on localhost.
+// Dev also has to relax script-src. Vite's own dev client is injected inline,
+// so under `script-src 'self'` hydrated React islands (see src/components/ui/*)
+// never hydrate on localhost.
 //
-// Production is unaffected: prerendered pages are served straight from the
-// Workers asset store without invoking the Worker, so this header never reaches
-// them. If `dist/_headers` is ever generated as this file's header claims, any
-// CSP it writes MUST allow Astro's inline island runtime -- either
-// `'unsafe-inline'` or the two SHA-256 hashes of the emitted script bodies --
-// or islands will break in production exactly the way they did in dev.
+// Production cannot use 'unsafe-inline' for the same reason it cannot omit
+// hashes: Astro emits its <astro-island> runtime and per-page bootstrap as
+// INLINE <script> elements regardless of assetsInlineLimit, and /profile/ is
+// the only page that has them. scripts/generate-static-headers.mts therefore
+// hashes every inline body out of the built HTML and feeds the results back
+// through buildContentSecurityPolicy(). On-demand routes have no such pass, so
+// they get the un-hashed policy -- acceptable only because they render no
+// islands. If an on-demand page ever gains one, give it hashes the same way.
 const SCRIPT_SRC = isDev ? "'self' 'unsafe-inline'" : "'self'";
 
 /**
@@ -67,25 +78,46 @@ const SCRIPT_SRC = isDev ? "'self' 'unsafe-inline'" : "'self'";
  * - `frame-src` is the YouTube embed host; `img-src` the YouTube thumbnail
  *   and Unsplash placeholder hosts.
  */
-export const CONTENT_SECURITY_POLICY = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "frame-ancestors 'none'",
-  "form-action 'self'",
-  `script-src ${SCRIPT_SRC}`,
-  "script-src-attr 'none'",
-  `style-src ${STYLE_SRC}`,
-  "style-src-attr 'unsafe-inline'",
-  "img-src 'self' data: blob: https://images.unsplash.com https://i.ytimg.com",
-  "font-src 'self' data: https://fonts.gstatic.com",
-  "media-src 'self' blob:",
-  `connect-src ${CONNECT_SRC}`,
-  'frame-src https://www.youtube-nocookie.com https://www.youtube.com',
-  "manifest-src 'self'",
-  "worker-src 'self' blob:",
-  "upgrade-insecure-requests",
-].join('; ');
+export interface ContentSecurityPolicyHashes {
+  /**
+   * Pre-quoted `'sha256-...'` sources covering every inline <script> body in
+   * the built HTML. Astro emits its `<astro-island>` runtime inline, so a bare
+   * `script-src 'self'` silently kills hydration -- see the note on SCRIPT_SRC.
+   */
+  script?: string[];
+}
+
+export const buildContentSecurityPolicy = (hashes: ContentSecurityPolicyHashes = {}): string => {
+  const scriptSrc = [SCRIPT_SRC, ...(hashes.script ?? [])].join(' ');
+
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    `script-src ${scriptSrc}`,
+    "script-src-attr 'none'",
+    // No hashes here on purpose. Per CSP, a source list containing a hash or
+    // nonce ignores 'unsafe-inline' entirely -- so appending the one inline
+    // <style> hash alongside 'unsafe-inline' makes the styles get refused
+    // again, with the console blaming 'unsafe-inline' right next to it. The
+    // hash could never cover Radix's runtime CSS anyway, since that CSS does
+    // not exist until React mounts.
+    `style-src ${STYLE_SRC}`,
+    "style-src-attr 'unsafe-inline'",
+    "img-src 'self' data: blob: https://images.unsplash.com https://i.ytimg.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "media-src 'self' blob:",
+    `connect-src ${CONNECT_SRC}`,
+    'frame-src https://www.youtube-nocookie.com https://www.youtube.com',
+    "manifest-src 'self'",
+    "worker-src 'self' blob:",
+    "upgrade-insecure-requests",
+  ].join('; ');
+};
+
+export const CONTENT_SECURITY_POLICY = buildContentSecurityPolicy();
 
 /**
  * Base header set applied to every response the Worker produces, plus to
