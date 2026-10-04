@@ -58,7 +58,7 @@ import { CloudUpload, CircleCheck } from '@lucide/astro';
             </div>
           </div>
 
-          <label class="mt-4 flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 text-slate-500 transition-colors hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700">
+          <label class="mt-4 flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-sm border-2 border-dashed border-slate-300 bg-slate-50 text-slate-500 transition-colors hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700">
             <CloudUpload class="h-6 w-6" />
             <span class="text-sm font-semibold">Upload document</span>
             <span class="text-xs">PDF / JPEG / PNG / WebP, up to 10 MB</span>
@@ -106,7 +106,7 @@ import { CloudUpload, CircleCheck } from '@lucide/astro';
     docsList.innerHTML = docs.length
       ? docs.map((d) => `
         <div class="flex items-center gap-4 px-5 py-4">
-          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-slate-100 text-slate-500">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
           </span>
           <div class="min-w-0 flex-1">

@@ -26,7 +26,7 @@ const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortNa
   <div id="profile-root" class="hidden">
     <div class="mt-6 card border border-slate-200 p-6 sm:p-8">
       <div class="flex flex-wrap items-center gap-4">
-        <span id="profile-avatar" class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 text-2xl font-extrabold text-white">?</span>
+        <span id="profile-avatar" class="flex h-16 w-16 items-center justify-center rounded-sm bg-brand-600 text-2xl font-extrabold text-white">?</span>
         <div class="min-w-0 flex-1">
           <h2 id="profile-name" class="truncate text-2xl font-extrabold tracking-tight text-slate-900">—</h2>
           <p id="profile-email" class="truncate text-sm text-slate-500">—</p>
@@ -72,10 +72,10 @@ const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortNa
           <button type="submit" class="btn-primary">
             <Check class="h-4 w-4" /> Save changes
           </button>
-          <p id="profile-saved-note" class="hidden rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700" role="status">
+          <p id="profile-saved-note" class="hidden rounded-sm bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700" role="status">
             Profile updated.
           </p>
-          <p id="profile-error" class="hidden rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700" role="alert"></p>
+          <p id="profile-error" class="hidden rounded-sm bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700" role="alert"></p>
         </div>
       </form>
     </div>

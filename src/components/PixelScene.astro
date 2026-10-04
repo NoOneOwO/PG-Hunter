@@ -1,0 +1,47 @@
+---
+/**
+ * PixelScene — drops an animated pixel-art canvas into any page.
+ *
+ * The scene name maps to a renderer registered in `src/lib/pixel/scenes.ts`.
+ * The canvas is decorative by default (the surrounding copy carries the
+ * meaning), so it is hidden from assistive tech unless `decorative={false}`.
+ *
+ *   <PixelScene scene="street" class="h-full w-full" />
+ */
+interface Props {
+  /** Registered scene id: skyline | street | campus | map | room. */
+  scene: string;
+  class?: string;
+  /** Art pixel size in CSS px. Higher = chunkier. Defaults to the engine's 10. */
+  pixel?: number;
+  /** Cap on back-buffer width, so wide screens stay cheap. */
+  maxCols?: number;
+  /** Pass false to expose the scene to screen readers with its own label. */
+  decorative?: boolean;
+}
+
+const { scene, class: className = '', pixel, maxCols, decorative = true } = Astro.props;
+---
+
+<canvas
+  data-pixel-scene={scene}
+  data-pixel-size={pixel}
+  data-pixel-max-cols={maxCols}
+  aria-hidden={decorative ? 'true' : undefined}
+  class={className}
+></canvas>
+
+<script>
+  import { mountScenesIn } from '@/lib/pixel';
+  import { afterFirstLayout } from '@/lib/motion/ui';
+
+  // The engine sizes its back buffer from the measured box, so mounting before
+  // the first layout pass would measure 0x0 and leave the canvas blank.
+  let teardown: (() => void) | null = null;
+  const boot = () => {
+    teardown?.();
+    teardown = mountScenesIn();
+  };
+  afterFirstLayout(boot);
+  document.addEventListener('astro:page-load', () => afterFirstLayout(boot));
+</script>

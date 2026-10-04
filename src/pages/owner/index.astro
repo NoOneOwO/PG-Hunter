@@ -14,8 +14,9 @@ import { listingStatusMeta } from '@/lib/owner';
 <OwnerLayout title="Owner Dashboard — PG Hunter" active="dashboard">
   <div class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <p class="text-sm font-semibold text-brand-700">Owner dashboard</p>
-      <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+      <p class="eyebrow">Owner dashboard</p>
+      <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
         Welcome back, <span id="dash-name">owner</span> 👋
       </h1>
       <p class="mt-1 text-sm font-medium text-slate-500">
@@ -34,33 +35,33 @@ import { listingStatusMeta } from '@/lib/owner';
   </div>
 
   <div id="dash-root" class="hidden">
-    <div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <a href="/owner/listings" class="card p-5 transition-shadow hover:shadow-card-hover">
-        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+    <div data-reveal-group class="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <a href="/owner/listings" class="card card-hover p-5">
+        <span class="flex h-10 w-10 items-center justify-center bg-brand-50 text-brand-700">
           <Building2 class="h-5 w-5" />
         </span>
         <p id="stat-listings" class="mt-4 text-3xl font-extrabold text-slate-900">–</p>
         <p class="text-sm font-semibold text-slate-500">Total listings</p>
       </a>
-      <a href="/owner/listings" class="card p-5 transition-shadow hover:shadow-card-hover">
-        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+      <a href="/owner/listings" class="card card-hover p-5">
+        <span class="flex h-10 w-10 items-center justify-center bg-emerald-50 text-emerald-700">
           <TrendingUp class="h-5 w-5" />
         </span>
         <p id="stat-active" class="mt-4 text-3xl font-extrabold text-slate-900">–</p>
         <p class="text-sm font-semibold text-slate-500">Live on PG Hunter</p>
       </a>
-      <a href="/owner/leads" class="card p-5 transition-shadow hover:shadow-card-hover">
-        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+      <a href="/owner/leads" class="card card-hover p-5">
+        <span class="flex h-10 w-10 items-center justify-center bg-sky-50 text-sky-700">
           <Inbox class="h-5 w-5" />
         </span>
         <p class="mt-4 flex items-center gap-2">
           <span id="stat-leads" class="text-3xl font-extrabold text-slate-900">–</span>
-          <span id="stat-newleads" class="badge hidden bg-brand-100 text-brand-800"></span>
+          <span id="stat-newleads" class="badge hidden border border-brand-200 bg-brand-50 text-brand-800"></span>
         </p>
         <p class="text-sm font-semibold text-slate-500">Enquiries received</p>
       </a>
-      <a href="/owner/verification" class="card p-5 transition-shadow hover:shadow-card-hover">
-        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-100 text-accent-500">
+      <a href="/owner/verification" class="card card-hover p-5">
+        <span class="flex h-10 w-10 items-center justify-center bg-accent-100 text-accent-500">
           <BadgeCheck class="h-5 w-5" />
         </span>
         <p id="stat-verification" class="mt-4 text-3xl font-extrabold text-slate-900">–</p>
@@ -77,14 +78,14 @@ import { listingStatusMeta } from '@/lib/owner';
           <div>
             <div class="mb-3 flex items-center justify-between">
               <p class="text-sm font-bold text-slate-800">Last 14 days</p>
-              <span class="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">Enquiries</span>
+              <span class="badge border border-sky-200 bg-sky-50 text-sky-700">Enquiries</span>
             </div>
             <div id="enquiry-chart" class="h-44"></div>
           </div>
           <div>
             <div class="mb-3 flex items-center justify-between">
               <p class="text-sm font-bold text-slate-800">PG reach</p>
-              <span id="stat-reach" class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">0 views</span>
+              <span id="stat-reach" class="badge border border-emerald-200 bg-emerald-50 text-emerald-700">0 views</span>
             </div>
             <div id="reach-chart" class="h-44"></div>
           </div>
@@ -98,11 +99,11 @@ import { listingStatusMeta } from '@/lib/owner';
         <div class="space-y-4 px-5 py-5">
           <div id="status-bars" class="space-y-3"></div>
           <div class="grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
-            <div class="rounded-xl bg-slate-50 p-3">
+            <div class="rounded-sm border border-slate-200 bg-slate-50 p-3">
               <p id="stat-rooms" class="text-xl font-extrabold text-slate-900">0</p>
               <p class="text-xs font-semibold text-slate-500">Available rooms</p>
             </div>
-            <div class="rounded-xl bg-slate-50 p-3">
+            <div class="rounded-sm border border-slate-200 bg-slate-50 p-3">
               <p id="stat-photos" class="text-xl font-extrabold text-slate-900">0</p>
               <p class="text-xs font-semibold text-slate-500">Photos uploaded</p>
             </div>
@@ -139,7 +140,7 @@ import { listingStatusMeta } from '@/lib/owner';
       </div>
       <div class="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-2 lg:grid-cols-4">
         {(Object.keys(listingStatusMeta) as (keyof typeof listingStatusMeta)[]).map((key) => (
-          <div class="rounded-xl border border-slate-200 p-4">
+          <div class="card p-4">
             <span class:list={['badge', listingStatusMeta[key].classes]}>
               <span class:list={['h-1.5 w-1.5 rounded-full', listingStatusMeta[key].dot]}></span>
               {listingStatusMeta[key].label}
@@ -193,7 +194,7 @@ import { listingStatusMeta } from '@/lib/owner';
       ? `<p class="mt-1 flex items-center gap-1 text-xs text-rose-600"><span class="inline-flex h-3 w-3 items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>${escapeHtml(l.rejectionReason)}</p>` : '';
     return `
     <div class="flex items-center gap-4 px-5 py-4">
-      <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+      <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-brand-50 text-brand-700">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
       </span>
       <div class="min-w-0 flex-1">
@@ -263,8 +264,8 @@ import { listingStatusMeta } from '@/lib/owner';
             <div class="mb-1 flex items-center justify-between text-xs font-semibold text-slate-500">
               <span>${meta.label}</span><span>${row.count}</span>
             </div>
-            <div class="h-2 overflow-hidden rounded-full bg-slate-100">
-              <div class="h-full rounded-full bg-brand-600" style="width: ${width}%"></div>
+            <div class="h-2 overflow-hidden bg-slate-100">
+              <div class="h-full bg-brand-600" style="width: ${width}%"></div>
             </div>
           </div>`;
       })

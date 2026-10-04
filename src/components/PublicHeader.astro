@@ -23,7 +23,7 @@ const isExploreActive =
   activePath.startsWith('/localities');
 ---
 
-<header class="sticky top-0 z-40 border-b border-slate-100 bg-white/95 backdrop-blur">
+<header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
   <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
     <a href="/" class="flex items-center gap-2" aria-label="PG Hunter home">
       <img src="/favicon.svg" alt="" width="32" height="32" class="h-8 w-8" />
@@ -37,7 +37,7 @@ const isExploreActive =
         data-nav="explore"
         href="/pgs-near-you"
         class:list={[
-          'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors',
+          'inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold transition-colors',
           isExploreActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
         ]}
         aria-current={isExploreActive ? 'page' : undefined}
@@ -48,7 +48,7 @@ const isExploreActive =
         data-nav="saved"
         href="/saved"
         class:list={[
-          'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors',
+          'inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold transition-colors',
           isActive('/saved') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
         ]}
         aria-current={isActive('/saved') ? 'page' : undefined}
@@ -59,7 +59,7 @@ const isExploreActive =
         data-nav="earn"
         href="/earn"
         class:list={[
-          'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors',
+          'inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold transition-colors',
           isActive('/earn') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
         ]}
         aria-current={isActive('/earn') ? 'page' : undefined}
@@ -70,7 +70,7 @@ const isExploreActive =
         data-nav="profile"
         href="/profile"
         class:list={[
-          'hidden min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors',
+          'hidden min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold transition-colors',
           isActive('/profile') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
         ]}
         aria-current={isActive('/profile') ? 'page' : undefined}
@@ -81,7 +81,7 @@ const isExploreActive =
         data-nav="for-owners"
         href="/for-owners"
         class:list={[
-          'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors',
+          'inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold transition-colors',
           isActive('/for-owners') ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
         ]}
         aria-current={isActive('/for-owners') ? 'page' : undefined}
@@ -91,7 +91,7 @@ const isExploreActive =
       <a
         data-nav="dashboard"
         href="/owner"
-        class="hidden min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
+        class="hidden min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900"
       >
         <LayoutDashboard class="h-4 w-4" /> Dashboard
       </a>
@@ -105,7 +105,7 @@ const isExploreActive =
         <a
           href="/login"
           aria-label="Account"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition-colors hover:bg-slate-50"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-sm border border-slate-200 text-slate-700 transition-colors hover:bg-slate-50"
         >
           <UserRound class="h-5 w-5" />
         </a>
@@ -114,12 +114,12 @@ const isExploreActive =
         <a
           href="/profile"
           id="header-profile-link"
-          class="hidden items-center gap-2 rounded-full border border-slate-200 py-1 pl-1 pr-3 transition-colors hover:bg-slate-50 sm:inline-flex"
+          class="hidden items-center gap-2 rounded-sm border border-slate-200 py-1 pl-1 pr-3 transition-colors hover:bg-slate-50 sm:inline-flex"
           aria-label="Your profile"
         >
           <span
             id="header-avatar"
-            class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-xs font-extrabold text-white"
+            class="flex h-8 w-8 items-center justify-center rounded-sm bg-brand-600 text-xs font-extrabold text-white"
           >?</span>
           <span id="header-name" class="max-w-28 truncate text-sm font-semibold text-slate-800"></span>
         </a>
@@ -127,12 +127,12 @@ const isExploreActive =
           href="/profile"
           id="header-avatar-mobile"
           aria-label="Your profile"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-sm font-extrabold text-white sm:hidden"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-sm bg-brand-600 text-sm font-extrabold text-white sm:hidden"
         >?</a>
       </div>
       <button
         id="menu-toggle"
-        class="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-50 lg:hidden"
+        class="inline-flex h-11 w-11 items-center justify-center rounded-sm text-slate-700 transition-colors hover:bg-slate-50 lg:hidden"
         aria-expanded="false"
         aria-controls="mobile-menu"
         aria-label="Open menu"
@@ -153,7 +153,7 @@ const isExploreActive =
         data-nav="explore-mobile"
         href="/pgs-near-you"
         class:list={[
-          'flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+          'flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
           isExploreActive ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
         ]}
       >
@@ -163,7 +163,7 @@ const isExploreActive =
         data-nav="saved-mobile"
         href="/saved"
         class:list={[
-          'flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+          'flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
           isActive('/saved') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
         ]}
       >
@@ -173,7 +173,7 @@ const isExploreActive =
         data-nav="earn-mobile"
         href="/earn"
         class:list={[
-          'flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+          'flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
           isActive('/earn') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
         ]}
       >
@@ -183,7 +183,7 @@ const isExploreActive =
         data-nav="profile-mobile"
         href="/profile"
         class:list={[
-          'hidden min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+          'hidden min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
           isActive('/profile') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
         ]}
       >
@@ -193,7 +193,7 @@ const isExploreActive =
         data-nav="for-owners-mobile"
         href="/for-owners"
         class:list={[
-          'flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold',
+          'flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
           isActive('/for-owners') ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
         ]}
       >
@@ -202,7 +202,7 @@ const isExploreActive =
       <a
         data-nav="dashboard-mobile"
         href="/owner"
-        class="hidden min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        class="hidden min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
       >
         <LayoutDashboard class="h-4 w-4" /> Dashboard
       </a>

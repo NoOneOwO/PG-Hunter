@@ -20,7 +20,7 @@ import { Inbox } from '@lucide/astro';
 
   <div id="leads-root" class="hidden">
     <div id="leads-empty" class="card mt-6 hidden p-12 text-center">
-      <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
+      <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-sm bg-brand-100 text-brand-700">
         <Inbox class="h-8 w-8" />
       </span>
       <h2 class="mt-6 text-xl font-extrabold tracking-tight text-slate-900">No enquiries yet</h2>
@@ -53,7 +53,7 @@ import { Inbox } from '@lucide/astro';
     <article class="px-5 py-5">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex items-center gap-3">
-          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-brand-50 text-brand-700">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg>
           </span>
           <div>
@@ -67,12 +67,12 @@ import { Inbox } from '@lucide/astro';
       </div>
 
       <div class="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-        <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600">Budget: ${escapeHtml(budgetLabel(lead.budget))}</span>
-        <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600">Move-in: ${escapeHtml(moveInLabel(lead.move_in_month))}</span>
-        <span class="rounded-lg bg-slate-100 px-2.5 py-1 capitalize text-slate-600">Source: ${escapeHtml(lead.source)}</span>
+        <span class="rounded-sm bg-slate-100 px-2.5 py-1 text-slate-600">Budget: ${escapeHtml(budgetLabel(lead.budget))}</span>
+        <span class="rounded-sm bg-slate-100 px-2.5 py-1 text-slate-600">Move-in: ${escapeHtml(moveInLabel(lead.move_in_month))}</span>
+        <span class="rounded-sm bg-slate-100 px-2.5 py-1 capitalize text-slate-600">Source: ${escapeHtml(lead.source)}</span>
       </div>
 
-      ${lead.message ? `<p class="mt-3 rounded-xl bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700">${escapeHtml(lead.message)}</p>` : ''}
+      ${lead.message ? `<p class="mt-3 rounded-sm bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700">${escapeHtml(lead.message)}</p>` : ''}
     </article>`;
 
   const init = async () => {

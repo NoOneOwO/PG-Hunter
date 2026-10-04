@@ -11,39 +11,40 @@ const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
   description="Log in or create a free account on PG Hunter to save PGs, send enquiries and message owners."
 >
   <section class="mx-auto max-w-md px-4 py-10 sm:px-6">
-    <div class="card border border-slate-200 p-8">
+    <div class="card pixel-corner relative p-8">
       <img src="/favicon.svg" alt="" width="40" height="40" class="h-10 w-10" />
-      <h1 id="auth-title" class="mt-4 text-2xl font-extrabold tracking-tight text-slate-900">
+      <div class="pixel-rule mt-5" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 id="auth-title" class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900">
         Welcome back
       </h1>
       <p id="auth-subtitle" class="mt-1 text-sm text-slate-500">
         Log in to save PGs, send enquiries and message owners.
       </p>
 
-      <div id="auth-error" class="mt-4 hidden rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-700" role="alert"></div>
-      <div id="auth-success" class="mt-4 hidden rounded-xl bg-emerald-50 px-3.5 py-2.5 text-sm font-medium text-emerald-700" role="status"></div>
+      <div id="auth-error" class="mt-4 hidden rounded-sm border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-700" role="alert"></div>
+      <div id="auth-success" class="mt-4 hidden rounded-sm border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm font-medium text-emerald-700" role="status"></div>
 
       <!-- Google is the primary, server-side OAuth — presented first per Phase 2 -->
-      <button id="google-btn" type="button" class="btn-secondary mt-6 w-full border-slate-200 bg-white shadow-sm hover:bg-slate-50">
+      <button id="google-btn" type="button" class="btn-secondary mt-6 w-full">
         <Fragment set:html={googleMark} />
         Continue with Google
       </button>
       <p class="mt-2 text-center text-xs text-slate-500">Works for both students and owners. New accounts respect your selected role.</p>
 
-      <div class="my-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-slate-400">
+      <div class="my-6 flex items-center gap-3 text-xs font-medium tracking-[0.18em] text-slate-400 uppercase">
         <span class="h-px flex-1 bg-slate-200" aria-hidden="true"></span>
         or
         <span class="h-px flex-1 bg-slate-200" aria-hidden="true"></span>
       </div>
 
-      <div class="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Account access">
+      <div class="grid grid-cols-2 gap-px border border-slate-200 bg-slate-200" role="tablist" aria-label="Account access">
         <button
           id="tab-login"
           type="button"
           role="tab"
           aria-selected="true"
           data-tab="login"
-          class="rounded-lg py-2 text-sm font-semibold transition-colors"
+          class="bg-white py-2.5 text-sm font-semibold text-slate-900 transition-colors"
         >
           Log in
         </button>
@@ -53,7 +54,7 @@ const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
           role="tab"
           aria-selected="false"
           data-tab="signup"
-          class="rounded-lg py-2 text-sm font-semibold transition-colors"
+          class="py-2.5 text-sm font-semibold text-slate-500 transition-colors"
         >
           Sign up free
         </button>
@@ -129,12 +130,12 @@ const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
           />
         </label>
         <div class="mt-1 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Account type">
-          <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
+          <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
             <input type="radio" name="role" value="student" class="sr-only" checked />
             <GraduationCap class="h-4 w-4" />
             Student
           </label>
-          <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
+          <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
             <input type="radio" name="role" value="owner" class="sr-only" />
             <Building2 class="h-4 w-4" />
             Owner
@@ -150,7 +151,7 @@ const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
         <span id="switch-hint">Don't have an account?</span>{' '}
         <a href="#switch" id="switch-link" class="font-semibold text-brand-700 hover:underline">Sign up free</a>
       </p>
-      <p class="mt-3 rounded-lg bg-slate-50 px-3 py-2.5 text-center text-xs text-slate-500">
+      <p class="mt-3 rounded-sm border border-slate-200 bg-slate-50 px-3 py-2.5 text-center text-xs text-slate-500">
         Your account and shortlist are stored securely on Cloudflare.
       </p>
     </div>
@@ -216,9 +217,11 @@ const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
     tabLogin.setAttribute('aria-selected', String(!isSignup));
     tabSignup.setAttribute('aria-selected', String(isSignup));
     tabLogin.classList.toggle('bg-white', !isSignup);
-    tabLogin.classList.toggle('shadow-card', !isSignup);
+    tabLogin.classList.toggle('text-slate-900', !isSignup);
+    tabLogin.classList.toggle('text-slate-500', isSignup);
     tabSignup.classList.toggle('bg-white', isSignup);
-    tabSignup.classList.toggle('shadow-card', isSignup);
+    tabSignup.classList.toggle('text-slate-900', isSignup);
+    tabSignup.classList.toggle('text-slate-500', !isSignup);
     switchLink.textContent = isSignup ? 'Log in' : 'Sign up free';
     switchHint.textContent = isSignup ? 'Already have an account?' : "Don't have an account?";
     clearMessages();

@@ -17,7 +17,7 @@ const thumb = safeId ? `https://i.ytimg.com/vi/${safeId}/hqdefault.jpg` : '';
 
 {safeId ? (
 
-<div class="video-player relative aspect-video w-full overflow-hidden rounded-2xl bg-slate-900">
+<div class="video-player relative aspect-video w-full overflow-hidden rounded-sm bg-slate-900">
   <img
     src={thumb}
     alt={title}
@@ -42,14 +42,14 @@ const thumb = safeId ? `https://i.ytimg.com/vi/${safeId}/hqdefault.jpg` : '';
     href={`https://www.youtube.com/watch?v=${safeId}`}
     target="_blank"
     rel="noopener"
-    class="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur"
+    class="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-sm bg-slate-900/80 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur"
   >
     Watch on YouTube
     <ExternalLink class="h-3 w-3" />
   </a>
 </div>
 ) : (
-  <div class="flex aspect-video w-full items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-sm font-medium text-slate-500">
+  <div class="flex aspect-video w-full items-center justify-center rounded-sm border border-dashed border-slate-300 bg-slate-50 text-sm font-medium text-slate-500">
     Walkthrough video unavailable
   </div>
 )}

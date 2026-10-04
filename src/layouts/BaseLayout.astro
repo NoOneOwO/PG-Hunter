@@ -48,6 +48,29 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     />
+
+    {/*
+      Entrances are hidden by CSS (see global.css) only once we know JS will
+      run them, so nothing flashes in before Motion hydrates. The failsafe
+      clears the class if the animation module never arrives — a page must
+      never be left blank because a chunk failed to load.
+    */}
+    <script is:inline>
+      // Entrances are CSS scroll-driven where supported (see global.css), so
+      // the hidden state is only needed for the JS fallback. Adding the class
+      // unconditionally would leave content stuck at opacity 0 in exactly the
+      // engines that already handle it natively.
+      if (
+        !window.CSS ||
+        !CSS.supports('animation-timeline', 'view()')
+      ) {
+        document.documentElement.classList.add('js-motion');
+        // If the motion module never arrives, nothing may stay hidden.
+        window.__pgMotionFailsafe = setTimeout(function () {
+          document.documentElement.classList.remove('js-motion');
+        }, 2500);
+      }
+    </script>
   </head>
   <body class="flex min-h-screen flex-col">
     <PublicHeader />
@@ -57,3 +80,8 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     <Footer />
   </body>
 </html>
+
+<script>
+  import { bootMotionUI } from '@/lib/motion/ui';
+  bootMotionUI();
+</script>

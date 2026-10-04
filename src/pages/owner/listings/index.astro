@@ -24,7 +24,7 @@ import { Plus, Building2, ArrowRight } from '@lucide/astro';
 
   <div id="listings-root" class="hidden">
     <div id="listings-empty" class="card mt-6 hidden p-12 text-center">
-      <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 text-brand-700">
+      <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-sm bg-brand-100 text-brand-700">
         <Building2 class="h-8 w-8" />
       </span>
       <h2 class="mt-6 text-xl font-extrabold tracking-tight text-slate-900">No PGs yet</h2>
@@ -91,7 +91,7 @@ import { Plus, Building2, ArrowRight } from '@lucide/astro';
             </div>`
         }
         <div class="absolute left-3 top-3">${statusBadge(l.status)}</div>
-        ${!img ? `<span class="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-slate-900/70 px-2.5 py-1 text-[11px] font-semibold text-white">
+        ${!img ? `<span class="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-sm bg-slate-900/80 px-2.5 py-1 text-[11px] font-semibold text-white">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
           Add photos
         </span>` : ''}
@@ -115,7 +115,7 @@ import { Plus, Building2, ArrowRight } from '@lucide/astro';
         </div>
 
         ${l.status === 'rejected' && l.rejectionReason
-          ? `<p class="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">${escapeHtml(l.rejectionReason)}</p>`
+          ? `<p class="rounded-sm bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">${escapeHtml(l.rejectionReason)}</p>`
           : ''}
 
         <div class="mt-auto grid grid-cols-1 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-2">
@@ -141,7 +141,7 @@ import { Plus, Building2, ArrowRight } from '@lucide/astro';
   const showToast = (message: string) => {
     const el = document.createElement('div');
     el.className =
-      'fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-popover';
+      'fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-sm bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-popover';
     el.textContent = message;
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 3000);

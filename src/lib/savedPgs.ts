@@ -62,11 +62,11 @@ export const savedCardHtml = (propertyId: string, opts?: { removable?: boolean }
   const amenities = p.amenitySlugs
     .map((slug) => amenityBySlug(slug)?.label ?? slug)
     .slice(0, 3)
-    .map((label) => `<span class="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">${escapeHtml(label)}</span>`)
+    .map((label) => `<span class="bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">${escapeHtml(label)}</span>`)
     .join(' ');
 
   return `
-<article class="card group relative flex flex-col overflow-hidden shadow-card transition-shadow hover:shadow-card-hover">
+<article class="card card-hover group relative flex flex-col overflow-hidden">
   <a href="/pgs/${encodeURIComponent(p.slug)}" class="relative block aspect-[4/3] overflow-hidden bg-slate-100" tabindex="-1" aria-hidden="true">
     <img src="${escapeAttr(safeImageSrc(image?.externalId) ?? '')}" alt="${escapeAttr(p.name)}" loading="lazy" decoding="async"
       class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" width="800" height="600" />
@@ -81,7 +81,7 @@ export const savedCardHtml = (propertyId: string, opts?: { removable?: boolean }
       </h3>
       ${opts?.removable
         ? `<button type="button" data-remove-saved="${escapeAttr(p.id)}"
-            class="relative z-10 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+            class="relative z-10 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
             aria-label="Remove ${escapeAttr(p.name)} from saved" title="Remove from saved">✕</button>`
         : ''}
     </div>
@@ -95,7 +95,7 @@ export const savedCardHtml = (propertyId: string, opts?: { removable?: boolean }
     <p class="text-sm font-semibold text-slate-700">${escapeHtml(roomSummary)}</p>
     <div class="flex flex-wrap gap-1.5">${amenities}</div>
     <div class="mt-auto pt-3">
-      <a href="/pgs/${encodeURIComponent(p.slug)}" class="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-brand-50 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100">
+      <a href="/pgs/${encodeURIComponent(p.slug)}" class="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-sm bg-brand-50 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100">
         View Details
       </a>
     </div>

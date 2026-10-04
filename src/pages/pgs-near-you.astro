@@ -13,9 +13,12 @@ const allPgs = activeProperties();
   title="PGs Near You — Find Student PGs, Rooms & Co-living | PG Hunter"
   description="Browse PGs, rooms and co-living spaces near your college. Filter by budget, room type, food and more on PG Hunter."
 >
-  <section class="bg-gradient-to-b from-brand-50 via-brand-50/40 to-white">
+  <section class="border-b border-slate-200 bg-brand-50">
     <div class="mx-auto max-w-7xl px-4 pb-10 pt-10 sm:px-6 lg:px-8">
-      <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">PGs Near You</h1>
+      <p class="eyebrow">Explore listings</p>
+      <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+
+      <h1 class="mt-5 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">PGs Near You</h1>
       <p class="mt-2 max-w-xl text-sm text-slate-600 sm:text-base">
         Search, filter and sort the best PGs, rooms and co-living spaces around your college.
       </p>
@@ -44,9 +47,9 @@ const allPgs = activeProperties();
       </div>
     </div>
 
-    <div id="filter-bar" class="mt-5 space-y-2" aria-label="Filters">
+    <div id="filter-bar" class="card pixel-corner relative mt-5 p-4" aria-label="Filters">
       <div class="flex flex-wrap items-center gap-2">
-        <span class="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-brand-50 px-3 text-sm font-semibold text-brand-700">
+        <span class="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-slate-200 bg-brand-50 px-3 text-sm font-semibold text-brand-700">
           <SlidersHorizontal class="h-4 w-4" />
           Filters
         </span>
@@ -58,18 +61,18 @@ const allPgs = activeProperties();
         <button type="button" class="chip filter-chip" data-filter="food" data-value="yes">With food</button>
         <button type="button" class="chip filter-chip" data-filter="verified" data-value="verified">Verified only</button>
         <span class="hidden h-6 w-px bg-slate-200 sm:block" aria-hidden="true"></span>
-        <button type="button" id="clear-filters-btn" class="chip text-rose-600 hover:bg-rose-50">Clear all</button>
+        <button type="button" id="clear-filters-btn" class="chip text-rose-600 hover:border-rose-200 hover:bg-rose-50">Clear all</button>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Budget</span>
+      <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+        <span class="eyebrow pr-1">Budget</span>
         <button type="button" class="chip filter-chip is-active" data-filter="budget" data-value="">Any</button>
         <button type="button" class="chip filter-chip" data-filter="budget" data-value="under-10">Under ₹10k</button>
         <button type="button" class="chip filter-chip" data-filter="budget" data-value="10-15">₹10k – ₹15k</button>
         <button type="button" class="chip filter-chip" data-filter="budget" data-value="15-20">₹15k – ₹20k</button>
         <button type="button" class="chip filter-chip" data-filter="budget" data-value="20-plus">₹20k +</button>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Room type</span>
+      <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+        <span class="eyebrow pr-1">Room type</span>
         <button type="button" class="chip filter-chip is-active" data-filter="roomType" data-value="">Any</button>
         <button type="button" class="chip filter-chip" data-filter="roomType" data-value="single">Single</button>
         <button type="button" class="chip filter-chip" data-filter="roomType" data-value="double">Double</button>
@@ -78,30 +81,21 @@ const allPgs = activeProperties();
       </div>
     </div>
 
-    <div id="results-grid" class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div id="results-grid" data-reveal-group class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {allPgs.map((p) => (
         <PropertyCard property={p} />
       ))}
     </div>
 
-    <div id="empty-state" class="hidden mt-12 text-center" role="status">
-      <p class="text-lg font-bold text-slate-900">No PGs match those filters</p>
+    <div id="empty-state" class="card pixel-corner relative mt-12 hidden px-6 py-12 text-center" role="status">
+      <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="mt-5 text-lg font-bold text-slate-900">No PGs match those filters</p>
       <p id="empty-query" class="mt-1 text-sm font-medium text-slate-500"></p>
       <p class="mt-1 text-sm text-slate-500">Try widening your budget, searching a shorter name (e.g. DTU, Rohini), or clearing a filter.</p>
-      <button type="button" id="clear-filters" class="btn-secondary mt-4">Clear all filters</button>
+      <button type="button" id="clear-filters" class="btn-secondary mt-6">Clear all filters</button>
     </div>
   </section>
 </BaseLayout>
-
-<style>
-  @reference "../styles/global.css";
-  .chip {
-    @apply inline-flex min-h-11 items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50;
-  }
-  .chip.is-active {
-    @apply border-brand-600 bg-brand-600 text-white hover:bg-brand-700;
-  }
-</style>
 
 <script>
   const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-property]'));

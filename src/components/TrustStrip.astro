@@ -25,14 +25,20 @@ const features = [
 ];
 ---
 
-<section aria-labelledby="trust-heading" class="px-4 py-12 sm:px-6 lg:px-8">
-  <div class="mx-auto max-w-7xl overflow-hidden rounded-3xl border border-brand-200/80 bg-brand-50 shadow-card">
+<section aria-labelledby="trust-heading" class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+  <div class="border border-slate-200 bg-white">
     <h2 id="trust-heading" class="sr-only">Why use PG Hunter</h2>
-    <ul class="grid grid-cols-1 gap-px bg-brand-200/70 sm:grid-cols-2 lg:grid-cols-4">
-      {features.map(({ Icon, title, body }) => (
-        <li class="bg-brand-50 p-7 sm:p-8 lg:p-10">
-          <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-100 text-brand-600 ring-1 ring-brand-200/70">
-            <Icon class="h-6 w-6" />
+    <ul class="grid grid-cols-1 gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-4">
+      {features.map(({ Icon, title, body }, i) => (
+        <li class="relative bg-white p-7 sm:p-8">
+          {/* Stepped pixel tick in the corner of the first tile. */}
+          {i === 0 && (
+            <div class="pixel-rule absolute top-0 right-0" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+          )}
+          <span class="flex h-11 w-11 items-center justify-center bg-brand-100 text-brand-700">
+            <Icon class="h-5 w-5" />
           </span>
           <h3 class="mt-5 text-base font-bold tracking-tight text-slate-900">{title}</h3>
           <p class="mt-2 text-sm leading-relaxed text-slate-600">{body}</p>

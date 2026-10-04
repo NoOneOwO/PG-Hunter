@@ -11,8 +11,12 @@ const suggestions = [
 ];
 ---
 
-<form action="/pgs-near-you" method="get" class="card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_auto] lg:items-center">
-  <label class="field focus-within:bg-white">
+<form
+  action="/pgs-near-you"
+  method="get"
+  class="card grid gap-3 p-4 sm:grid-cols-2"
+>
+  <label class="field focus-within:bg-white sm:col-span-2">
     <span class="sr-only">College or locality</span>
     <Search class="h-5 w-5 shrink-0 text-brand-600" />
     <input
@@ -51,7 +55,7 @@ const suggestions = [
     <ChevronDown class="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
   </label>
 
-  <button type="submit" class="btn-primary h-11 w-full lg:w-auto">Search PGs</button>
+  <button type="submit" class="btn-primary h-11 w-full sm:col-span-2">Search PGs</button>
 </form>
 
 <script>

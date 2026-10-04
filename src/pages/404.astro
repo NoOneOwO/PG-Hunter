@@ -1,20 +1,65 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import { ArrowRight } from '@lucide/astro';
+import { ArrowRight, Compass } from '@lucide/astro';
+
+// A 5x7 pixel-font bitmap so the 404 is drawn in the same language as the
+// profile banner instead of being a big flat number. '1' is lit, '0' is dim.
+const GLYPHS: Record<string, string[]> = {
+  '4': ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
+  '0': ['01110', '10001', '10011', '10101', '11001', '10001', '01110'],
+};
+
+const CODE = '404';
+const GLYPH_W = GLYPHS['0'][0].length;
+const rows = GLYPHS['0'].length;
+const cols = CODE.length * GLYPH_W + (CODE.length - 1); // 1px gap between digits
+
+// Row-major cell list. Every row must be exactly `cols` wide or the last row
+// wraps into a new grid row, so each digit after the first is prefixed with a
+// blank spacer column.
+const bitmap = Array.from({ length: rows }, (_, y) =>
+  CODE.split('').flatMap((ch, digit) => [
+    ...(digit > 0 ? ['0'] : []),
+    ...GLYPHS[ch][y].split(''),
+  ]),
+).flat();
 ---
 
-<BaseLayout title="Page not found — PG Hunter">
-  <section class="mx-auto max-w-2xl px-4 py-24 text-center sm:px-6">
-    <p class="text-7xl font-extrabold text-brand-200">404</p>
-    <h1 class="mt-4 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+<BaseLayout title="Page not found — PG Hunter" noindex>
+  <section class="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+    <div
+      class="mx-auto grid gap-0 bg-slate-50 p-4"
+      style={`grid-template-columns: repeat(${cols}, minmax(0, 1fr)); width: ${cols * 20 + 32}px;`}
+      role="img"
+      aria-label="Error 404"
+    >
+      {bitmap.map((on) => (
+        <span
+          class="aspect-square"
+          style={`background: ${on === '1' ? 'var(--color-pixel-ink)' : 'transparent'};`}
+        />
+      ))}
+    </div>
+
+    <p class="eyebrow mt-10">Error 404</p>
+    <div class="pixel-rule mt-3 justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+
+    <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
       This page wandered off campus
     </h1>
     <p class="mx-auto mt-2 max-w-md text-sm text-slate-600 sm:text-base">
       The page you're looking for doesn't exist. Head back home and keep hunting for your PG.
     </p>
-    <a href="/" class="btn-primary mt-8 px-8">
-      Back to homepage
-      <ArrowRight class="h-4 w-4" />
-    </a>
+
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/" class="btn-primary px-8">
+        Back to homepage
+        <ArrowRight class="h-4 w-4" />
+      </a>
+      <a href="/pgs-near-you" class="btn-secondary px-8">
+        <Compass class="h-4 w-4" />
+        Explore PGs
+      </a>
+    </div>
   </section>
 </BaseLayout>

@@ -27,7 +27,14 @@ const isDev = import.meta.env?.DEV === true;
  * never relaxes anything and the whole dev server renders unstyled (Vite injects
  * styles as inline <style> tags).
  */
-const STYLE_SRC = isDev ? "'self' 'unsafe-inline'" : "'self'";
+// fonts.googleapis.com serves the @font-face CSS for Plus Jakarta Sans, so it
+// has to be in style-src or the <link> in BaseLayout is refused and the whole
+// site silently falls back to the system stack. font-src below allows the
+// actual woff2 files on fonts.gstatic.com.
+const GOOGLE_FONTS_CSS = 'https://fonts.googleapis.com';
+const STYLE_SRC = isDev
+  ? `'self' 'unsafe-inline' ${GOOGLE_FONTS_CSS}`
+  : `'self' ${GOOGLE_FONTS_CSS}`;
 const CONNECT_SRC = isDev
   ? "'self' ws: wss: http://localhost:* http://127.0.0.1:*"
   : "'self'";

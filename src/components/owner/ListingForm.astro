@@ -359,10 +359,10 @@ const edit = mode === 'edit';
         <div class="group relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-100" data-media-id="${escapeAttr(m.id)}">
           <img src="${escapeAttr(safeImageSrc(m.url ?? m.externalId) ?? '')}" alt="${escapeAttr(m.title)}" loading="lazy" decoding="async" class="h-full w-full object-cover" />
           <div class="absolute inset-0 flex items-start justify-between bg-gradient-to-b from-black/40 via-transparent to-black/40 p-2 opacity-0 transition-opacity group-hover:opacity-100">
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-slate-500 cursor-grab active:cursor-grabbing" data-drag-handle title="Drag to reorder">
+            <span class="flex h-6 w-6 items-center justify-center rounded-sm bg-white/90 text-slate-500 cursor-grab active:cursor-grabbing" data-drag-handle title="Drag to reorder">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m8 6 4-4 4 4"/><path d="m8 18 4 4 4-4"/></svg>
             </span>
-            <button type="button" data-delete-media="${escapeAttr(m.id)}" class="flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-rose-500 transition-colors hover:bg-rose-500 hover:text-white" aria-label="Delete photo">
+            <button type="button" data-delete-media="${escapeAttr(m.id)}" class="flex h-6 w-6 items-center justify-center rounded-sm bg-white/90 text-rose-500 transition-colors hover:bg-rose-500 hover:text-white" aria-label="Delete photo">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
@@ -464,7 +464,7 @@ const edit = mode === 'edit';
                 </div>`
             }
             <div class="absolute inset-0 flex items-center justify-center">
-              <a href="${escapeAttr(safeUrl(link) ?? '#')}" target="_blank" rel="noopener" class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-brand-700 shadow-lg transition-transform hover:scale-110">
+              <a href="${escapeAttr(safeUrl(link) ?? '#')}" target="_blank" rel="noopener" class="flex h-12 w-12 items-center justify-center rounded-sm bg-white/90 text-brand-700 shadow-lg transition-transform hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               </a>
             </div>

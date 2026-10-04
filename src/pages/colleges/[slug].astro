@@ -29,7 +29,7 @@ const nearby = properties
   title={`PGs near ${college.shortName} — Student PGs, Rooms & Co-living | PG Hunter`}
   description={`Find verified PGs, rooms and co-living spaces near ${college.name} in ${college.locality}. Compare rent, amenities and walkthroughs on PG Hunter.`}
 >
-  <section class="bg-gradient-to-b from-brand-50 via-brand-50/40 to-white">
+  <section class="border-b border-slate-200 bg-brand-50">
     <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <nav aria-label="Breadcrumb" class="text-sm">
         <ol class="flex flex-wrap items-center gap-1.5 text-slate-500">
@@ -42,15 +42,17 @@ const nearby = properties
       </nav>
 
       <div class="mt-6 flex items-start gap-4">
-        <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-white">
+        <span class="flex h-14 w-14 shrink-0 items-center justify-center bg-brand-600 text-white">
           <Building2 class="h-7 w-7" />
         </span>
         <div>
-          <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+          <p class="eyebrow">{college.locality}, {college.city}</p>
+          <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          <h1 class="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
             PGs near {college.shortName}
           </h1>
-          <p class="mt-1 text-sm text-slate-600 sm:text-base">
-            {college.name} · {college.locality}, {college.city} — {nearby.length} PGs found
+          <p class="mt-2 text-sm text-slate-600 sm:text-base">
+            {college.name} — <span class="font-semibold text-slate-800">{nearby.length} PGs found</span>
           </p>
         </div>
       </div>
@@ -59,14 +61,15 @@ const nearby = properties
 
   <section aria-label="Listings" class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
     {nearby.length > 0 ? (
-      <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div data-reveal-group class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {nearby.map((p) => (
           <PropertyCard property={p} contextCollegeId={college.id} />
         ))}
       </div>
     ) : (
-      <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-        <p class="text-base font-bold text-slate-900">No PGs listed near {college.shortName} yet</p>
+      <div class="card pixel-corner relative p-10 text-center">
+        <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <p class="mt-5 text-base font-bold text-slate-900">No PGs listed near {college.shortName} yet</p>
         <p class="mt-1 text-sm text-slate-500">We're expanding college by college. Check back soon.</p>
       </div>
     )}

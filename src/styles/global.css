@@ -48,7 +48,10 @@
 /* ------------------------------------------------------------------ */
 
 :root {
-  --radius: 0.75rem;
+  /* Tight, near-square. The design language that was approved on /profile is
+     square-edged: cards have no radius at all and controls only a hint of it,
+     so the radius scale starts small rather than at shadcn's 12px default. */
+  --radius: 0.25rem;
 
   --background: #ffffff;
   --foreground: #0f172a; /* slate-900 */
@@ -112,10 +115,16 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: 0;
+  --radius-md: 0.125rem;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 2px);
+
+  /* Pixel-art accents. The profile banner proved the motif works; elsewhere it
+     shows up as small stepped details rather than full banners. */
+  --color-pixel-ink: #2c125d; /* brand-950 */
+  --color-pixel-mid: #7a42e6; /* brand-600 */
+  --color-pixel-lit: #fde047; /* accent-300 */
 }
 
 @layer base {
@@ -146,6 +155,90 @@
     @apply bg-brand-200 text-brand-900;
   }
 
+  /*
+   * Motion entrance states.
+   *
+   * Elements are hidden here rather than from JS so they never flash into
+   * their final position before Motion hydrates. Three guarantees keep this
+   * safe:
+   *   1. the rules only apply under `.js-motion`, which an inline script in
+   *      the layout adds — so no-JS users see everything,
+   *   2. reduced-motion users never get the class, and this media query
+   *      forces everything visible as a second line of defence,
+   *   3. a 2.5s failsafe removes the class if the animation module fails to
+   *      load, so a chunk error can never leave a page blank.
+   *
+   * Keep this list in step with REVEALED_SELECTORS in src/lib/motion/ui.ts.
+   */
+  /*
+   * Motion entrance states.
+   *
+   * Primary path is a CSS scroll-driven animation: no JavaScript at all, so
+   * visibility cannot be stranded by a slow module, a failed chunk, or an
+   * observer that never fires. Engines without `animation-timeline: view()`
+   * fall through to the JS path below, and anything that fails there is
+   * covered by the `.js-motion` failsafe in the layout.
+   *
+   * Keep the selector list in step with src/lib/motion/ui.ts.
+   */
+  @keyframes pg-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Primary: scroll-driven, pure CSS. */
+  @supports (animation-timeline: view()) {
+    .section-head,
+    .eyebrow,
+    [data-reveal],
+    [data-reveal-group] > * {
+      animation: pg-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 18%;
+    }
+  }
+
+  /*
+   * Fallback: hidden only once JS confirms it will run an entrance, and
+   * revealed by the `.is-revealed` class it adds. Reduced-motion users never
+   * get `.js-motion` at all, and this media query is the second line of
+   * defence behind that.
+   */
+  .js-motion [data-reveal],
+  .js-motion .section-head,
+  .js-motion .eyebrow,
+  .js-motion [data-reveal-group] > * {
+    opacity: 0;
+  }
+
+  .js-motion [data-reveal].is-revealed,
+  .js-motion .section-head.is-revealed,
+  .js-motion .eyebrow.is-revealed,
+  .js-motion [data-reveal-group].is-revealed > * {
+    animation: pg-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .js-motion [data-reveal],
+    .js-motion .section-head,
+    .js-motion .eyebrow,
+    .js-motion [data-reveal-group] > * {
+      opacity: 1;
+    }
+    .js-motion [data-reveal].is-revealed,
+    .js-motion .section-head.is-revealed,
+    .js-motion .eyebrow.is-revealed,
+    .js-motion [data-reveal-group].is-revealed > * {
+      animation: none;
+    }
+  }
+
   /* Visible, consistent focus states */
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-600;
@@ -153,32 +246,151 @@
 }
 
 @layer components {
-  /* Minimal borders, soft shadows, generous tap targets */
+  /* Square-edged, hairline-bordered, generous tap targets. These classes carry
+     most of the public site, so the design language lives here rather than in
+     every page's class list. */
   .btn {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors duration-150;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-sm px-5 text-sm font-semibold transition-colors duration-150;
   }
 
   .btn-accent {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent-400 px-5 text-sm font-semibold text-slate-900 transition-colors duration-150 hover:bg-accent-300;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-accent-400 px-5 text-sm font-semibold text-slate-900 transition-colors duration-150 hover:bg-accent-300;
   }
 
   .btn-primary {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-700;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-brand-600 px-5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-700;
   }
 
   .btn-secondary {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-800 transition-colors duration-150 hover:bg-slate-50;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-800 transition-colors duration-150 hover:bg-slate-50;
   }
 
+  /* Cards are square and hairline-bordered; the shadow is a whisper, not a
+     lift. Hover states add a brand edge rather than more depth. */
   .card {
-    @apply rounded-2xl bg-white shadow-card;
+    @apply border border-slate-200 bg-white;
+  }
+
+  .card-hover {
+    @apply transition-colors duration-150 hover:border-brand-300;
   }
 
   .field {
-    @apply flex min-h-11 w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-within:border-brand-400;
+    @apply flex min-h-11 w-full items-center gap-2 rounded-sm border border-slate-200 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus-within:border-brand-400;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold;
+    @apply inline-flex items-center gap-1 rounded-sm px-2.5 py-1 text-xs font-semibold;
+  }
+
+  /* Filter pill. Square corners, hairline border, filled solid when active so
+     the selected state reads without relying on colour alone. Shared by
+     /pgs-near-you, the college and locality explorers, and /saved. */
+  .chip {
+    @apply inline-flex min-h-11 items-center rounded-sm border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition-colors duration-150 hover:border-slate-300 hover:bg-slate-50;
+  }
+  .chip.is-active {
+    @apply border-brand-600 bg-brand-600 text-white hover:border-brand-700 hover:bg-brand-700;
+  }
+
+  /* ---- section furniture --------------------------------------- */
+
+  /* Small uppercase kicker above a heading. */
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-brand-700 uppercase;
+  }
+
+  /*
+   * Pixel accent: a stepped rule in brand purple with one lit yellow block,
+   * the same motif as the /profile banner reduced to a 4px-tall detail. Used
+   * under section headings and in empty states so the pixel language recurs
+   * without repeating the full artwork.
+   */
+  .pixel-rule {
+    @apply flex items-center gap-1;
+    height: 4px;
+  }
+  .pixel-rule > i {
+    @apply block h-full;
+    width: 8px;
+  }
+  .pixel-rule > i:nth-child(1) { background: var(--color-pixel-ink); }
+  .pixel-rule > i:nth-child(2) { background: var(--color-pixel-mid); }
+  .pixel-rule > i:nth-child(3) { background: var(--color-pixel-lit); }
+  .pixel-rule > i:nth-child(4) { background: var(--color-pixel-mid); }
+  .pixel-rule > i:nth-child(5) { background: var(--color-pixel-ink); }
+
+  /*
+   * The same five-step rule, drawn as a pseudo-element so a section heading
+   * needs one class instead of five <i> elements.
+   *
+   * It is absolutely positioned rather than an in-flow block: several headings
+   * are `display: flex` (to centre an icon against the text), and an in-flow
+   * ::before would then become a flex item and sit inline beside the icon
+   * instead of above the heading. Taking it out of flow makes the rule behave
+   * identically on flex and block headings.
+   */
+  .section-head {
+    position: relative;
+  }
+  .section-head::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 100%;
+    width: 40px;
+    height: 4px;
+    margin-bottom: 14px;
+    background: linear-gradient(
+      90deg,
+      var(--color-pixel-ink) 0% 20%,
+      transparent 20% 25%,
+      var(--color-pixel-mid) 25% 45%,
+      transparent 45% 50%,
+      var(--color-pixel-lit) 50% 70%,
+      transparent 70% 75%,
+      var(--color-pixel-mid) 75% 95%,
+      transparent 95%
+    );
+  }
+
+  /* Stepped corner block for hero/section panels. */
+  .pixel-corner::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: 0;
+    bottom: 0;
+    width: 24px;
+    height: 24px;
+    background-image:
+      linear-gradient(var(--color-pixel-mid), var(--color-pixel-mid)),
+      linear-gradient(var(--color-pixel-lit), var(--color-pixel-lit));
+    background-size: 8px 8px, 8px 8px;
+    background-position: 100% 100%, 100% calc(100% - 8px);
+    background-repeat: no-repeat;
+    opacity: 0.9;
+  }
+
+  /*
+   * Top-right counterpart: three squares stepping down and inward from the
+   * corner. Used instead of a diagonal wedge on the hero so the page never
+   * shows a smooth gradient triangle.
+   */
+  .pixel-corner-tr {
+    @apply pointer-events-none absolute top-0 right-0 flex justify-end;
+    gap: 2px;
+    padding: 10px;
+  }
+  .pixel-corner-tr > span {
+    @apply block h-4 w-4;
+    background: var(--color-pixel-lit);
+  }
+  .pixel-corner-tr > span:nth-child(2) {
+    margin-top: 4px;
+    background: var(--color-pixel-mid);
+  }
+  .pixel-corner-tr > span:nth-child(3) {
+    margin-top: 8px;
+    background: var(--color-pixel-ink);
   }
 }

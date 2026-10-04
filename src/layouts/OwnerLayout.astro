@@ -33,6 +33,24 @@ const {
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     />
+
+    {/* Same no-flash gate for entrances as BaseLayout — see global.css. */}
+    <script is:inline>
+      // Entrances are CSS scroll-driven where supported (see global.css), so
+      // the hidden state is only needed for the JS fallback. Adding the class
+      // unconditionally would leave content stuck at opacity 0 in exactly the
+      // engines that already handle it natively.
+      if (
+        !window.CSS ||
+        !CSS.supports('animation-timeline', 'view()')
+      ) {
+        document.documentElement.classList.add('js-motion');
+        // If the motion module never arrives, nothing may stay hidden.
+        window.__pgMotionFailsafe = setTimeout(function () {
+          document.documentElement.classList.remove('js-motion');
+        }, 2500);
+      }
+    </script>
   </head>
   <body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
     <OwnerHeader active={active} />
@@ -63,6 +81,8 @@ const {
 <script>
   import { getSession, onAuthChange, redirectToLogin } from '@/lib/auth';
   import type { AppUser } from '@/lib/auth';
+  import { bootMotionUI } from '@/lib/motion/ui';
+  bootMotionUI();
 
   const loading = document.getElementById('owner-loading')!;
   const root = document.getElementById('owner-root')!;
