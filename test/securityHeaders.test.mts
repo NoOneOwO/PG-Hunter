@@ -41,6 +41,16 @@ test('script-src never allows inline script in production', () => {
   assert.ok(!scriptSrc.includes("'unsafe-eval'"), `script-src must not allow eval: ${scriptSrc}`);
 });
 
+test('script-src allows the Cloudflare Web Analytics beacon', () => {
+  // Injected at the edge, so it is absent from `astro preview` and only breaks
+  // once deployed -- where it fails silently rather than visibly.
+  const scriptSrc = directive(CONTENT_SECURITY_POLICY, 'script-src') ?? '';
+  assert.ok(
+    scriptSrc.includes('https://static.cloudflareinsights.com'),
+    `Cloudflare RUM beacon would be blocked: ${scriptSrc}`
+  );
+});
+
 test('script-src-attr blocks inline event handlers', () => {
   assert.equal(directive(CONTENT_SECURITY_POLICY, 'script-src-attr'), "script-src-attr 'none'");
 });

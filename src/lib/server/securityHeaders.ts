@@ -63,7 +63,13 @@ const CONNECT_SRC = isDev
 // through buildContentSecurityPolicy(). On-demand routes have no such pass, so
 // they get the un-hashed policy -- acceptable only because they render no
 // islands. If an on-demand page ever gains one, give it hashes the same way.
-const SCRIPT_SRC = isDev ? "'self' 'unsafe-inline'" : "'self'";
+// Cloudflare injects its Web Analytics beacon at the edge, so it only ever
+// shows up in production -- never in `astro preview`. Under a strict
+// `script-src 'self'` it is refused, which silently stops analytics rather
+// than erroring anywhere visible. Declared before SCRIPT_SRC uses it.
+const CLOUDFLARE_RUM_SRC = 'https://static.cloudflareinsights.com';
+
+const SCRIPT_SRC = isDev ? "'self' 'unsafe-inline'" : `'self' ${CLOUDFLARE_RUM_SRC}`;
 
 /**
  * Content-Security-Policy.
