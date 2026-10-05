@@ -265,6 +265,16 @@
     @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-800 transition-colors duration-150 hover:bg-slate-50;
   }
 
+  /* Destructive confirmation (revoke, reject, delete). Same square language,
+     red edge, used only where an action removes something. */
+  .btn-danger {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-rose-600 px-5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-rose-700;
+  }
+
+  .btn-ghost-danger {
+    @apply inline-flex min-h-9 items-center justify-center gap-1.5 rounded-sm px-3 text-sm font-semibold text-rose-600 transition-colors duration-150 hover:bg-rose-50;
+  }
+
   /* Cards are square and hairline-bordered; the shadow is a whisper, not a
      lift. Hover states add a brand edge rather than more depth. */
   .card {
@@ -392,5 +402,94 @@
   .pixel-corner-tr > span:nth-child(3) {
     margin-top: 8px;
     background: var(--color-pixel-ink);
+  }
+
+  /*
+   * SpotlightCard — cursor spotlight.
+   *
+   * The React island writes --spot-x/--spot-y on mousemove; the overlay is a
+   * radial gradient positioned at those coordinates. Nothing renders on touch
+   * or keyboard focus, where the plain card styling carries the interaction.
+   */
+  .spotlight-card {
+    position: relative;
+  }
+  .spotlight-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 300ms ease;
+    background: radial-gradient(
+      340px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      var(--spotlight-color, rgba(122, 66, 230, 0.14)),
+      transparent 70%
+    );
+    z-index: 0;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .spotlight-card:hover::before {
+      opacity: 1;
+    }
+  }
+  /* Content inside a spotlight card sits above the overlay. */
+  .spotlight-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /*
+   * StarBorder — animated gradient border.
+   *
+   * Two conic-gradient layers, larger than the card, rotate inside an
+   * overflow-hidden wrapper while the inner content panel (inset by the
+   * border width) hides everything except the edge. Pure CSS, so islands pay
+   * nothing for it.
+   */
+  .star-border {
+    --star-border-width: 1.5px;
+    --star-duration: 8s;
+    --star-color-a: rgba(122, 66, 230, 0.9);
+    --star-color-b: rgba(250, 204, 21, 0.85);
+    position: relative;
+    overflow: hidden;
+  }
+  .star-border__ray {
+    position: absolute;
+    inset: -150%;
+    animation: star-spin var(--star-duration) linear infinite;
+    will-change: transform;
+  }
+  .star-border__ray--a {
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      transparent 300deg,
+      var(--star-color-a) 330deg,
+      transparent 360deg
+    );
+    animation-duration: var(--star-duration);
+  }
+  .star-border__ray--b {
+    background: conic-gradient(
+      from 180deg,
+      transparent 0deg,
+      transparent 280deg,
+      var(--star-color-b) 320deg,
+      transparent 360deg
+    );
+    animation-duration: calc(var(--star-duration) * 1.6);
+    opacity: 0.7;
+  }
+  @keyframes star-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .star-border__ray {
+      animation: none;
+    }
   }
 }

@@ -7,10 +7,11 @@ const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortNa
 ---
 
 <OwnerLayout title="Profile — Owner Dashboard — PG Hunter" active="profile">
-  <div class="flex flex-wrap items-end justify-between gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-4" data-reveal>
     <div>
-      <p class="text-sm font-semibold text-brand-700">Owner profile</p>
-      <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Your account</h1>
+      <p class="eyebrow">Owner workspace</p>
+      <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Your account</h1>
       <p class="mt-1 text-sm font-medium text-slate-500">Owner information, contact details and verification. This stays inside your owner workspace — you never lose the dashboard nav.</p>
     </div>
     <a href="/owner/verification" class="btn-secondary">
@@ -24,7 +25,7 @@ const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortNa
   </div>
 
   <div id="profile-root" class="hidden">
-    <div class="mt-6 card border border-slate-200 p-6 sm:p-8">
+    <div class="mt-6 card border border-slate-200 p-6 sm:p-8" data-reveal>
       <div class="flex flex-wrap items-center gap-4">
         <span id="profile-avatar" class="flex h-16 w-16 items-center justify-center rounded-sm bg-brand-600 text-2xl font-extrabold text-white">?</span>
         <div class="min-w-0 flex-1">
@@ -80,7 +81,7 @@ const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortNa
       </form>
     </div>
 
-    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3" data-reveal-group>
       <section class="card p-6 lg:col-span-2">
         <h3 class="flex items-center gap-2 text-sm font-bold text-slate-900"><Mail class="h-4 w-4 text-brand-600" /> Contact & account</h3>
         <p class="mt-2 text-sm leading-relaxed text-slate-600">Your enquiries show your name and phone to interested students. Keep them up to date. Verification documents are reviewed separately under <a href="/owner/verification" class="font-semibold text-brand-700 hover:underline">Verification</a>.</p>

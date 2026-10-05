@@ -45,9 +45,16 @@ const sniffImage = (bytes: Uint8Array): string | null => {
   return isRiff ? 'webp' : null;
 };
 
-/** Best-effort cleanup of a previous avatar. Never fails the request. */
+/**
+ * Best-effort cleanup of a previous avatar. Never fails the request.
+ *
+ * Only R2 keys are ours to delete: a Google account's picture is an absolute
+ * https URL on Google's CDN, and passing that to the bucket would just look up
+ * a key that does not exist. (`avatar_url` may hold either form — see
+ * `avatarUrl()` in lib/server/auth.ts.)
+ */
 const dropPrevious = async (previousKey: string | null): Promise<void> => {
-  if (!previousKey) return;
+  if (!previousKey || /^https?:\/\//i.test(previousKey)) return;
   try {
     if (await getObject(previousKey)) await deleteObject(previousKey);
   } catch {
@@ -80,6 +87,8 @@ export async function POST(context: APIContext) {
     return json({ error: 'That file is not a readable JPEG, PNG or WebP image.' }, 400);
   }
 
+  // Downloading a Google picture and re-uploading it here would be a sync job
+  // of its own; the uploaded file simply wins and the CDN URL is dropped.
   const key = await storeObject(
     `avatars/${user.id}`,
     `avatar.${sniffedExt}`,

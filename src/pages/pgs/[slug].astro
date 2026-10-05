@@ -727,11 +727,33 @@ const availableRooms = p.rooms.filter((r) => r.available).length;
     enquiryForm.querySelector<HTMLButtonElement>('button[type="submit"]')?.removeAttribute('disabled');
   };
 
+  const budgetSelect = enquiryForm.querySelector<HTMLSelectElement>('select[name="budget"]')!;
+  const messageField = enquiryForm.querySelector<HTMLTextAreaElement>('textarea[name="message"]')!;
+
+  /**
+   * Prefill the enquiry from the student's saved hunt preferences. Anything
+   * they have already typed in this session wins, and a value the form does
+   * not offer (e.g. a month outside the 8-month window) is simply skipped.
+   */
+  const prefillEnquiry = (user: { budgetPref?: string; movingInMonth?: string; messageToOwners?: string }) => {
+    if (user.budgetPref && budgetSelect.querySelector(`option[value="${user.budgetPref}"]`)) {
+      budgetSelect.value = user.budgetPref;
+    }
+    if (user.movingInMonth && moveInSelect.querySelector(`option[value="${user.movingInMonth}"]`)) {
+      moveInSelect.value = user.movingInMonth;
+    }
+    if (user.messageToOwners && !messageField.value.trim()) {
+      messageField.value = user.messageToOwners;
+    }
+  };
+
   enquiryBtn.addEventListener('click', async () => {
-    if (!(await getCurrentSession())) {
+    const user = await getCurrentSession();
+    if (!user) {
       window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
       return;
     }
+    prefillEnquiry(user);
     modal.classList.remove('hidden');
   });
 

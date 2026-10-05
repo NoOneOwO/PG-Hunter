@@ -4,8 +4,10 @@ import { CloudUpload, CircleCheck } from '@lucide/astro';
 ---
 
 <OwnerLayout title="Verification — PG Hunter" active="verification">
-  <div>
-    <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Verification</h1>
+  <div data-reveal>
+    <p class="eyebrow">Owner workspace</p>
+    <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Verification</h1>
     <p class="mt-1 text-sm font-medium text-slate-500">
       Upload documents to get your PGs verified by the PG Hunter team.
     </p>
@@ -17,7 +19,7 @@ import { CloudUpload, CircleCheck } from '@lucide/astro';
   </div>
 
   <div id="verification-root" class="hidden">
-    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3" data-reveal-group>
       <section class="card lg:col-span-1" aria-labelledby="status-heading">
         <div class="border-b border-slate-100 px-5 py-4">
           <h2 id="status-heading" class="text-base font-bold text-slate-900">Current status</h2>
@@ -69,7 +71,7 @@ import { CloudUpload, CircleCheck } from '@lucide/astro';
       </section>
     </div>
 
-    <section class="card mt-6" aria-labelledby="docs-heading">
+    <section class="card mt-6" aria-labelledby="docs-heading" data-reveal>
       <div class="border-b border-slate-100 px-5 py-4">
         <h2 id="docs-heading" class="text-base font-bold text-slate-900">Submitted documents</h2>
       </div>
@@ -84,6 +86,7 @@ import { CloudUpload, CircleCheck } from '@lucide/astro';
   // Uploaded file names and admin review notes are untrusted text that get
   // interpolated into innerHTML — file names are chosen by the uploader.
   import { escapeHtml, escapeAttr } from '@/lib/html';
+  import { initMotionUI } from '@/lib/motion/ui';
 
   const loading = document.getElementById('verification-loading')!;
   const root = document.getElementById('verification-root')!;
@@ -143,6 +146,7 @@ import { CloudUpload, CircleCheck } from '@lucide/astro';
 
     loading.classList.add('hidden');
     root.classList.remove('hidden');
+    initMotionUI();
   };
 
   fileInput.addEventListener('change', async () => {
@@ -159,6 +163,7 @@ import { CloudUpload, CircleCheck } from '@lucide/astro';
       statusEl.textContent = 'Document uploaded for review.';
       const fresh = await getVerificationState();
       renderDocs(fresh.documents);
+      initMotionUI();
       fileInput.value = '';
     } catch (err) {
       statusEl.className = 'mt-3 text-sm font-medium text-rose-700';

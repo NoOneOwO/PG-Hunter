@@ -103,15 +103,48 @@ export const savedCardHtml = (propertyId: string, opts?: { removable?: boolean }
 </article>`;
 };
 
-/** Render a grid of saved property cards into a container element. */
-export const renderSavedGrid = (
+/**
+ * Render a grid of saved cards into a container.
+ *
+ * A saved id can point at either world: a demo property (`prop_…`, resolved
+ * from the bundled dataset) or a real D1 listing (resolved by the public
+ * listings API). Demo cards render synchronously; live ids are fetched in one
+ * batch call and appended as live cards. Returns the number rendered.
+ */
+export const renderSavedGrid = async (
   container: HTMLElement,
   propertyIds: string[],
   opts?: { removable?: boolean }
-): number => {
-  const valid = propertyIds.map((id) => propertyBySavedRef(id)).filter((p): p is Property => Boolean(p));
-  container.innerHTML = valid
-    .map((p) => savedCardHtml(p.id, opts))
-    .join('');
-  return valid.length;
+): Promise<number> => {
+  const demo: Property[] = [];
+  const liveIds: string[] = [];
+
+  for (const id of propertyIds) {
+    const property = propertyBySavedRef(id);
+    if (property) demo.push(property);
+    else if (id) liveIds.push(id);
+  }
+
+  container.innerHTML = demo.map((p) => savedCardHtml(p.id, opts)).join('');
+
+  if (liveIds.length === 0) return demo.length;
+
+  const { fetchLiveListings, renderLiveCards } = await import('@/lib/liveListings');
+  const listings = await fetchLiveListings({ ids: liveIds, limit: liveIds.length });
+  if (listings.length === 0) return demo.length;
+
+  const holder = document.createElement('div');
+  await renderLiveCards(holder, listings, opts);
+  while (holder.firstElementChild) container.appendChild(holder.firstElementChild);
+
+  // Re-bind entrances now that the cards are actually in the document.
+  // `renderLiveCards` wires them while they still sit in this detached
+  // holder, and a detached node has a zero rect — in the JS entrance path
+  // (browsers without `animation-timeline: view()`) the observer would never
+  // see them and the cards would stay at opacity 0. Calling again here lets
+  // `settle()` pick up everything now that it is on screen.
+  const { initMotionUI } = await import('@/lib/motion/ui');
+  initMotionUI();
+
+  return demo.length + listings.length;
 };

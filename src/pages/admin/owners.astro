@@ -2,51 +2,195 @@
 export const prerender = false;
 import AdminLayout from '@/layouts/AdminLayout.astro';
 import { getDb } from '@/lib/server/auth';
+import { Search, Users, Building2, CircleCheck, BadgeCheck } from '@lucide/astro';
 
 const url = new URL(Astro.request.url);
 const q = url.searchParams.get('q')?.trim() ?? '';
 const db = getDb();
-let where = '';
-let binds:any[]=[];
-if (q) { where = `WHERE (u.name LIKE ? OR u.email LIKE ?)`; const like=`%${q}%`; binds=[like,like]; }
 
-const owners = await db.prepare(
-  `SELECT u.id, u.name, u.email, u.created_at, u.is_admin,
-          (SELECT COUNT(*) FROM owner_listings ol WHERE ol.owner_id=u.id) as listings,
-          (SELECT COUNT(*) FROM verification_documents vd WHERE vd.owner_id=u.id AND vd.status='pending') as pending_verifs
-   FROM users u
-   WHERE u.role='owner' ${q ? 'AND (u.name LIKE ? OR u.email LIKE ?)' : ''}
-   ORDER BY u.created_at DESC LIMIT 100`
-).bind(...(q? [`%${q}%`,`%${q}%`] : [])).all();
+const owners = await db
+  .prepare(
+    `SELECT u.id, u.name, u.email, u.avatar_url, u.created_at, u.is_admin,
+            (SELECT COUNT(*) FROM owner_listings ol WHERE ol.owner_id = u.id) as listings,
+            (SELECT COUNT(*) FROM owner_listings ol WHERE ol.owner_id = u.id AND ol.status = 'active') as active_listings,
+            (SELECT COUNT(*) FROM owner_listings ol WHERE ol.owner_id = u.id AND ol.verification_status = 'verified') as verified_listings,
+            (SELECT COUNT(*) FROM verification_documents vd WHERE vd.owner_id = u.id AND vd.status = 'pending') as pending_verifs
+     FROM users u
+     WHERE u.role = 'owner' ${q ? 'AND (u.name LIKE ? OR u.email LIKE ?)' : ''}
+     ORDER BY u.created_at DESC LIMIT 100`
+  )
+  .bind(...(q ? [`%${q}%`, `%${q}%`] : []))
+  .all();
+
+const rows = owners.results as any[];
+
+const initials = (name: string) =>
+  (name ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('') || 'O';
+
+/** Mirrors server `avatarUrl()` semantics for R2 keys vs absolute URLs. */
+const avatarFor = (v: string | null): string | null => {
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) return v;
+  return v.startsWith('/') ? v : `/api/media/${v}`;
+};
+
+const totals = rows.reduce(
+  (acc, o) => ({
+    listings: acc.listings + Number(o.listings ?? 0),
+    active: acc.active + Number(o.active_listings ?? 0),
+    verifs: acc.verifs + Number(o.pending_verifs ?? 0),
+  }),
+  { listings: 0, active: 0, verifs: 0 }
+);
+
+const statCards = [
+  { label: 'Owners shown', value: rows.length, hint: q ? `Filtered by “${q}”` : 'Most recent 100', Icon: Users },
+  { label: 'Listings total', value: totals.listings, hint: 'All statuses', Icon: Building2 },
+  { label: 'Live listings', value: totals.active, hint: 'Approved & public', Icon: CircleCheck },
+  { label: 'Docs to review', value: totals.verifs, hint: 'Verification queue', Icon: BadgeCheck },
+];
 ---
 
 <AdminLayout title="Owners — Admin" active="owners">
-  <h1 class="text-2xl font-extrabold">Owners</h1>
-  <p class="mt-1 text-sm text-slate-500">From <code>users</code> where <code>role=owner</code>. Never shows password hashes or tokens.</p>
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="eyebrow">People</p>
+      <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Owners</h1>
+      <p class="mt-1 text-sm font-medium text-slate-500">
+        Everyone listing PGs on PG Hunter. Never shows password hashes or tokens.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 text-xs font-semibold">
+      <span class="badge border border-slate-200 bg-white px-3 py-2 text-slate-600">{rows.length} shown</span>
+      {
+        totals.verifs > 0 && (
+          <a href="/admin/verification" class="badge border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 hover:border-amber-300">
+            {totals.verifs} document{totals.verifs === 1 ? '' : 's'} to review
+          </a>
+        )
+      }
+    </div>
+  </div>
 
-  <form class="mt-4 flex gap-2">
-    <input name="q" value={q} placeholder="Search name or email" class="field text-sm flex-1" />
-    <button class="btn-primary px-4 text-sm">Search</button>
-    <a href="/admin/owners" class="btn-secondary px-4 text-sm">Clear</a>
+  <div data-reveal-group class="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    {
+      statCards.map((card) => (
+        <div class="card p-5" data-hover-lift>
+          <span class="flex h-10 w-10 items-center justify-center bg-brand-50 text-brand-700">
+            <card.Icon class="h-5 w-5" />
+          </span>
+          <p class="mt-4 text-3xl font-extrabold tracking-tight text-slate-900" data-count-up={card.value}>
+            {card.value}
+          </p>
+          <p class="text-sm font-semibold text-slate-500">{card.label}</p>
+          <p class="mt-0.5 text-xs text-slate-400">{card.hint}</p>
+        </div>
+      ))
+    }
+  </div>
+
+  <form class="mt-6 flex flex-wrap items-center gap-2" data-reveal>
+    <label class="field w-full sm:w-80">
+      <Search class="h-4 w-4 shrink-0 text-slate-400" />
+      <span class="sr-only">Search owners</span>
+      <input name="q" value={q} placeholder="Search name or email" class="w-full bg-transparent text-sm outline-none" />
+    </label>
+    <button class="btn-primary px-5">Search</button>
+    <a href="/admin/owners" class="btn-secondary px-5">Clear</a>
   </form>
 
-  <div class="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-    <table class="w-full min-w-[700px] text-left text-sm">
-      <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-        <tr><th class="px-4 py-3">Name</th><th class="px-4 py-3">Email</th><th class="px-4 py-3">Created</th><th class="px-4 py-3">Listings</th><th class="px-4 py-3">Pending verifs</th><th class="px-4 py-3">Admin</th></tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100">
-        {owners.results.length===0 ? <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">No owners yet</td></tr> : owners.results.map((o:any)=>(
-          <tr class="hover:bg-slate-50">
-            <td class="px-4 py-3 font-semibold">{o.name}</td>
-            <td class="px-4 py-3 text-xs">{o.email}</td>
-            <td class="px-4 py-3 text-xs">{new Date(o.created_at).toLocaleDateString()}</td>
-            <td class="px-4 py-3"><a href={`/admin/pgs?q=${encodeURIComponent(o.email)}`} class="text-brand-700 hover:underline">{o.listings}</a></td>
-            <td class="px-4 py-3">{o.pending_verifs}</td>
-            <td class="px-4 py-3">{o.is_admin ? <span class="badge bg-slate-900 text-white">admin</span> : <span class="badge bg-slate-100 text-slate-600">—</span>}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+  {
+    rows.length === 0 ? (
+      <div class="card pixel-corner relative mt-8 px-6 py-14 text-center">
+        <div class="pixel-rule justify-center" aria-hidden="true">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <p class="mt-5 text-base font-bold text-slate-900">{q ? 'No owners match that search' : 'No owners yet'}</p>
+        <p class="mt-1 text-sm text-slate-500">Owners appear here when they register for a listing account.</p>
+      </div>
+    ) : (
+      <div class="card mt-6 overflow-x-auto" data-reveal>
+        <table class="w-full min-w-[820px] text-left text-sm">
+          <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+            <tr>
+              <th class="px-4 py-3">Owner</th>
+              <th class="px-4 py-3">Email</th>
+              <th class="px-4 py-3">Joined</th>
+              <th class="px-4 py-3 text-center">Listings</th>
+              <th class="px-4 py-3 text-center">Live</th>
+              <th class="px-4 py-3 text-center">Verified</th>
+              <th class="px-4 py-3 text-center">Docs</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {rows.map((o) => {
+              const avatar = avatarFor(o.avatar_url ?? null);
+              return (
+                <tr class="transition-colors hover:bg-brand-50/40">
+                  <td class="px-4 py-3">
+                    <span class="flex items-center gap-3">
+                      {avatar ? (
+                        <img src={avatar} alt="" width="32" height="32" class="h-8 w-8 shrink-0 border border-slate-200 object-cover" loading="lazy" />
+                      ) : (
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center bg-brand-50 text-xs font-extrabold text-brand-700">
+                          {initials(o.name)}
+                        </span>
+                      )}
+                      <span class="flex items-center gap-2">
+                        <span class="font-semibold text-slate-900">{o.name}</span>
+                        {Boolean(o.is_admin) && <span class="badge bg-slate-900 px-1.5 py-0.5 text-[10px] text-white uppercase">admin</span>}
+                      </span>
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-xs text-slate-500">{o.email}</td>
+                  <td class="px-4 py-3 text-xs text-slate-500">
+                    {new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </td>
+                  <td class="px-4 py-3 text-center">
+                    <a href={`/admin/pgs?q=${encodeURIComponent(o.email)}`} class="font-extrabold text-brand-700 hover:underline">
+                      {o.listings}
+                    </a>
+                  </td>
+                  <td class="px-4 py-3 text-center font-extrabold text-emerald-700">{o.active_listings}</td>
+                  <td class="px-4 py-3 text-center">
+                    {Number(o.verified_listings) > 0 ? (
+                      <span class="badge border border-emerald-200 bg-emerald-50 text-emerald-800">{o.verified_listings}</span>
+                    ) : (
+                      <span class="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td class="px-4 py-3 text-center">
+                    {Number(o.pending_verifs) > 0 ? (
+                      <a href="/admin/verification" class="badge border border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-300">
+                        {o.pending_verifs}
+                      </a>
+                    ) : (
+                      <span class="text-slate-400">—</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  <script>
+    import { bootMotionUI } from '@/lib/motion/ui';
+    import { initCountUps } from '@/lib/countUp';
+    bootMotionUI();
+    initCountUps();
+  </script>
 </AdminLayout>

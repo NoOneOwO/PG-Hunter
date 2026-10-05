@@ -4,9 +4,11 @@ import { Inbox } from '@lucide/astro';
 ---
 
 <OwnerLayout title="Enquiries — PG Hunter" active="leads">
-  <div class="flex flex-wrap items-end justify-between gap-4">
+  <div class="flex flex-wrap items-end justify-between gap-4" data-reveal>
     <div>
-      <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Enquiries</h1>
+      <p class="eyebrow">Owner workspace</p>
+      <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Enquiries</h1>
       <p class="mt-1 text-sm font-medium text-slate-500">
         Students interested in your PGs. Reach out to them directly.
       </p>
@@ -43,6 +45,7 @@ import { Inbox } from '@lucide/astro';
   // untrusted input being interpolated into innerHTML. Escape it or it is
   // stored XSS: a student's free-text enquiry renders in the owner's session.
   import { escapeHtml } from '@/lib/html';
+  import { initMotionUI } from '@/lib/motion/ui';
 
   const loading = document.getElementById('leads-loading')!;
   const root = document.getElementById('leads-root')!;
@@ -50,7 +53,7 @@ import { Inbox } from '@lucide/astro';
   const list = document.getElementById('leads-list')!;
 
   const leadCard = (lead: OwnerLead) => `
-    <article class="px-5 py-5">
+    <article class="px-5 py-5" data-reveal>
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex items-center gap-3">
           <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-brand-50 text-brand-700">
@@ -81,6 +84,8 @@ import { Inbox } from '@lucide/astro';
     list.innerHTML = leads.map(leadCard).join('');
     loading.classList.add('hidden');
     root.classList.remove('hidden');
+    // Bind entrances for rows that did not exist at page load.
+    initMotionUI();
   };
 
   void init();

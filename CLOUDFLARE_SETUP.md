@@ -223,7 +223,7 @@ Workers Builds runs `npm ci` and the build command only. It does **not** apply
 D1 migrations or set secrets — a build never migrates the production database.
 So before the first auto-deploy, make sure these are already done:
 
-- `npx wrangler d1 migrations apply pg_hunter --remote` (migrations 0001–0008)
+- `npx wrangler d1 migrations apply pg_hunter --remote` (migrations 0001–0009)
 - `npx wrangler secret put RATE_LIMIT_SALT` — without it, rate limiting falls
   back to an unkeyed SHA-256 digest, which is brute-forceable
 - `npx wrangler secret put GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
@@ -306,9 +306,12 @@ field pin it.
   denormalised `verification_*` cache on `owner_listings`
 - `db/migrations/0007_rate_limits.sql` — `rate_limits` counters
 - `db/migrations/0008_plans_pricing.sql` — `plans` table + seeded plan catalogue
+- `db/migrations/0009_student_preferences.sql` — `users.city`,
+  `moving_in_month`, `budget_pref`, `availability`, `message_to_owners` used
+  to pre-fill student enquiries
 
 Apply with `wrangler d1 migrations apply pg_hunter --local|--remote`.
-Add future migrations as `db/migrations/0009_*.sql`.
+Add future migrations as `db/migrations/0010_*.sql`.
 
 ### Publication vs verification
 

@@ -208,12 +208,17 @@ src/
     api/owner/      listings, media, leads, verification
     api/admin/      moderation, verification ledger, tours, reports, stats
   components/       presentational building blocks (PropertyCard, ListingForm…)
+    bits/           React Bits-style motion components (Aurora, BlurText,
+                    CountUp, SpotlightCard, StarBorder, AnimatedContent)
   layouts/          Base / Owner / Admin shells
   lib/              shared client + pure logic (auth client, format, plans, html)
+    pixel/          the pixel engine + scene painters (skyline, hero-city,
+                    campus, map, room)
+    motion/         shared Motion layer: entrances, hover, press wiring
     server/         Worker-only logic: auth, oauth, listings, media,
                     verification, rateLimit, requestPolicy, securityHeaders
   data/             bundled SAMPLE catalogue (properties, colleges, amenities)
-db/migrations/      0001…0008 — see §5
+db/migrations/      0001…0009 — see §5
 test/               node:test unit suites
 public/             static assets (favicon, robots.txt, og image)
 ai/                 the project's behavioural docs (see §6)
@@ -236,7 +241,15 @@ npx wrangler d1 migrations apply pg_hunter --local
 
 # Start the site with the real Worker runtime + local D1 + local R2
 npm run dev            # http://localhost:4321
+
+# Optional: create demo accounts, a listing with photos, enquiries, experiences
+npm run seed:dev       # idempotent; re-running is safe
 ```
+
+`npm run seed:dev` talks to the running dev server through the real API (so it
+exercises the same guards as a browser) and creates
+`seed.student@pghunter.local`, `seed.owner@pghunter.local` and the admin from
+`ADMIN_EMAILS`, all with password `seed-password-123`.
 
 ### Google sign-in locally
 
@@ -283,6 +296,7 @@ applied with `wrangler d1 migrations apply pg_hunter --local|--remote`:
 | `0006_verification_and_expiry` | `listing_verifications` ledger, `plan`/`expires_at`, verification cache |
 | `0007_rate_limits` | rate-limit counters |
 | `0008_plans_pricing` | `plans` table + seeded plan catalogue |
+| `0009_student_preferences` | `users.city`, `moving_in_month`, `budget_pref`, `availability`, `message_to_owners` (student hunt preferences that pre-fill enquiries) |
 
 Schema details: [`ai/DATABASE_SCHEMA.md`](ai/DATABASE_SCHEMA.md).
 
@@ -294,12 +308,14 @@ Schema details: [`ai/DATABASE_SCHEMA.md`](ai/DATABASE_SCHEMA.md).
 npm test         # node:test unit suites
 npm run check    # astro check — TypeScript + template diagnostics
 npm run build    # production build (must pass before deploy)
+npm run seed:dev # API-driven dev seed: users, listings, photos, enquiries
 npm run deploy   # astro build && wrangler deploy
 ```
 
-`npm test` runs four suites in [`test/`](test): public listing/expiry
+`npm test` runs five suites in [`test/`](test): public listing/expiry
 rules, the plan catalogue (asserting the SQL seed and the code fallback cannot
-drift), HTML escaping, and request policy (CSRF + rate-limit routing). New pure
+drift), HTML escaping, request policy (CSRF + rate-limit routing), and the
+security headers (CSP directives, script hashes, media hosts). New pure
 logic under `src/lib` should get a test here.
 
 ---

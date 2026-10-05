@@ -51,6 +51,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 
 import type { AppUser } from "@/lib/auth";
 import {
@@ -76,8 +77,30 @@ interface Props {
   colleges: CollegeOption[];
 }
 
-/** Radix <Select.Item> rejects an empty string, so "no college" uses a sentinel. */
+/** Radix <Select.Item> rejects an empty string, so optional selects use sentinels. */
 const NO_COLLEGE = "__none__";
+const NO_MONTH = "__none__";
+const NO_BUDGET = "__none__";
+
+/** Budget bands shared with the browse filters (/pgs-near-you) and the API. */
+const BUDGET_OPTIONS = [
+  { value: "under-10", label: "Under ₹10,000" },
+  { value: "10-15", label: "₹10,000 – ₹15,000" },
+  { value: "15-20", label: "₹15,000 – ₹20,000" },
+  { value: "20-plus", label: "₹20,000 and above" },
+] as const;
+
+/** The next 8 months, as the enquiry form's move-in picker uses. */
+const monthOptions = (): { value: string; label: string }[] => {
+  const now = new Date();
+  return Array.from({ length: 8 }, (_, i) => {
+    const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    return {
+      value: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
+      label: date.toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+    };
+  });
+};
 
 const digitsOf = (value: string): string => value.replace(/\D/g, "");
 
@@ -112,7 +135,16 @@ function ProfileApp({ colleges }: Props) {
   const [user, setUser] = React.useState<AppUser | null>(null);
   const [booting, setBooting] = React.useState(true);
 
-  const [form, setForm] = React.useState({ name: "", phone: "", college: NO_COLLEGE });
+  const [form, setForm] = React.useState({
+    name: "",
+    phone: "",
+    college: NO_COLLEGE,
+    city: "",
+    movingInMonth: NO_MONTH,
+    budgetPref: NO_BUDGET,
+    availability: "",
+    messageToOwners: "",
+  });
   const [saving, setSaving] = React.useState(false);
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -144,7 +176,7 @@ function ProfileApp({ colleges }: Props) {
         node.innerHTML = "";
         return;
       }
-      renderSavedGrid(node, savedIds, { removable: true });
+      void renderSavedGrid(node, savedIds, { removable: true });
     },
     [savedIds]
   );
@@ -170,6 +202,11 @@ function ProfileApp({ colleges }: Props) {
         name: current.name,
         phone: current.phone ?? "",
         college: current.collegeSlug ?? NO_COLLEGE,
+        city: current.city ?? "",
+        movingInMonth: current.movingInMonth ?? NO_MONTH,
+        budgetPref: current.budgetPref ?? NO_BUDGET,
+        availability: current.availability ?? "",
+        messageToOwners: current.messageToOwners ?? "",
       });
       setBooting(false);
     })();
@@ -239,7 +276,12 @@ function ProfileApp({ colleges }: Props) {
     return (
       form.name !== user.name ||
       form.phone !== (user.phone ?? "") ||
-      form.college !== (user.collegeSlug ?? NO_COLLEGE)
+      form.college !== (user.collegeSlug ?? NO_COLLEGE) ||
+      form.city !== (user.city ?? "") ||
+      form.movingInMonth !== (user.movingInMonth ?? NO_MONTH) ||
+      form.budgetPref !== (user.budgetPref ?? NO_BUDGET) ||
+      form.availability !== (user.availability ?? "") ||
+      form.messageToOwners !== (user.messageToOwners ?? "")
     );
   }, [form, user]);
 
@@ -254,6 +296,11 @@ function ProfileApp({ colleges }: Props) {
       name: user.name,
       phone: user.phone ?? "",
       college: user.collegeSlug ?? NO_COLLEGE,
+      city: user.city ?? "",
+      movingInMonth: user.movingInMonth ?? NO_MONTH,
+      budgetPref: user.budgetPref ?? NO_BUDGET,
+      availability: user.availability ?? "",
+      messageToOwners: user.messageToOwners ?? "",
     });
     setFormError(null);
   };
@@ -267,10 +314,31 @@ function ProfileApp({ colleges }: Props) {
     }
     setSaving(true);
     setFormError(null);
+    // An emptied field is a deliberate clear, so it is sent as null rather
+    // than omitted: `undefined` means "leave this field as it was".
+    const orClear = (next: string, current: string | undefined): string | null | undefined =>
+      next ? next : current ? null : undefined;
+
     const { user: updated, error } = await updateProfile({
       name: form.name.trim(),
       phone: form.phone.trim(),
-      collegeSlug: form.college === NO_COLLEGE ? undefined : form.college,
+      collegeSlug:
+        form.college === NO_COLLEGE
+          ? user.collegeSlug
+            ? null
+            : undefined
+          : form.college,
+      city: orClear(form.city.trim(), user.city),
+      movingInMonth: orClear(
+        form.movingInMonth === NO_MONTH ? "" : form.movingInMonth,
+        user.movingInMonth
+      ),
+      budgetPref: orClear(
+        form.budgetPref === NO_BUDGET ? "" : form.budgetPref,
+        user.budgetPref
+      ),
+      availability: orClear(form.availability.trim(), user.availability),
+      messageToOwners: orClear(form.messageToOwners.trim(), user.messageToOwners),
     });
     setSaving(false);
     if (error || !updated) {
@@ -283,6 +351,11 @@ function ProfileApp({ colleges }: Props) {
       name: updated.name,
       phone: updated.phone ?? "",
       college: updated.collegeSlug ?? NO_COLLEGE,
+      city: updated.city ?? "",
+      movingInMonth: updated.movingInMonth ?? NO_MONTH,
+      budgetPref: updated.budgetPref ?? NO_BUDGET,
+      availability: updated.availability ?? "",
+      messageToOwners: updated.messageToOwners ?? "",
     });
     toast.success("Profile updated", {
       description: "Your details are saved.",
@@ -363,13 +436,15 @@ function ProfileApp({ colleges }: Props) {
   /* -------------------------------------------------- derived ------ */
 
   const selectedCollege = colleges.find((c) => c.slug === form.college);
+  const months = React.useMemo(monthOptions, []);
   const completion = React.useMemo(() => {
-    if (!user) return { done: 0, total: 3, missing: [] as string[] };
+    if (!user) return { done: 0, total: 4, missing: [] as string[] };
     const missing: string[] = [];
     if (!user.name?.trim()) missing.push("Add your name");
     if (!user.phone?.trim()) missing.push("Add a phone number");
     if (!user.collegeSlug) missing.push("Pick your college");
-    return { done: 3 - missing.length, total: 3, missing };
+    if (!user.budgetPref) missing.push("Set your monthly budget");
+    return { done: 4 - missing.length, total: 4, missing };
   }, [user]);
 
   if (booting) return <ProfileSkeleton />;
@@ -669,6 +744,105 @@ function ProfileApp({ colleges }: Props) {
                         </SelectContent>
                       </Select>
                     </Field>
+
+                    <Separator className="my-1" />
+
+                    <div>
+                      <h3 className="text-sm font-bold text-foreground">
+                        Your hunt preferences
+                      </h3>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        These pre-fill your enquiries and help us rank PGs that actually
+                        fit — owners see them only when you send an enquiry.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                      <Field id="city" label="City">
+                        <Input
+                          id="city"
+                          name="city"
+                          className="h-11"
+                          placeholder="Delhi"
+                          autoComplete="address-level2"
+                          value={form.city}
+                          onChange={(e) => patch({ city: e.target.value })}
+                        />
+                      </Field>
+
+                      <Field id="moving-in" label="Moving in">
+                        <Select
+                          value={form.movingInMonth}
+                          onValueChange={(value) => patch({ movingInMonth: value })}
+                        >
+                          <SelectTrigger id="moving-in" className="h-11 w-full">
+                            <SelectValue placeholder="Not sure yet" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_MONTH}>Not sure yet</SelectItem>
+                            {months.map((month) => (
+                              <SelectItem key={month.value} value={month.value}>
+                                {month.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+
+                      <Field id="budget" label="Monthly budget">
+                        <Select
+                          value={form.budgetPref}
+                          onValueChange={(value) => patch({ budgetPref: value })}
+                        >
+                          <SelectTrigger id="budget" className="h-11 w-full">
+                            <SelectValue placeholder="Any budget" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_BUDGET}>Any budget</SelectItem>
+                            {BUDGET_OPTIONS.map((budget) => (
+                              <SelectItem key={budget.value} value={budget.value}>
+                                {budget.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                      <Field
+                        id="availability"
+                        label="When can you visit?"
+                        optional
+                        hint="Helps an owner suggest a good time."
+                      >
+                        <Input
+                          id="availability"
+                          name="availability"
+                          className="h-11"
+                          placeholder="Weekends, after 5 pm"
+                          value={form.availability}
+                          onChange={(e) => patch({ availability: e.target.value })}
+                        />
+                      </Field>
+
+                      <Field
+                        id="message"
+                        label="Message to owners"
+                        optional
+                        hint="Pre-fills the enquiry form on every PG."
+                      >
+                        <Textarea
+                          id="message"
+                          name="messageToOwners"
+                          rows={3}
+                          maxLength={500}
+                          placeholder="Hi! I'm a DTU student looking for a quiet double-sharing room."
+                          value={form.messageToOwners}
+                          onChange={(e) => patch({ messageToOwners: e.target.value })}
+                        />
+                      </Field>
+                    </div>
                   </CardContent>
 
                   <div className="flex flex-col gap-3 border-t bg-muted/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
@@ -865,40 +1039,49 @@ interface AvatarControlProps {
 
 function AvatarControl({ src, initials, busy, onPick, onRemove }: AvatarControlProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
+  // A stored URL can be unreachable (object removed, expired Google picture,
+  // offline). When it is, fall back to the initials layer instead of leaving
+  // the browser's broken-image icon on a blank square. Keyed on `src` so a
+  // fresh upload gets another chance to render.
+  const [failedSrc, setFailedSrc] = React.useState<string | null>(null);
+  const showImage = Boolean(src) && failedSrc !== src;
 
   return (
     <div className="group relative">
       <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-none border-2 border-background bg-brand-100 text-3xl font-extrabold tracking-tight text-brand-800 shadow-card sm:h-28 sm:w-28 sm:text-4xl">
-        {src ? (
-          <img
-            src={src}
-            alt=""
-            className="h-full w-full object-cover"
-            width={112}
-            height={112}
-          />
-        ) : (
-          <span aria-hidden="true">{initials}</span>
-        )}
+          {src && showImage ? (
+            <img
+              src={src}
+              alt=""
+              className="h-full w-full object-cover"
+              width={112}
+              height={112}
+              decoding="async"
+              referrerPolicy="no-referrer"
+              onError={() => setFailedSrc(src)}
+            />
+          ) : (
+            <span aria-hidden="true">{initials}</span>
+          )}
 
-        {busy && (
-          <span className="absolute inset-0 flex items-center justify-center bg-background/70">
-            <Loader2 className="size-5 animate-spin text-brand-700" />
-          </span>
-        )}
+          {busy && (
+            <span className="absolute inset-0 flex items-center justify-center bg-background/70">
+              <Loader2 className="size-5 animate-spin text-brand-700" />
+            </span>
+          )}
 
-        {/* Hover/focus overlay: the whole avatar is the upload target. */}
-        {!busy && (
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-brand-950/70 text-[11px] font-semibold text-white opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
-          >
-            <ImageUp className="size-5" />
-            <span>{src ? "Change" : "Upload"}</span>
-          </button>
-        )}
-      </div>
+          {/* Hover/focus overlay: the whole avatar is the upload target. */}
+          {!busy && (
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-brand-950/70 text-[11px] font-semibold text-white opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+            >
+              <ImageUp className="size-5" />
+              <span>{src ? "Change" : "Upload"}</span>
+            </button>
+          )}
+        </div>
 
       <input
         ref={inputRef}

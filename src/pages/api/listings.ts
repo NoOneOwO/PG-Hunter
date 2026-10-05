@@ -21,14 +21,22 @@ const clampInt = (raw: string | null, fallback: number, min: number, max: number
 };
 
 /**
- * The minimum monthly rent across a listing's rooms.
+ * The minimum monthly rent a listing can actually be booked at.
  *
  * Rents live at the room level, so a budget filter has to look at the cheapest
- * room. Expressed as a correlated subquery so the filter runs inside SQLite and
+ * room — but "starting from" must mean an *available* room: quoting the rent of
+ * a full room type would advertise a price nobody can take. Falls back to every
+ * room when the owner marked none as available, so the listing still shows a
+ * price instead of vanishing from every band.
+ *
+ * Expressed as a correlated subquery so the filter runs inside SQLite and
  * therefore inside LIMIT/OFFSET — filtering after pagination would return short
  * or empty pages and an incorrect `total`.
  */
-const MIN_RENT_SUBQUERY = '(SELECT MIN(r.rent) FROM listing_rooms r WHERE r.listing_id = ol.id)';
+const MIN_RENT_SUBQUERY = `COALESCE(
+  (SELECT MIN(r.rent) FROM listing_rooms r WHERE r.listing_id = ol.id AND r.available = 1),
+  (SELECT MIN(r.rent) FROM listing_rooms r WHERE r.listing_id = ol.id)
+)`;
 
 /**
  * Public, published owner listings.
@@ -54,6 +62,16 @@ export async function GET(context: APIContext) {
   const limit = clampInt(params.get('limit'), DEFAULT_LIMIT, 1, MAX_LIMIT);
   const offset = clampInt(params.get('offset'), 0, 0, 100_000);
 
+  // Batch lookup by id, used by the saved shortlist to resolve D1 listings it
+  // already knows the ids of. Bounded like every other public read, and still
+  // subject to the public-visibility conditions below, so it can never be used
+  // to probe a draft or an expired listing.
+  const ids = (params.get('ids') ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, MAX_LIMIT);
+
   // Only fixed SQL fragments ever enter this list; every user value is bound.
   const conditions: string[] = [
     "ol.status = 'active'",
@@ -73,6 +91,10 @@ export async function GET(context: APIContext) {
   if (roomType) {
     conditions.push('EXISTS (SELECT 1 FROM listing_rooms r WHERE r.listing_id = ol.id AND LOWER(r.room_type) = ?)');
     binds.push(roomType);
+  }
+  if (ids.length) {
+    conditions.push(`ol.id IN (${ids.map(() => '?').join(', ')})`);
+    binds.push(...ids);
   }
   if (budget) {
     const budgetSql: Record<string, string> = {
@@ -97,12 +119,16 @@ export async function GET(context: APIContext) {
       ? `ORDER BY ${MIN_RENT_SUBQUERY} ${sort === 'price-asc' ? 'ASC' : 'DESC'}, ol.updated_at DESC`
       : 'ORDER BY ol.updated_at DESC';
 
+  // An `ids` lookup must not be truncated by the default page size, so the
+  // window is widened to the number of ids requested (already capped).
+  const effectiveLimit = ids.length ? Math.max(1, Math.min(ids.length, MAX_LIMIT)) : limit;
+
   const [rowsRes, totalRes] = await Promise.all([
     db
       .prepare(
         `SELECT ${PUBLIC_LISTING_COLUMNS} FROM owner_listings ol ${where} ${orderBy} LIMIT ? OFFSET ?`
       )
-      .bind(...binds, limit, offset)
+      .bind(...binds, effectiveLimit, offset)
       .all<ListingRow>(),
     db
       .prepare(`SELECT COUNT(*) AS c FROM owner_listings ol ${where}`)
@@ -118,7 +144,12 @@ export async function GET(context: APIContext) {
 
   const listings = rows.map((row) => {
     const dto = listingDto(row, rooms.get(row.id) ?? [], media.get(row.id) ?? [], mediaUrl);
-    const rents = dto.rooms.map((r) => r.rent);
+    // Same rule as MIN_RENT_SUBQUERY: available rooms first, all rooms as the
+    // fallback. The two must agree or a card's price would contradict the
+    // budget chip that selected it.
+    const available = dto.rooms.filter((r) => r.available).map((r) => r.rent);
+    const all = dto.rooms.map((r) => r.rent);
+    const rents = available.length ? available : all;
     return { ...dto, minRent: rents.length ? Math.min(...rents) : null };
   });
 
@@ -127,7 +158,7 @@ export async function GET(context: APIContext) {
   return json({
     count: listings.length,
     total,
-    limit,
+    limit: effectiveLimit,
     offset,
     hasMore: offset + listings.length < total,
     listings,

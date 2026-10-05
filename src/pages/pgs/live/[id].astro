@@ -1,0 +1,948 @@
+---
+/**
+ * Public detail page for a real D1 listing (owner_listings).
+ *
+ * The demo catalogue at /pgs/[slug] is prerendered from src/data; this route is
+ * the live counterpart, so it runs on demand (prerender = false) and is listed
+ * in wrangler.toml `run_worker_first`. Only listings that are BOTH approved and
+ * inside their plan window render — a draft, a rejected listing or a lapsed
+ * plan answers 404 rather than leaking a private row.
+ *
+ * Everything a student can do here is wired to the same engagement APIs the
+ * demo pages use: views, save, like/dislike, experiences and enquiries all
+ * accept the D1 listing id, and an enquiry lands in the owner's inbox because
+ * /api/owner/leads matches on owner_listings.id.
+ */
+export const prerender = false;
+
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PixelScene from '@/components/PixelScene.astro';
+import VideoPlayer from '@/components/VideoPlayer.astro';
+import VerificationBadge from '@/components/VerificationBadge.astro';
+import { amenityBySlug } from '@/data/amenities';
+import { amenityIcon } from '@/lib/amenityIcons';
+import {
+  MapPin,
+  Bookmark,
+  Utensils,
+  Clock3,
+  ShieldCheck,
+  MessageCircle,
+  Check,
+  Building2,
+  Play,
+  Eye,
+  ThumbsUp,
+  ThumbsDown,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  Compass,
+} from '@lucide/astro';
+
+import { getDb } from '@/lib/server/auth';
+import { fetchListing, listingDto } from '@/lib/server/listings';
+import { mediaUrl } from '@/lib/server/media';
+import { isExpired } from '@/lib/verificationRules';
+import { formatINR } from '@/lib/format';
+
+const { id } = Astro.params;
+const found = id ? await fetchListing(getDb(), id) : null;
+const listing = found ? listingDto(found.row, found.rooms, found.media, mediaUrl) : null;
+
+// Public visibility requires an approved listing inside its plan window.
+const visible = Boolean(
+  listing && found && found.row.status === 'active' && !isExpired({ expires_at: found.row.expires_at ?? null })
+);
+
+if (!visible) {
+  Astro.response.status = 404;
+}
+
+const l = visible ? listing! : null;
+
+// The badge component speaks the demo vocabulary ('listed' | tier); D1 reports
+// 'unverified' for an absent or lapsed claim.
+const badgeStatus = l
+  ? l.verificationStatus === 'unverified'
+    ? ('listed' as const)
+    : l.verificationStatus
+  : ('listed' as const);
+
+const photos = l ? l.media.filter((m) => m.type === 'photo') : [];
+const photoSrc = (photo: { url: string | null; externalId: string }): string =>
+  photo.url ?? photo.externalId;
+const videos = l ? l.media.filter((m) => m.type === 'video' && m.provider === 'youtube') : [];
+const availableRooms = l ? l.rooms.filter((r) => r.available).length : 0;
+const minRent = l && l.rooms.length ? Math.min(...l.rooms.map((r) => r.rent)) : null;
+const food = l?.food ?? { available: false };
+const amenitiesWithLabels = l
+  ? l.amenitySlugs.map((slug) => ({ slug, label: amenityBySlug(slug)?.label ?? slug }))
+  : [];
+const listedOn = l
+  ? new Date(l.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  : '';
+---
+
+<BaseLayout
+  title={l ? `${l.name} — ${l.locality}, ${l.city} | PG Hunter` : 'Listing not found — PG Hunter'}
+  description={l ? l.description.slice(0, 155) : 'This PG listing is no longer available on PG Hunter.'}
+  image={photos.length ? photoSrc(photos[0]) : undefined}
+  noindex={!l}
+>
+  {
+    !l ? (
+      <section class="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+        <span class="mx-auto flex h-16 w-16 items-center justify-center bg-brand-50 text-brand-700">
+          <Compass class="h-8 w-8" />
+        </span>
+        <p class="eyebrow mt-6">Listing unavailable</p>
+        <div class="pixel-rule mt-3 justify-center" aria-hidden="true">
+          <i /><i /><i /><i /><i />
+        </div>
+        <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+          This PG is no longer live
+        </h1>
+        <p class="mx-auto mt-2 max-w-md text-sm text-slate-600 sm:text-base">
+          The owner may have paused it or it has come off PG Hunter. Plenty of other
+          verified PGs are waiting — your shortlist stays saved.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <a href="/pgs-near-you" class="btn-primary px-8">
+            Browse PGs near you
+          </a>
+          <a href="/saved" class="btn-secondary px-8">
+            View your shortlist
+          </a>
+        </div>
+      </section>
+    ) : (
+      <div class="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
+        <nav aria-label="Breadcrumb" class="text-sm">
+          <ol class="flex flex-wrap items-center gap-1.5 text-slate-500">
+            <li>
+              <a href="/" class="hover:text-brand-700">
+                Home
+              </a>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li>
+              <a href="/pgs-near-you" class="hover:text-brand-700">
+                PGs Near You
+              </a>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" class="font-semibold text-slate-800">
+              {l.name}
+            </li>
+          </ol>
+        </nav>
+
+        {/* ------------------------------------------------ title band ---- */}
+        <div class="relative mt-6 overflow-hidden border border-slate-200 bg-brand-50 p-5 sm:p-6">
+          <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+            <PixelScene scene="room" pixel={9} maxCols={180} class="h-full w-full" />
+          </div>
+          <div
+            class="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-50 via-brand-50/80 to-brand-50/10"
+            aria-hidden="true"
+          />
+          <div class="relative">
+            <div class="flex flex-wrap items-center gap-2">
+              <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{l.name}</h1>
+              <VerificationBadge status={badgeStatus} />
+              <span class="badge border border-accent-300 bg-accent-100 text-slate-900" title="This listing is live on PG Hunter right now">
+                <Sparkles class="h-3.5 w-3.5" />
+                Live listing
+              </span>
+            </div>
+            <p class="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-medium text-slate-500">
+              <MapPin class="h-4 w-4 text-brand-600" />
+              {l.address ? `${l.address} · ` : ''}
+              {l.locality}
+              {l.locality && l.city ? ', ' : ''}
+              {l.city}
+            </p>
+            <ul class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium text-slate-500">
+              <li class="capitalize">{l.propertyType === 'flat' ? 'Student flat' : l.propertyType === 'hostel' ? 'Hostel' : 'PG'}</li>
+              <li class="capitalize">
+                {l.gender === 'co-ed' ? 'Co-ed' : l.gender === 'boys' ? 'Boys only' : 'Girls only'}
+              </li>
+              <li>Listed {listedOn}</li>
+              {l.verificationExpiresAt && l.verificationStatus !== 'unverified' && (
+                <li>
+                  Verified until{' '}
+                  {new Date(l.verificationExpiresAt).toLocaleDateString('en-IN', {
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
+          <div class="min-w-0">
+            {/* ------------------------------------------------ gallery ---- */}
+            <section aria-roledescription="carousel" aria-label={`Photos of ${l.name}`} class="relative">
+              {photos.length > 0 ? (
+                <>
+                  <div
+                    id="pg-gallery"
+                    tabindex="0"
+                    class="flex snap-x snap-mandatory overflow-x-auto scroll-smooth rounded-none border border-slate-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  >
+                    {photos.map((photo, i) => (
+                      <figure class="w-full shrink-0 snap-center">
+                        <img
+                          src={photoSrc(photo)}
+                          alt={photo.title || l.name}
+                          loading={i === 0 ? 'eager' : 'lazy'}
+                          decoding="async"
+                          width="800"
+                          height="500"
+                          class="aspect-[16/10] w-full object-cover"
+                        />
+                      </figure>
+                    ))}
+                  </div>
+
+                  {photos.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        data-gallery-prev
+                        class="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-sm border border-slate-200 bg-white/95 text-slate-700 transition hover:bg-white disabled:pointer-events-none disabled:opacity-0"
+                        aria-label="Previous photo"
+                      >
+                        <ChevronLeft class="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        data-gallery-next
+                        class="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-sm border border-slate-200 bg-white/95 text-slate-700 transition hover:bg-white disabled:pointer-events-none disabled:opacity-0"
+                        aria-label="Next photo"
+                      >
+                        <ChevronRight class="h-5 w-5" />
+                      </button>
+                      <p class="pointer-events-none absolute bottom-3 right-3 rounded-sm bg-slate-900/80 px-2.5 py-1 text-xs font-semibold text-white">
+                        <span data-gallery-index>1</span> / {photos.length}
+                      </p>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div class="flex aspect-[16/10] w-full items-center justify-center rounded-none border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
+                  The owner has not uploaded photos yet.
+                </div>
+              )}
+            </section>
+
+            {/* --------------------------------------------- engagement ---- */}
+            <div
+              id="engagement-bar"
+              class="card pixel-corner relative mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 px-3 py-2.5 sm:px-4"
+            >
+              <span class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                <Eye class="h-4 w-4 text-slate-400" />
+                <span id="eng-views">—</span> views
+              </span>
+
+              <div class="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  data-save-btn
+                  data-property-id={l.id}
+                  class="inline-flex h-9 items-center gap-1.5 rounded-sm border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600"
+                  aria-label={`Save ${l.name} to your shortlist`}
+                  aria-pressed="false"
+                  title="Save to shortlist"
+                >
+                  <Bookmark class="h-4 w-4" />
+                  <span data-save-label>Save</span>
+                </button>
+                <button
+                  type="button"
+                  data-like-btn
+                  data-property-id={l.id}
+                  class="inline-flex h-9 items-center gap-1.5 rounded-sm border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                  aria-label="Like"
+                  aria-pressed="false"
+                  title="Like"
+                >
+                  <ThumbsUp class="h-4 w-4" /> <span data-like-count>—</span>
+                </button>
+                <button
+                  type="button"
+                  data-dislike-btn
+                  data-property-id={l.id}
+                  class="inline-flex h-9 items-center gap-1.5 rounded-sm border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                  aria-label="Dislike"
+                  aria-pressed="false"
+                  title="Dislike"
+                >
+                  <ThumbsDown class="h-4 w-4" /> <span data-dislike-count>—</span>
+                </button>
+              </div>
+            </div>
+
+            {/* ----------------------------------------------- videos ---- */}
+            {videos.length > 0 && (
+              <section aria-labelledby="walkthrough-heading" class="mt-8">
+                <h2 id="walkthrough-heading" class="section-head flex items-center gap-2 text-lg font-bold text-slate-900">
+                  <Play class="h-5 w-5 text-brand-600" /> Room-tour video
+                </h2>
+                <p class="mt-1 text-sm text-slate-500">
+                  The owner recorded this walkthrough of the actual property.
+                </p>
+                <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {videos.map((video) => (
+                    <VideoPlayer videoId={video.externalId} title={video.title} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* ------------------------------------------------ about ---- */}
+            <section aria-labelledby="about-heading" class="mt-8">
+              <h2 id="about-heading" class="section-head text-lg font-bold text-slate-900">
+                About this {l.propertyType === 'flat' ? 'flat' : l.propertyType === 'hostel' ? 'hostel' : 'PG'}
+              </h2>
+              <p class="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
+                {l.description || 'The owner has not added a description yet.'}
+              </p>
+            </section>
+
+            {/* ------------------------------------------------ rooms ---- */}
+            <section aria-labelledby="rooms-heading" class="mt-8">
+              <h2 id="rooms-heading" class="section-head text-lg font-bold text-slate-900">
+                Rooms &amp; pricing
+              </h2>
+              <p class="mt-1 text-sm text-slate-500">
+                Rent lives at the room level, so every option has its own price.
+              </p>
+              <div class="mt-3 overflow-x-auto border border-slate-200">
+                <table class="w-full text-left text-sm">
+                  <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th scope="col" class="px-4 py-3 font-semibold">Room</th>
+                      <th scope="col" class="px-4 py-3 font-semibold">Monthly rent</th>
+                      <th scope="col" class="px-4 py-3 font-semibold">Deposit</th>
+                      <th scope="col" class="px-4 py-3 font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    {l.rooms.length === 0 ? (
+                      <tr>
+                        <td colspan="4" class="px-4 py-8 text-center text-slate-500">
+                          The owner has not published room options yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      l.rooms.map((room) => (
+                        <tr>
+                          <td class="px-4 py-3 font-semibold text-slate-800">
+                            {room.occupancy || room.roomType}
+                          </td>
+                          <td class="px-4 py-3 text-slate-700">{formatINR(room.rent)}</td>
+                          <td class="px-4 py-3 text-slate-700">{formatINR(room.deposit)}</td>
+                          <td class="px-4 py-3">
+                            {room.available ? (
+                              <span class="inline-flex items-center gap-1 rounded-sm bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                                <Check class="h-3 w-3" /> Available
+                              </span>
+                            ) : (
+                              <span class="inline-flex items-center gap-1 rounded-sm bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
+                                Occupied
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* -------------------------------------------- amenities ---- */}
+            {amenitiesWithLabels.length > 0 && (
+              <section aria-labelledby="amenities-heading" class="mt-8">
+                <h2 id="amenities-heading" class="section-head text-lg font-bold text-slate-900">
+                  What's included
+                </h2>
+                <ul class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {amenitiesWithLabels.map((amenity) => {
+                    const Icon = amenityIcon(amenity.slug);
+                    return (
+                      <li class="flex items-center gap-2 border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700">
+                        <Icon class="h-4 w-4 shrink-0 text-brand-600" />
+                        {amenity.label}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
+
+            {/* ------------------------------------------- house rules ---- */}
+            <section aria-labelledby="rules-heading" class="mt-8">
+              <h2 id="rules-heading" class="section-head text-lg font-bold text-slate-900">
+                Food, rules &amp; timings
+              </h2>
+              <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="border border-slate-200 bg-white p-4">
+                  <p class="flex items-center gap-2 text-sm font-bold text-slate-800">
+                    <Utensils class="h-4 w-4 text-brand-600" /> Food
+                  </p>
+                  <p class="mt-2 text-sm text-slate-600">
+                    {food.available
+                      ? `${food.type === 'veg' ? 'Pure veg' : food.type === 'non-veg' ? 'Non-veg' : 'Veg & non-veg'} meals included${
+                          food.monthlyCost ? ` · ${formatINR(food.monthlyCost)}/month` : ''
+                        }`
+                      : 'No mess on site — self-cooking or nearby options.'}
+                  </p>
+                </div>
+                <div class="border border-slate-200 bg-white p-4">
+                  <p class="flex items-center gap-2 text-sm font-bold text-slate-800">
+                    <Clock3 class="h-4 w-4 text-brand-600" /> Curfew
+                  </p>
+                  <p class="mt-2 text-sm text-slate-600">{l.curfew || 'No curfew mentioned.'}</p>
+                </div>
+              </div>
+              {l.rules.length > 0 && (
+                <ul class="mt-4 flex flex-col gap-2">
+                  {l.rules.map((rule) => (
+                    <li class="flex items-start gap-2 text-sm text-slate-600">
+                      <ShieldCheck class="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+                      {rule}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            {/* ----------------------------------------- experiences ---- */}
+            <section aria-labelledby="experiences-heading" class="mt-8">
+              <div class="flex flex-wrap items-end justify-between gap-2">
+                <h2 id="experiences-heading" class="section-head text-lg font-bold text-slate-900">
+                  Student experiences
+                </h2>
+                <p class="text-sm font-medium text-slate-500">
+                  <span id="exp-count">—</span> · <span id="exp-avg">No ratings yet</span>
+                </p>
+              </div>
+
+              <div id="experiences-list" class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"></div>
+              <p id="experiences-empty" class="mt-4 border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                No approved experiences yet. Be the first to share what living here is like.
+              </p>
+
+              <form id="experience-form" class="mt-6 border border-slate-200 bg-white p-4">
+                <label for="exp-content" class="text-sm font-bold text-slate-800">
+                  Share your experience
+                </label>
+                <p class="mt-0.5 text-xs text-slate-500">
+                  Goes live after moderation. Please avoid personal attacks and contact details.
+                </p>
+                <textarea
+                  id="exp-content"
+                  rows="3"
+                  maxlength="2000"
+                  placeholder="What is it actually like to live here? Food, wifi, water, owners…"
+                  class="mt-3 w-full resize-none rounded-sm border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none"
+                ></textarea>
+                <div class="mt-3 flex flex-wrap items-center gap-3">
+                  <label class="flex items-center gap-2 text-sm text-slate-600">
+                    Rating
+                    <select id="exp-rating" class="rounded-sm border border-slate-200 bg-white px-2 py-1.5 text-sm">
+                      <option value="">—</option>
+                      <option value="5">5 ★</option>
+                      <option value="4">4 ★</option>
+                      <option value="3">3 ★</option>
+                      <option value="2">2 ★</option>
+                      <option value="1">1 ★</option>
+                    </select>
+                  </label>
+                  <button type="submit" class="btn-primary px-6">
+                    Submit experience
+                  </button>
+                </div>
+                <p id="exp-status" class="mt-3 hidden rounded-sm px-3 py-2 text-sm font-medium"></p>
+              </form>
+            </section>
+          </div>
+
+          {/* ------------------------------------------------- aside ---- */}
+          <aside class="lg:sticky lg:top-6 lg:self-start">
+            <div class="card pixel-corner relative p-5">
+              <div class="pixel-rule" aria-hidden="true">
+                <i /><i /><i /><i /><i />
+              </div>
+              <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Starting from
+              </p>
+              <p class="mt-1 text-3xl font-extrabold tracking-tight text-brand-700">
+                {minRent !== null ? formatINR(minRent) : 'Ask owner'}
+                {minRent !== null && <span class="text-sm font-semibold text-slate-500">/month</span>}
+              </p>
+              <ul class="mt-4 flex flex-col gap-2 text-sm text-slate-600">
+                <li class="flex items-center gap-2">
+                  <Check class="h-4 w-4 text-emerald-600" />
+                  {availableRooms} of {l.rooms.length} room types available
+                </li>
+                <li class="flex items-center gap-2">
+                  <Check class="h-4 w-4 text-emerald-600" />
+                  {food.available ? 'Mess/food available' : 'No mess on site'}
+                </li>
+                <li class="flex items-center gap-2">
+                  <ShieldCheck class="h-4 w-4 text-brand-600" />
+                  No brokerage · owner listed
+                </li>
+              </ul>
+
+              <button
+                type="button"
+                id="enquiry-btn"
+                class="btn-primary mt-5 w-full px-6"
+              >
+                <MessageCircle class="h-4 w-4" />
+                Send enquiry
+              </button>
+              <p class="mt-3 text-xs leading-relaxed text-slate-500">
+                The owner sees your name{''}
+                and contact details only after you send an enquiry. PG Hunter never asks
+                for an advance payment.
+              </p>
+            </div>
+
+            <div class="card mt-4 border border-slate-200 p-5">
+              <h2 class="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <Building2 class="h-4 w-4 text-brand-600" /> Listing details
+              </h2>
+              <dl class="mt-3 space-y-2.5 text-sm">
+                <div class="flex justify-between gap-3">
+                  <dt class="text-slate-500">Type</dt>
+                  <dd class="font-semibold capitalize text-slate-800">{l.propertyType}</dd>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <dt class="text-slate-500">Gender</dt>
+                  <dd class="font-semibold capitalize text-slate-800">
+                    {l.gender === 'co-ed' ? 'Co-ed' : l.gender === 'boys' ? 'Boys' : 'Girls'}
+                  </dd>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <dt class="text-slate-500">Locality</dt>
+                  <dd class="font-semibold text-slate-800">{l.locality || '—'}</dd>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <dt class="text-slate-500">City</dt>
+                  <dd class="font-semibold text-slate-800">{l.city || '—'}</dd>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <dt class="text-slate-500">Listed</dt>
+                  <dd class="font-semibold text-slate-800">{listedOn}</dd>
+                </div>
+              </dl>
+              <a
+                href="/pgs-near-you"
+                class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:underline"
+              >
+                Compare similar PGs
+              </a>
+            </div>
+          </aside>
+        </div>
+
+        {/* ------------------------------------------------- modal ---- */}
+        <div id="enquiry-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 p-4">
+          <div class="card w-full max-w-md border border-slate-200 p-6">
+            <h2 id="enquiry-title" class="text-lg font-extrabold text-slate-900">
+              Send enquiry to {l.name}
+            </h2>
+            <p class="mt-1 text-sm text-slate-500">
+              The owner will see your contact details and reach out to you.
+            </p>
+            <form id="enquiry-form" class="mt-4 flex flex-col gap-3">
+              <label class="field">
+                <span class="sr-only">Budget</span>
+                <select name="budget" class="w-full appearance-none bg-transparent outline-none">
+                  <option value="">Monthly budget — any</option>
+                  <option value="under-10">Under ₹10k</option>
+                  <option value="10-15">₹10k – ₹15k</option>
+                  <option value="15-20">₹15k – ₹20k</option>
+                  <option value="20-plus">₹20k +</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="sr-only">Move-in month</span>
+                <select name="moveInMonth" class="w-full appearance-none bg-transparent outline-none">
+                  <option value="">Move-in month — any</option>
+                </select>
+              </label>
+              <textarea
+                name="message"
+                rows="3"
+                maxlength="1000"
+                placeholder="Anything the owner should know? (optional)"
+                class="w-full resize-none rounded-sm border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none"></textarea>
+              <button type="submit" class="btn-primary w-full">Send enquiry</button>
+              <button type="button" id="enquiry-cancel" class="btn-secondary w-full">Cancel</button>
+              <p
+                id="enquiry-status"
+                class="hidden rounded-sm bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-700"
+                role="status"
+              >
+                Enquiry sent! The owner will reach out to you shortly.
+              </p>
+            </form>
+          </div>
+        </div>
+      </div>
+    )
+  }
+</BaseLayout>
+
+<script>
+    // Engagement wiring shared with the demo detail page (views, saves,
+    // likes/dislikes, experiences, enquiries) — all keyed by the D1 id.
+    //
+    // Astro hoists every <script> it finds, so this runs on the 404 state too:
+    // each block below is guarded by the presence of its own markup instead of
+    // assuming the listing rendered.
+    import { getCurrentSession, getSession, isSaved, toggleSaved, createEnquiry } from '@/lib/auth';
+    import { recordView, getStats, setReaction, getExperiences, submitExperience } from '@/lib/engagement';
+    import { escapeAttr, escapeHtml } from '@/lib/html';
+
+    const saveBtn = document.querySelector<HTMLButtonElement>('[data-save-btn]');
+    const likeBtn = document.querySelector<HTMLButtonElement>('[data-like-btn]');
+    const dislikeBtn = document.querySelector<HTMLButtonElement>('[data-dislike-btn]');
+    const propertyId = saveBtn?.dataset.propertyId ?? '';
+
+    const engViews = document.getElementById('eng-views');
+    const likeCountEl = likeBtn?.querySelector('[data-like-count]') as HTMLElement | null;
+    const dislikeCountEl = dislikeBtn?.querySelector('[data-dislike-count]') as HTMLElement | null;
+
+    const setSaveState = (btn: HTMLButtonElement, saved: boolean) => {
+      const svg = btn.querySelector('svg');
+      btn.classList.toggle('text-brand-600', saved);
+      btn.classList.toggle('bg-brand-50', saved);
+      btn.classList.toggle('border-brand-200', saved);
+      btn.setAttribute('aria-pressed', String(saved));
+      btn.setAttribute('aria-label', saved ? 'Remove from shortlist' : 'Save to shortlist');
+      btn.title = saved ? 'Remove from shortlist' : 'Save to shortlist';
+      if (svg) svg.style.fill = saved ? 'currentColor' : 'none';
+      const label = btn.querySelector('[data-save-label]');
+      if (label) label.textContent = saved ? 'Saved' : 'Save';
+    };
+
+    const setReactionState = (reaction: 'like' | 'dislike' | null) => {
+      const isLike = reaction === 'like';
+      const isDislike = reaction === 'dislike';
+      likeBtn?.classList.toggle('bg-emerald-50', isLike);
+      likeBtn?.classList.toggle('text-emerald-700', isLike);
+      likeBtn?.classList.toggle('border-emerald-200', isLike);
+      likeBtn?.setAttribute('aria-pressed', String(isLike));
+      dislikeBtn?.classList.toggle('bg-rose-50', isDislike);
+      dislikeBtn?.classList.toggle('text-rose-700', isDislike);
+      dislikeBtn?.classList.toggle('border-rose-200', isDislike);
+      dislikeBtn?.setAttribute('aria-pressed', String(isDislike));
+    };
+
+    const refreshStats = async () => {
+      try {
+        const stats = await getStats(propertyId);
+        if (engViews) engViews.textContent = String(stats.views);
+        if (likeCountEl) likeCountEl.textContent = String(stats.likes);
+        if (dislikeCountEl) dislikeCountEl.textContent = String(stats.dislikes);
+        setReactionState(stats.userReaction);
+        if (saveBtn) setSaveState(saveBtn, stats.userSaved);
+      } catch {
+        /* counts are decoration; a failure must not break the page */
+      }
+    };
+
+    if (propertyId) {
+      void recordView(propertyId);
+      void refreshStats();
+    }
+
+    if (saveBtn && propertyId) {
+      void isSaved(propertyId).then((saved) => setSaveState(saveBtn, saved));
+      saveBtn.addEventListener('click', async () => {
+        if (!(await getCurrentSession())) {
+          window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+          return;
+        }
+        const { saved } = await toggleSaved(propertyId);
+        setSaveState(saveBtn, saved);
+        window.dispatchEvent(new CustomEvent('pghunter:saved', { detail: { propertyId, saved } }));
+        void refreshStats();
+      });
+    }
+
+    const handleReaction = async (desired: 'like' | 'dislike') => {
+      if (!(await getCurrentSession())) {
+        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
+      try {
+        const current = (likeBtn?.getAttribute('aria-pressed') === 'true'
+          ? 'like'
+          : dislikeBtn?.getAttribute('aria-pressed') === 'true'
+            ? 'dislike'
+            : null) as 'like' | 'dislike' | null;
+        const next = current === desired ? null : desired;
+        const res = await setReaction(propertyId, next);
+        if (likeCountEl) likeCountEl.textContent = String(res.likes);
+        if (dislikeCountEl) dislikeCountEl.textContent = String(res.dislikes);
+        setReactionState(res.userReaction);
+      } catch {
+        /* ignore — the reaction simply did not register */
+      }
+    };
+
+    likeBtn?.addEventListener('click', () => void handleReaction('like'));
+    dislikeBtn?.addEventListener('click', () => void handleReaction('dislike'));
+
+    /* ------------------------------------------------ gallery -------- */
+    const gallery = document.getElementById('pg-gallery') as HTMLElement | null;
+    if (gallery) {
+      const total = gallery.children.length;
+      const indexEl = gallery.parentElement?.querySelector('[data-gallery-index]') as HTMLElement | null;
+      const prevBtn = document.querySelector<HTMLButtonElement>('[data-gallery-prev]');
+      const nextBtn = document.querySelector<HTMLButtonElement>('[data-gallery-next]');
+
+      const currentIndex = () =>
+        Math.min(Math.max(Math.round(gallery.scrollLeft / gallery.clientWidth), 0), total - 1);
+
+      const syncGallery = () => {
+        const i = currentIndex();
+        if (indexEl) indexEl.textContent = String(i + 1);
+        prevBtn?.toggleAttribute('disabled', i === 0);
+        nextBtn?.toggleAttribute('disabled', i === total - 1);
+      };
+
+      const goTo = (i: number) => gallery.scrollTo({ left: i * gallery.clientWidth, behavior: 'smooth' });
+
+      prevBtn?.addEventListener('click', () => goTo(currentIndex() - 1));
+      nextBtn?.addEventListener('click', () => goTo(currentIndex() + 1));
+
+      let ticking = false;
+      gallery.addEventListener(
+        'scroll',
+        () => {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(() => {
+            syncGallery();
+            ticking = false;
+          });
+        },
+        { passive: true }
+      );
+      gallery.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          goTo(currentIndex() + 1);
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          goTo(currentIndex() - 1);
+        }
+      });
+      window.addEventListener('resize', syncGallery, { passive: true });
+      syncGallery();
+    }
+
+    /* -------------------------------------------- experiences ------- */
+    const expList = document.getElementById('experiences-list');
+    const expEmpty = document.getElementById('experiences-empty');
+    const expCount = document.getElementById('exp-count');
+    const expAvg = document.getElementById('exp-avg');
+    const expForm = document.getElementById('experience-form') as HTMLFormElement | null;
+    const expContent = document.getElementById('exp-content') as HTMLTextAreaElement | null;
+    const expRating = document.getElementById('exp-rating') as HTMLSelectElement | null;
+    const expStatus = document.getElementById('exp-status');
+
+    const renderExperiences = async () => {
+      if (!expList || !expCount || !expAvg || !expEmpty) return;
+      try {
+        const data = await getExperiences(propertyId);
+        expCount.textContent = `${data.count} experience${data.count === 1 ? '' : 's'}`;
+        expAvg.textContent = data.avgRating !== null ? `⭐ ${data.avgRating} avg` : 'No ratings yet';
+        if (data.experiences.length === 0) {
+          expList.innerHTML = '';
+          expEmpty.classList.remove('hidden');
+          return;
+        }
+        expEmpty.classList.add('hidden');
+        expList.innerHTML = data.experiences
+          .map(
+            (e) => `
+        <article class="border border-slate-200 bg-white p-4">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-sm font-bold text-slate-900">${escapeHtml(e.user_name ?? 'Student')}</p>
+            <span class="text-xs text-slate-500">${escapeHtml(
+              new Date(e.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+            )}</span>
+          </div>
+          ${e.rating ? `<p class="mt-1 text-sm text-amber-500">${'★'.repeat(e.rating)}${'☆'.repeat(5 - e.rating)}</p>` : ''}
+          <p class="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">${escapeHtml(e.content)}</p>
+          <div class="mt-3 flex justify-end">
+            <button data-report="${escapeAttr(e.id)}" class="text-xs font-medium text-slate-500 hover:text-rose-600">Report</button>
+          </div>
+        </article>`
+          )
+          .join('');
+
+        expList.querySelectorAll('[data-report]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const target = (btn as HTMLElement).dataset.report!;
+            if (!(await getCurrentSession())) {
+              window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+              return;
+            }
+            const reason = prompt('Report reason: spam, abuse, fake, inappropriate, other')?.trim().toLowerCase();
+            if (!reason || !['spam', 'abuse', 'fake', 'inappropriate', 'other'].includes(reason)) {
+              if (reason !== null) alert('Invalid reason.');
+              return;
+            }
+            const description = prompt('Description (optional, max 1000)')?.trim().slice(0, 1000) ?? null;
+            const res = await fetch('/api/reports', {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ target_type: 'experience', target_id: target, reason, description }),
+            });
+            if (res.ok) alert('Report submitted.');
+            else {
+              const err = await res.json().catch(() => ({ error: 'failed' }));
+              alert(err.error || 'Failed to report.');
+            }
+          });
+        });
+      } catch {
+        if (expCount) expCount.textContent = '—';
+      }
+    };
+
+    void renderExperiences();
+
+    expForm?.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      if (!expContent || !expStatus) return;
+      if (!(await getCurrentSession())) {
+        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
+      const content = expContent.value.trim();
+      const ratingVal = expRating?.value ? Number(expRating.value) : null;
+      if (content.length < 10) {
+        expStatus.textContent = 'Please write at least 10 characters.';
+        expStatus.className = 'mt-3 rounded-sm bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700';
+        return;
+      }
+      expStatus.textContent = 'Submitting…';
+      expStatus.className = 'mt-3 rounded-sm bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600';
+      try {
+        await submitExperience(propertyId, content, ratingVal);
+        expStatus.textContent = 'Experience submitted for moderation and will appear after approval.';
+        expStatus.className = 'mt-3 rounded-sm bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700';
+        expContent.value = '';
+        if (expRating) expRating.value = '';
+      } catch (err) {
+        expStatus.textContent = (err as Error).message || 'Could not submit experience.';
+        expStatus.className = 'mt-3 rounded-sm bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700';
+      }
+    });
+
+    /* ------------------------------------------------ enquiry ------- */
+    const modal = document.getElementById('enquiry-modal') as HTMLElement | null;
+    const enquiryBtn = document.getElementById('enquiry-btn') as HTMLButtonElement | null;
+    const cancelBtn = document.getElementById('enquiry-cancel') as HTMLButtonElement | null;
+    const enquiryForm = document.getElementById('enquiry-form') as HTMLFormElement | null;
+    const statusEl = document.getElementById('enquiry-status') as HTMLElement | null;
+    const moveInSelect = enquiryForm?.querySelector<HTMLSelectElement>('select[name="moveInMonth"]') ?? null;
+    const budgetSelect = enquiryForm?.querySelector<HTMLSelectElement>('select[name="budget"]') ?? null;
+    const messageField = enquiryForm?.querySelector<HTMLTextAreaElement>('textarea[name="message"]') ?? null;
+
+    const now = new Date();
+    if (moveInSelect) {
+      for (let i = 0; i < 8; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+        const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        moveInSelect.insertAdjacentHTML('beforeend', `<option value="${value}">${label}</option>`);
+      }
+    }
+
+    const closeModal = () => {
+      if (!modal || !enquiryForm || !statusEl) return;
+      modal.classList.add('hidden');
+      statusEl.classList.add('hidden');
+      statusEl.className = 'hidden rounded-sm bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-700';
+      enquiryForm.reset();
+      enquiryForm.querySelector<HTMLButtonElement>('button[type="submit"]')?.removeAttribute('disabled');
+    };
+
+    /** Prefill from the student's saved hunt preferences (see /profile). */
+    const prefillEnquiry = (user: {
+      budgetPref?: string;
+      movingInMonth?: string;
+      messageToOwners?: string;
+    }) => {
+      if (user.budgetPref && budgetSelect?.querySelector(`option[value="${user.budgetPref}"]`)) {
+        budgetSelect.value = user.budgetPref;
+      }
+      if (user.movingInMonth && moveInSelect?.querySelector(`option[value="${user.movingInMonth}"]`)) {
+        moveInSelect.value = user.movingInMonth;
+      }
+      if (user.messageToOwners && messageField && !messageField.value.trim()) {
+        messageField.value = user.messageToOwners;
+      }
+    };
+
+    enquiryBtn?.addEventListener('click', async () => {
+      const user = await getCurrentSession();
+      if (!user) {
+        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
+      prefillEnquiry(user);
+      modal?.classList.remove('hidden');
+    });
+
+    cancelBtn?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    enquiryForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!enquiryForm || !statusEl || !propertyId) return;
+      if (!(await getSession())) {
+        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
+      const data = new FormData(enquiryForm);
+      const { error } = await createEnquiry({
+        propertyId,
+        budget: String(data.get('budget') ?? ''),
+        moveInMonth: String(data.get('moveInMonth') ?? ''),
+        message: String(data.get('message') ?? ''),
+      });
+      if (error) {
+        statusEl.textContent = `Could not send the enquiry: ${error}`;
+        statusEl.className = 'rounded-sm bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-700';
+        return;
+      }
+      statusEl.textContent = 'Enquiry sent! The owner will reach out to you shortly.';
+      statusEl.className = 'rounded-sm bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-700';
+      enquiryForm.querySelector<HTMLButtonElement>('button[type="submit"]')?.setAttribute('disabled', 'true');
+      setTimeout(closeModal, 2000);
+    });
+  </script>

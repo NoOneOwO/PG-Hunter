@@ -38,3 +38,6 @@ npm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# local scratch (cookies, curl output)
+.tmp/

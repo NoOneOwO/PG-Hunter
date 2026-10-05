@@ -155,10 +155,16 @@ const tabs = [
           aria-label="Your profile"
         >
           <span
-            id="header-avatar"
-            class="flex h-8 w-8 items-center justify-center rounded-sm bg-brand-600 text-xs font-extrabold text-white"
-            >?</span
+            class="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-brand-600 text-xs font-extrabold text-white"
           >
+            <img
+              id="header-avatar-img"
+              alt=""
+              class="absolute inset-0 hidden h-full w-full object-cover"
+              referrerpolicy="no-referrer"
+            />
+            <span id="header-avatar">?</span>
+          </span>
           <span id="header-name" class="max-w-28 truncate text-sm font-semibold text-slate-800"
           ></span>
         </a>
@@ -166,9 +172,16 @@ const tabs = [
           href="/profile"
           id="header-avatar-mobile"
           aria-label="Your profile"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-sm bg-brand-600 text-sm font-extrabold text-white sm:hidden"
-          >?</a
+          class="relative inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-sm bg-brand-600 text-sm font-extrabold text-white sm:hidden"
         >
+          <img
+            id="header-avatar-mobile-img"
+            alt=""
+            class="absolute inset-0 hidden h-full w-full object-cover"
+            referrerpolicy="no-referrer"
+          />
+          <span id="header-avatar-mobile-initials">?</span>
+        </a>
       </div>
       <button
         id="menu-toggle"
@@ -298,7 +311,9 @@ const tabs = [
   const guestMobile = document.getElementById('auth-guest-mobile')!;
   const userMobile = document.getElementById('auth-user-mobile')!;
   const avatar = document.getElementById('header-avatar')!;
-  const avatarMobile = document.getElementById('header-avatar-mobile')!;
+  const avatarMobile = document.getElementById('header-avatar-mobile-initials')!;
+  const avatarImg = document.getElementById('header-avatar-img') as HTMLImageElement | null;
+  const avatarImgMobile = document.getElementById('header-avatar-mobile-img') as HTMLImageElement | null;
   const nameEl = document.getElementById('header-name')!;
   const headerProfileLink = document.getElementById('header-profile-link') as HTMLAnchorElement | null;
   const headerAvatarMobile = document.getElementById('header-avatar-mobile') as HTMLAnchorElement | null;
@@ -320,6 +335,34 @@ const tabs = [
     if (!el) return;
     el.classList.toggle('hidden', !show);
     if (show) el.classList.add('flex');
+  };
+
+  /**
+   * Paint the account photo over the initials chip. The image stays hidden
+   * until it loads, so a slow or missing picture degrades to initials instead
+   * of flashing the browser's broken-image icon.
+   */
+  const paintAvatar = (
+    img: HTMLImageElement | null,
+    initialsEl: HTMLElement,
+    user: AppUser
+  ) => {
+    initialsEl.textContent = initialsOf(user.name);
+    if (!img) return;
+    const src = user.avatar ?? '';
+    if (!src) {
+      img.hidden = true;
+      img.removeAttribute('src');
+      return;
+    }
+    img.hidden = true;
+    img.onload = () => {
+      img.hidden = false;
+    };
+    img.onerror = () => {
+      img.hidden = true;
+    };
+    img.src = src;
   };
 
   const renderAuth = (user: AppUser | null) => {
@@ -354,9 +397,8 @@ const tabs = [
     if (authUserMobile) authUserMobile.href = isOwner ? '/owner/profile' : '/profile';
 
     if (user) {
-      const initials = initialsOf(user.name);
-      avatar.textContent = initials;
-      avatarMobile.textContent = initials;
+      paintAvatar(avatarImg, avatar, user);
+      paintAvatar(avatarImgMobile, avatarMobile, user);
       nameEl.textContent = user.name.split(' ')[0];
     }
   };

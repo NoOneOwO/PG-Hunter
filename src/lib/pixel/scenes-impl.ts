@@ -36,7 +36,7 @@ import {
  * `horizon`. This is the single most recognisable "pixel art" cue, and the
  * reason these scenes don't look like flat vector shapes.
  */
-function ditheredSky(
+export function ditheredSky(
   p: Painter,
   stops: readonly Rgb[],
   horizon: number,
@@ -54,7 +54,7 @@ function ditheredSky(
 }
 
 /** A retro sun disc with horizontal slice gaps that widen toward the bottom. */
-function slicedSun(
+export function slicedSun(
   p: Painter,
   cx: number,
   cy: number,
@@ -80,7 +80,7 @@ function slicedSun(
 }
 
 /** Twinkling stars over the upper part of the buffer. */
-function starfield(p: Painter, count: number, maxY: number): void {
+export function starfield(p: Painter, count: number, maxY: number): void {
   const total = Math.round(p.cols * count);
   for (let i = 0; i < total; i += 1) {
     const sx = Math.floor(noise(i, 5) * p.cols);
@@ -92,7 +92,7 @@ function starfield(p: Painter, count: number, maxY: number): void {
 }
 
 /** A silhouetted building block with a lit window grid. */
-function tower(
+export function tower(
   p: Painter,
   x: number,
   width: number,
@@ -119,7 +119,7 @@ function tower(
  * Build a repeatable skyline strip in grid units. Returns the buildings plus
  * the total width of the strip, so the caller can scroll it seamlessly.
  */
-function skylineStrip(
+export function skylineStrip(
   seed: number,
   cols: number,
   minH: number,
@@ -139,7 +139,7 @@ function skylineStrip(
 }
 
 /** Blit a string-art sprite. `key` maps a character to a colour. */
-function sprite(
+export function sprite(
   p: Painter,
   art: readonly string[],
   x: number,

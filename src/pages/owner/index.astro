@@ -36,21 +36,21 @@ import { listingStatusMeta } from '@/lib/owner';
 
   <div id="dash-root" class="hidden">
     <div data-reveal-group class="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <a href="/owner/listings" class="card card-hover p-5">
+      <a href="/owner/listings" class="card card-hover p-5" data-hover-lift>
         <span class="flex h-10 w-10 items-center justify-center bg-brand-50 text-brand-700">
           <Building2 class="h-5 w-5" />
         </span>
         <p id="stat-listings" class="mt-4 text-3xl font-extrabold text-slate-900">–</p>
         <p class="text-sm font-semibold text-slate-500">Total listings</p>
       </a>
-      <a href="/owner/listings" class="card card-hover p-5">
+      <a href="/owner/listings" class="card card-hover p-5" data-hover-lift>
         <span class="flex h-10 w-10 items-center justify-center bg-emerald-50 text-emerald-700">
           <TrendingUp class="h-5 w-5" />
         </span>
         <p id="stat-active" class="mt-4 text-3xl font-extrabold text-slate-900">–</p>
         <p class="text-sm font-semibold text-slate-500">Live on PG Hunter</p>
       </a>
-      <a href="/owner/leads" class="card card-hover p-5">
+      <a href="/owner/leads" class="card card-hover p-5" data-hover-lift>
         <span class="flex h-10 w-10 items-center justify-center bg-sky-50 text-sky-700">
           <Inbox class="h-5 w-5" />
         </span>
@@ -60,17 +60,17 @@ import { listingStatusMeta } from '@/lib/owner';
         </p>
         <p class="text-sm font-semibold text-slate-500">Enquiries received</p>
       </a>
-      <a href="/owner/verification" class="card card-hover p-5">
+      <a href="/owner/verification" class="card card-hover p-5" data-hover-lift>
         <span class="flex h-10 w-10 items-center justify-center bg-accent-100 text-accent-500">
           <BadgeCheck class="h-5 w-5" />
         </span>
-        <p id="stat-verification" class="mt-4 text-3xl font-extrabold text-slate-900">–</p>
+        <p id="stat-verification" class="mt-4 text-2xl font-extrabold text-slate-900">–</p>
         <p class="text-sm font-semibold text-slate-500">Verification</p>
       </a>
     </div>
 
     <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <section class="card lg:col-span-2" aria-labelledby="analytics-heading">
+      <section class="card lg:col-span-2" aria-labelledby="analytics-heading" data-reveal>
         <div class="border-b border-slate-100 px-5 py-4">
           <h2 id="analytics-heading" class="text-base font-bold text-slate-900">Enquiries and reach</h2>
         </div>
@@ -92,7 +92,7 @@ import { listingStatusMeta } from '@/lib/owner';
         </div>
       </section>
 
-      <section class="card" aria-labelledby="pg-health-heading">
+      <section class="card" aria-labelledby="pg-health-heading" data-reveal>
         <div class="border-b border-slate-100 px-5 py-4">
           <h2 id="pg-health-heading" class="text-base font-bold text-slate-900">PG stats</h2>
         </div>
@@ -111,7 +111,7 @@ import { listingStatusMeta } from '@/lib/owner';
         </div>
       </section>
 
-      <section class="card lg:col-span-2" aria-labelledby="recent-listings-heading">
+      <section class="card lg:col-span-2" aria-labelledby="recent-listings-heading" data-reveal>
         <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <h2 id="recent-listings-heading" class="text-base font-bold text-slate-900">Your PGs</h2>
           <a href="/owner/listings" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
@@ -122,7 +122,7 @@ import { listingStatusMeta } from '@/lib/owner';
         <div id="recent-listings" class="divide-y divide-slate-100"></div>
       </section>
 
-      <section class="card" aria-labelledby="recent-leads-heading">
+      <section class="card" aria-labelledby="recent-leads-heading" data-reveal>
         <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <h2 id="recent-leads-heading" class="text-base font-bold text-slate-900">Latest enquiries</h2>
           <a href="/owner/leads" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline">
@@ -134,7 +134,7 @@ import { listingStatusMeta } from '@/lib/owner';
       </section>
     </div>
 
-    <section class="card mt-6" aria-labelledby="status-guide-heading">
+    <section class="card mt-6" aria-labelledby="status-guide-heading" data-reveal>
       <div class="border-b border-slate-100 px-5 py-4">
         <h2 id="status-guide-heading" class="text-base font-bold text-slate-900">Listing statuses</h2>
       </div>
@@ -165,6 +165,7 @@ import { listingStatusMeta } from '@/lib/owner';
     rentRangeOf,
     formatRelativeDate,
   } from '@/lib/owner';
+  import { initMotionUI } from '@/lib/motion/ui';
 
   const loading = document.getElementById('dash-loading')!;
   const root = document.getElementById('dash-root')!;
@@ -300,6 +301,8 @@ import { listingStatusMeta } from '@/lib/owner';
 
     loading.classList.add('hidden');
     root.classList.remove('hidden');
+    // Dashboard content was injected after page load — wire its entrances.
+    initMotionUI();
   };
 
   void init();

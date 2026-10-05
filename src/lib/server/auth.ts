@@ -23,6 +23,11 @@ export interface UserRow {
   name: string;
   phone: string | null;
   college_slug: string | null;
+  city: string | null;
+  moving_in_month: string | null;
+  budget_pref: string | null;
+  availability: string | null;
+  message_to_owners: string | null;
   role: 'student' | 'owner';
   is_admin: number;
   avatar_url: string | null;
@@ -122,7 +127,8 @@ export const getUserFromSession = async (db: D1Database, token: string | undefin
   const row = await db
     .prepare(
       `SELECT u.id, u.email, u.password_hash, u.salt, u.provider, u.name, u.phone,
-              u.college_slug, u.role, u.is_admin, u.avatar_url, u.created_at, u.updated_at
+              u.college_slug, u.city, u.moving_in_month, u.budget_pref, u.availability,
+              u.message_to_owners, u.role, u.is_admin, u.avatar_url, u.created_at, u.updated_at
        FROM sessions s
        JOIN users u ON u.id = s.user_id
        WHERE s.token = ? AND s.expires_at > ?`
@@ -196,12 +202,20 @@ export const requireAdmin = async (
 /* ------------------------------------------------------------------ */
 
 /**
- * `users.avatar_url` stores the R2 object key (avatars/{userId}/{uuid}.webp),
- * not a URL, so the bucket and route can change without a data migration.
- * Hand the browser a path instead.
+ * `users.avatar_url` holds either:
+ *   - an R2 object key (avatars/{userId}/{uuid}.webp) for uploaded photos, or
+ *   - an absolute https URL for accounts whose picture comes from Google.
+ *
+ * Only the R2 key is rewritten into the /api/media route; an absolute URL is
+ * passed through untouched. Prefixing the Google URL produced
+ * `/api/media/https://lh3.googleusercontent.com/...`, which 404s and left the
+ * profile showing a broken-image icon after every fresh sign-in.
  */
-const avatarUrl = (key: string | null): string | null =>
-  key ? (key.startsWith('/') ? key : mediaUrl(key)) : null;
+const avatarUrl = (value: string | null): string | null => {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  return value.startsWith('/') ? value : mediaUrl(value);
+};
 
 /** The app-facing user object (never includes password material). */
 export const publicUser = (u: UserRow) => ({
@@ -212,6 +226,11 @@ export const publicUser = (u: UserRow) => ({
   isAdmin: Boolean(u.is_admin),
   phone: u.phone ?? undefined,
   collegeSlug: u.college_slug ?? undefined,
+  city: u.city ?? undefined,
+  movingInMonth: u.moving_in_month ?? undefined,
+  budgetPref: u.budget_pref ?? undefined,
+  availability: u.availability ?? undefined,
+  messageToOwners: u.message_to_owners ?? undefined,
   avatar: avatarUrl(u.avatar_url),
   createdAt: u.created_at,
   provider: u.provider,

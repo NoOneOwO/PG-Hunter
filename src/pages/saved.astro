@@ -68,7 +68,7 @@ import { Bookmark, ArrowRight } from '@lucide/astro';
   const render = async () => {
     const ids = await getSavedIds();
     countEl.textContent = String(ids.length);
-    const count = renderSavedGrid(grid, ids, { removable: true });
+    const count = await renderSavedGrid(grid, ids, { removable: true });
     empty.classList.toggle('hidden', count > 0);
   };
 

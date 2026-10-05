@@ -1,139 +1,237 @@
 ---
+/**
+ * Experience moderation.
+ *
+ * Server-rendered so the queue is visible on first paint; the actions post to
+ * /api/admin/experiences/:id, which writes the moderation_actions audit row.
+ * Only an approved experience appears on a public PG page.
+ */
 export const prerender = false;
 import AdminLayout from '@/layouts/AdminLayout.astro';
+import { getDb } from '@/lib/server/auth';
+import { Check, X, Ban, Star, ExternalLink } from '@lucide/astro';
+
+const url = new URL(Astro.request.url);
+const statusParam = url.searchParams.get('status')?.trim() ?? 'pending';
+const valid = ['pending', 'approved', 'rejected', 'spam', 'all'];
+const status = valid.includes(statusParam) ? statusParam : 'pending';
+
+const db = getDb();
+const where = status === 'all' ? '' : 'WHERE e.status = ?';
+const res = await db
+  .prepare(
+    `SELECT e.*, u.name AS user_name, u.email AS user_email, ol.name AS listing_name
+     FROM pg_experiences e
+     LEFT JOIN users u ON u.id = e.user_id
+     LEFT JOIN owner_listings ol ON ol.id = e.listing_id
+     ${where}
+     ORDER BY CASE e.status WHEN 'pending' THEN 0 WHEN 'spam' THEN 1 ELSE 2 END, e.created_at DESC
+     LIMIT 100`
+  )
+  .bind(...(status === 'all' ? [] : [status]))
+  .all();
+
+const counts = await db
+  .prepare(`SELECT status, COUNT(*) AS c FROM pg_experiences GROUP BY status`)
+  .all<{ status: string; c: number }>()
+  .catch(() => ({ results: [] as { status: string; c: number }[] }));
+const countOf = (s: string) => counts.results.find((row) => row.status === s)?.c ?? 0;
+
+const statusMeta: Record<string, string> = {
+  pending: 'bg-amber-100 text-amber-800',
+  approved: 'bg-emerald-100 text-emerald-800',
+  rejected: 'bg-slate-100 text-slate-600',
+  spam: 'bg-rose-100 text-rose-700',
+};
+
+const filters = [
+  { key: 'pending', label: 'Pending', count: countOf('pending') },
+  { key: 'approved', label: 'Approved', count: countOf('approved') },
+  { key: 'rejected', label: 'Rejected', count: countOf('rejected') },
+  { key: 'spam', label: 'Spam', count: countOf('spam') },
+  { key: 'all', label: 'All', count: countOf('pending') + countOf('approved') + countOf('rejected') + countOf('spam') },
+];
 ---
 
-<AdminLayout title="Experiences Moderation — PG Hunter Admin" active="experiences">
+<AdminLayout title="Experiences — Admin" active="experiences">
   <div class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Student Experiences</h1>
-      <p class="mt-1 text-sm text-slate-500">Pending is default. Only <code class="rounded bg-emerald-50 px-1">approved</code> appears publicly.</p>
+      <p class="eyebrow">Moderation</p>
+      <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+        Student experiences
+      </h1>
+      <p class="mt-1 text-sm font-medium text-slate-500">
+        Pending by default. Only <strong class="font-semibold text-emerald-700">approved</strong> experiences
+        appear on a public PG page, and every decision is written to the audit log.
+      </p>
     </div>
-    <div class="flex gap-2">
-      <select id="filter-status" class="field text-sm">
-        <option value="pending" selected>Pending</option>
-        <option value="approved">Approved</option>
-        <option value="rejected">Rejected</option>
-        <option value="spam">Spam</option>
-        <option value="">All</option>
-      </select>
-      <button id="refresh-btn" class="btn-secondary text-sm">Refresh</button>
+    <div class="flex flex-wrap gap-2">
+      {
+        filters.map((f) => (
+          <a
+            href={`/admin/experiences?status=${f.key}`}
+            class:list={[
+              'chip min-h-10 gap-1.5',
+              status === f.key && 'is-active',
+            ]}
+            aria-current={status === f.key ? 'page' : undefined}
+          >
+            {f.label}
+            <span class:list={['text-xs font-bold', status === f.key ? 'text-white/80' : 'text-slate-400']}>
+              {f.count}
+            </span>
+          </a>
+        ))
+      }
     </div>
   </div>
 
-  <div id="loading" class="mx-auto max-w-md py-16 text-center">
-    <span class="mx-auto flex h-10 w-10 animate-spin items-center justify-center rounded-full border-4 border-slate-200 border-t-slate-900"></span>
-    <p class="mt-3 text-sm text-slate-500">Loading experiences…</p>
-  </div>
+  {res.results.length === 0 ? (
+    <div class="card pixel-corner relative mt-8 px-6 py-14 text-center">
+      <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="mt-5 text-base font-bold text-slate-900">Nothing to moderate here</p>
+      <p class="mt-1 text-sm text-slate-500">
+        Student experiences land in this queue the moment they are submitted.
+      </p>
+    </div>
+  ) : (
+    <div class="mt-6 flex flex-col gap-4">
+      {res.results.map((e: any) => (
+        <article class="card p-5" data-reveal>
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class={`badge ${statusMeta[e.status] ?? 'bg-slate-100 text-slate-600'}`}>{e.status}</span>
+                {e.rating ? (
+                  <span class="badge border border-amber-200 bg-amber-50 text-amber-800">
+                    <Star class="h-3.5 w-3.5 fill-current" /> {e.rating}/5
+                  </span>
+                ) : (
+                  <span class="badge border border-slate-200 bg-white text-slate-500">No rating</span>
+                )}
+                <span class="text-xs font-medium text-slate-500">
+                  {new Date(e.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
 
-  <div id="list" class="mt-6 space-y-4 hidden"></div>
-  <p id="empty" class="mt-6 hidden rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">No experiences for this filter — shows “No data yet” when empty.</p>
+              <p class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                {e.content?.slice(0, 900) ?? '—'}
+              </p>
 
-  <template id="item-tpl">
-    <article class="card p-5">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="min-w-0 flex-1">
-          <p class="text-sm font-bold text-slate-900" data-field="content">—</p>
-          <p class="mt-1 text-xs text-slate-500"><span data-field="user"></span> · <span data-field="listing"></span> · <span data-field="date"></span> · <span data-field="rating"></span></p>
-          <p class="mt-2"><span data-field="status" class="badge"></span></p>
-        </div>
-        <div class="flex shrink-0 gap-2" data-actions>
-          <button data-action="approve" class="btn-primary px-3 py-1.5 text-xs">Approve</button>
-          <button data-action="reject" class="btn-secondary px-3 py-1.5 text-xs">Reject</button>
-          <button data-action="spam" class="btn-secondary px-3 py-1.5 text-xs text-rose-600">Spam</button>
-        </div>
-      </div>
-      <div data-reason-wrap class="mt-3 hidden">
-        <input data-reason placeholder="Reason (optional, 500 chars)" class="field w-full text-sm" maxlength="500" />
-        <button data-confirm class="btn-primary mt-2 px-3 py-1.5 text-xs">Confirm</button>
-        <span data-status class="ml-2 text-xs"></span>
-      </div>
-    </article>
-  </template>
-</AdminLayout>
+              <p class="mt-3 text-xs font-medium text-slate-500">
+                {e.user_name ?? 'Student'} · {e.user_email ?? '—'} ·{' '}
+                {e.listing_name ? (
+                  <a href={`/pgs/live/${encodeURIComponent(e.listing_id)}`} target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-brand-700 hover:underline">
+                    {e.listing_name} <ExternalLink class="h-3 w-3" />
+                  </a>
+                ) : (
+                  <span>listing {e.listing_id}</span>
+                )}
+              </p>
 
-<script>
-  const filter = document.getElementById('filter-status') as HTMLSelectElement;
-  const refreshBtn = document.getElementById('refresh-btn') as HTMLButtonElement;
-  const loading = document.getElementById('loading') as HTMLElement;
-  const list = document.getElementById('list') as HTMLElement;
-  const empty = document.getElementById('empty') as HTMLElement;
-  const tpl = document.getElementById('item-tpl') as HTMLTemplateElement;
+              {e.status !== 'pending' && (
+                <p class="mt-2 text-xs text-slate-400">
+                  Last decision saved {new Date(e.updated_at).toLocaleDateString('en-IN')}
+                </p>
+              )}
+            </div>
 
-  const badgeClass = (s: string) =>
-    s === 'pending' ? 'bg-amber-100 text-amber-800' :
-    s === 'approved' ? 'bg-emerald-100 text-emerald-800' :
-    s === 'rejected' ? 'bg-slate-100 text-slate-600' :
-    'bg-rose-100 text-rose-700';
+            <div class="flex shrink-0 flex-wrap gap-2">
+              {e.status !== 'approved' && (
+                <button
+                  type="button"
+                  class="btn-primary min-h-10 px-4 text-xs"
+                  data-exp-action="approve"
+                  data-exp-id={e.id}
+                >
+                  <Check class="h-4 w-4" /> Approve
+                </button>
+              )}
+              {e.status !== 'rejected' && (
+                <button
+                  type="button"
+                  class="btn-secondary min-h-10 px-4 text-xs"
+                  data-exp-action="reject"
+                  data-exp-id={e.id}
+                >
+                  <X class="h-4 w-4" /> Reject
+                </button>
+              )}
+              {e.status !== 'spam' && (
+                <button
+                  type="button"
+                  class="btn-ghost-danger min-h-10"
+                  data-exp-action="spam"
+                  data-exp-id={e.id}
+                >
+                  <Ban class="h-4 w-4" /> Spam
+                </button>
+              )}
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  )}
 
-  const load = async () => {
-    loading.classList.remove('hidden');
-    list.classList.add('hidden');
-    empty.classList.add('hidden');
-    const status = filter.value;
-    const url = status ? `/api/admin/experiences?status=${encodeURIComponent(status)}` : `/api/admin/experiences`;
-    const res = await fetch(url, { credentials: 'same-origin' });
-    if (res.status === 401 || res.status === 403) {
-      loading.innerHTML = '<p class="text-sm text-rose-600">Access denied — admin only.</p>';
-      return;
-    }
-    const data = await res.json().catch(()=>({experiences:[]}));
-    const exps = data.experiences ?? [];
-    loading.classList.add('hidden');
-    if (exps.length === 0) {
-      empty.classList.remove('hidden');
-      return;
-    }
-    list.innerHTML = '';
-    exps.forEach((e: any) => {
-      const clone = (tpl.content.cloneNode(true) as DocumentFragment);
-      const article = clone.querySelector('article') as HTMLElement;
-      (clone.querySelector('[data-field="content"]') as HTMLElement).textContent = e.content?.slice(0,300) ?? '—';
-      (clone.querySelector('[data-field="user"]') as HTMLElement).textContent = `${e.user_name ?? '—'} (${e.user_email ?? ''})`;
-      (clone.querySelector('[data-field="listing"]') as HTMLElement).textContent = `PG ${e.listing_id ?? '—'}`;
-      (clone.querySelector('[data-field="date"]') as HTMLElement).textContent = new Date(e.created_at).toLocaleDateString();
-      (clone.querySelector('[data-field="rating"]') as HTMLElement).textContent = e.rating ? `★${e.rating}` : 'no rating';
-      const badge = clone.querySelector('[data-field="status"]') as HTMLElement;
-      badge.textContent = e.status;
-      badge.className = `badge ${badgeClass(e.status)}`;
-      const actions = clone.querySelector('[data-actions]') as HTMLElement;
-      const reasonWrap = clone.querySelector('[data-reason-wrap]') as HTMLElement;
-      const reasonInput = clone.querySelector('[data-reason]') as HTMLInputElement;
-      const confirmBtn = clone.querySelector('[data-confirm]') as HTMLButtonElement;
-      const statusEl = clone.querySelector('[data-status]') as HTMLElement;
-      let pendingAction: string | null = null;
-      actions.querySelectorAll('button').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          pendingAction = (btn as HTMLButtonElement).dataset.action ?? null;
-          reasonWrap.classList.remove('hidden');
-          confirmBtn.textContent = `Confirm ${pendingAction}`;
+  <script>
+    import { openAdminDialog, sendAdmin } from '@/lib/adminActions';
+    import { toast } from '@/lib/toast';
+    import { bootMotionUI } from '@/lib/motion/ui';
+
+    bootMotionUI();
+
+    const LABELS: Record<string, string> = {
+      approve: 'Approve experience',
+      reject: 'Reject experience',
+      spam: 'Mark as spam',
+    };
+
+    document.querySelectorAll<HTMLElement>('[data-exp-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.expAction ?? '';
+        const id = button.dataset.expId ?? '';
+        if (!id) return;
+
+        openAdminDialog({
+          title: LABELS[action] ?? 'Moderate experience',
+          description:
+            action === 'approve'
+              ? 'It becomes visible on the public PG page immediately.'
+              : 'The student is not notified automatically; the reason is kept in the audit log.',
+          submitLabel: LABELS[action] ?? 'Confirm',
+          tone: action === 'approve' ? 'primary' : 'danger',
+          fields:
+            action === 'approve'
+              ? []
+              : [
+                  {
+                    name: 'reason',
+                    label: 'Reason',
+                    type: 'textarea',
+                    rows: 3,
+                    placeholder:
+                      action === 'spam'
+                        ? 'e.g. Promotional text, contact details, or copied content.'
+                        : 'e.g. Names a specific person and contains an unverifiable claim.',
+                    hint: 'Optional, up to 500 characters — stored on the moderation audit row.',
+                  },
+                ],
+          onSubmit: async (values) => {
+            const result = await sendAdmin(
+              'POST',
+              `/api/admin/experiences/${encodeURIComponent(id)}`,
+              { action, reason: values.reason || undefined }
+            );
+            if (!result.error) {
+              toast.success('Decision saved', 'The moderation audit log has the record.');
+              window.setTimeout(() => window.location.reload(), 450);
+            }
+            return result;
+          },
         });
       });
-      confirmBtn.addEventListener('click', async () => {
-        if (!pendingAction) return;
-        confirmBtn.disabled = true;
-        statusEl.textContent = 'Saving…';
-        const res2 = await fetch(`/api/admin/experiences/${encodeURIComponent(e.id)}`, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: pendingAction, reason: reasonInput.value || undefined }),
-        });
-        if (!res2.ok) {
-          const err = await res2.json().catch(()=>({error:'failed'}));
-          statusEl.textContent = err.error || 'Failed';
-          confirmBtn.disabled = false;
-          return;
-        }
-        statusEl.textContent = 'Saved — audit recorded.';
-        setTimeout(load, 600);
-      });
-      list.appendChild(clone);
     });
-    list.classList.remove('hidden');
-  };
-
-  filter.addEventListener('change', load);
-  refreshBtn.addEventListener('click', load);
-  load();
-</script>
+  </script>
+</AdminLayout>

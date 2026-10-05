@@ -31,10 +31,10 @@ export default defineConfig({
     // instance: sonner's <Toaster> then threw "Invalid hook call" during SSR and
     // its toast store never reached the mounted <Toaster> in the browser.
     resolve: {
-      dedupe: ['react', 'react-dom', 'sonner'],
+      dedupe: ['react', 'react-dom', 'sonner', 'motion', 'motion/react'],
     },
     optimizeDeps: {
-      include: ['react', 'react-dom', 'sonner'],
+      include: ['react', 'react-dom', 'sonner', 'motion/react', 'lucide-react'],
     },
     build: {
       // Keep every script an external file under 'self'. Astro decides whether

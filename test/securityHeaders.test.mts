@@ -55,6 +55,24 @@ test('script-src-attr blocks inline event handlers', () => {
   assert.equal(directive(CONTENT_SECURITY_POLICY, 'script-src-attr'), "script-src-attr 'none'");
 });
 
+test('img-src allows Google account pictures', () => {
+  // Google sign-in stores the CDN picture URL on users.avatar_url and the
+  // headers render it directly. Without these hosts the avatar silently falls
+  // back to the browser's broken-image icon after every Google sign-in.
+  const imgSrc = directive(CONTENT_SECURITY_POLICY, 'img-src') ?? '';
+  assert.ok(
+    imgSrc.includes('https://lh3.googleusercontent.com'),
+    `Google profile pictures would be blocked: ${imgSrc}`
+  );
+});
+
+test('img-src still allows same-origin R2 media and YouTube thumbnails', () => {
+  const imgSrc = directive(CONTENT_SECURITY_POLICY, 'img-src') ?? '';
+  assert.ok(imgSrc.includes("'self'"), imgSrc);
+  assert.ok(imgSrc.includes('blob:'), imgSrc);
+  assert.ok(imgSrc.includes('https://i.ytimg.com'), imgSrc);
+});
+
 test('style-src keeps the Google Fonts stylesheet host', () => {
   const styleSrc = directive(CONTENT_SECURITY_POLICY, 'style-src') ?? '';
   assert.ok(

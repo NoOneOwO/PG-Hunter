@@ -1,57 +1,218 @@
 ---
+/**
+ * Reports queue.
+ *
+ * Server-rendered list with dialog-based status changes; each change records a
+ * moderation_actions row through /api/admin/reports/:id.
+ */
 export const prerender = false;
 import AdminLayout from '@/layouts/AdminLayout.astro';
 import { getDb } from '@/lib/server/auth';
+import { Eye, Check, X, TriangleAlert, ExternalLink } from '@lucide/astro';
+
 const url = new URL(Astro.request.url);
 const status = url.searchParams.get('status')?.trim() ?? '';
-const valid=['open','reviewing','resolved','dismissed'];
+const valid = ['open', 'reviewing', 'resolved', 'dismissed'];
 const filter = valid.includes(status) ? status : '';
+
 const db = getDb();
-const res = await db.prepare(
-  `SELECT r.*, u.name as reporter_name, u.email as reporter_email
-   FROM reports r LEFT JOIN users u ON u.id=r.reporter_id
-   ${filter ? 'WHERE r.status=?' : ''}
-   ORDER BY r.created_at DESC LIMIT 100`
-).bind(...(filter? [filter]:[])).all();
+const res = await db
+  .prepare(
+    `SELECT r.*, u.name AS reporter_name, u.email AS reporter_email
+     FROM reports r LEFT JOIN users u ON u.id = r.reporter_id
+     ${filter ? 'WHERE r.status = ?' : ''}
+     ORDER BY r.created_at DESC LIMIT 100`
+  )
+  .bind(...(filter ? [filter] : []))
+  .all();
+
+const all = await db
+  .prepare(`SELECT status, COUNT(*) AS c FROM reports GROUP BY status`)
+  .all<{ status: string; c: number }>()
+  .catch(() => ({ results: [] as { status: string; c: number }[] }));
+const countOf = (s: string) => all.results.find((row) => row.status === s)?.c ?? 0;
+
+const statusMeta: Record<string, string> = {
+  open: 'bg-amber-100 text-amber-800',
+  reviewing: 'bg-sky-100 text-sky-800',
+  resolved: 'bg-emerald-100 text-emerald-800',
+  dismissed: 'bg-slate-100 text-slate-600',
+};
+
+const reasonLabels: Record<string, string> = {
+  spam: 'Spam',
+  abuse: 'Abuse',
+  fake: 'Fake listing',
+  inappropriate: 'Inappropriate',
+  other: 'Other',
+};
+
+const filters = [
+  { key: '', label: 'All', count: countOf('open') + countOf('reviewing') + countOf('resolved') + countOf('dismissed') },
+  { key: 'open', label: 'Open', count: countOf('open') },
+  { key: 'reviewing', label: 'Reviewing', count: countOf('reviewing') },
+  { key: 'resolved', label: 'Resolved', count: countOf('resolved') },
+  { key: 'dismissed', label: 'Dismissed', count: countOf('dismissed') },
+];
 ---
 
 <AdminLayout title="Reports — Admin" active="reports">
-  <h1 class="text-2xl font-extrabold">Reports</h1>
-  <p class="mt-1 text-sm text-slate-500">Users can report experiences/PGs via “Report” on Student Experiences. Guest reporting unavailable. Foundation only.</p>
-
-  <div class="mt-4 flex gap-2">
-    <a href="/admin/reports" class:list={['rounded-lg px-3 py-2 text-sm font-semibold', !filter ? 'bg-slate-900 text-white' : 'bg-white border text-slate-700']}>All</a>
-    {valid.map(v=>(
-      <a href={`/admin/reports?status=${v}`} class:list={['rounded-lg px-3 py-2 text-sm font-semibold', v===filter ? 'bg-slate-900 text-white' : 'bg-white border text-slate-700']}>{v}</a>
-    ))}
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="eyebrow">Trust &amp; safety</p>
+      <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Reports</h1>
+      <p class="mt-1 text-sm font-medium text-slate-500">
+        Student reports on experiences and listings. Resolving or dismissing a report records
+        who did it and when.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {
+        filters.map((f) => (
+          <a
+            href={f.key ? `/admin/reports?status=${f.key}` : '/admin/reports'}
+            class:list={['chip min-h-10 gap-1.5', filter === f.key && 'is-active']}
+            aria-current={filter === f.key ? 'page' : undefined}
+          >
+            {f.label}
+            <span class:list={['text-xs font-bold', filter === f.key ? 'text-white/80' : 'text-slate-400']}>{f.count}</span>
+          </a>
+        ))
+      }
+    </div>
   </div>
 
-  <div class="mt-6 space-y-3">
-    {res.results.length===0 ? <p class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">No reports — “No data yet”.</p> : res.results.map((r:any)=>(
-      <div class="card p-5">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p class="text-sm font-bold">{r.target_type} {r.target_id} — {r.reason}</p>
-            <p class="text-xs text-slate-500">{r.reporter_name ?? 'anon'} {r.reporter_email ?? ''} · {new Date(r.created_at).toLocaleDateString()} · <span class="badge bg-slate-100 text-slate-700">{r.status}</span></p>
-            {r.description ? <p class="mt-2 text-sm text-slate-700">{r.description}</p> : null}
+  {res.results.length === 0 ? (
+    <div class="card pixel-corner relative mt-8 px-6 py-14 text-center">
+      <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="mt-5 text-base font-bold text-slate-900">No reports in this view</p>
+      <p class="mt-1 text-sm text-slate-500">
+        That is the good outcome — nothing needs attention right now.
+      </p>
+    </div>
+  ) : (
+    <div class="mt-6 flex flex-col gap-4">
+      {res.results.map((r: any) => (
+        <article class="card p-5" data-reveal>
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class={`badge ${statusMeta[r.status] ?? 'bg-slate-100 text-slate-600'}`}>{r.status}</span>
+                <span class="badge border border-rose-200 bg-rose-50 text-rose-700">
+                  <TriangleAlert class="h-3.5 w-3.5" />
+                  {reasonLabels[r.reason] ?? r.reason}
+                </span>
+                <span class="text-xs font-medium text-slate-500 capitalize">{r.target_type}</span>
+                <span class="text-xs text-slate-400">
+                  {new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+
+              {r.description ? (
+                <p class="mt-3 whitespace-pre-wrap border-l-2 border-slate-200 pl-3 text-sm leading-relaxed text-slate-700">
+                  {r.description}
+                </p>
+              ) : (
+                <p class="mt-3 text-sm text-slate-500">No description provided.</p>
+              )}
+
+              <p class="mt-3 text-xs font-medium text-slate-500">
+                Reported by {r.reporter_name ?? 'a guest'} · {r.reporter_email ?? 'no email'}
+                {' · '}
+                {r.target_type === 'experience' ? (
+                  <span class="text-slate-500">experience {r.target_id}</span>
+                ) : (
+                  <a
+                    href={`/pgs/live/${encodeURIComponent(r.target_id)}`}
+                    target="_blank"
+                    rel="noopener"
+                    class="inline-flex items-center gap-1 text-brand-700 hover:underline"
+                  >
+                    open listing <ExternalLink class="h-3 w-3" />
+                  </a>
+                )}
+              </p>
+
+              {r.resolved_at && (
+                <p class="mt-1 text-xs text-slate-400">
+                  Closed {new Date(r.resolved_at).toLocaleDateString('en-IN')}
+                </p>
+              )}
+            </div>
+
+            <div class="flex shrink-0 flex-wrap gap-2">
+              {r.status !== 'reviewing' && (
+                <button type="button" class="btn-secondary min-h-10 px-4 text-xs" data-report-action="reviewing" data-report-id={r.id}>
+                  <Eye class="h-4 w-4" /> Reviewing
+                </button>
+              )}
+              {r.status !== 'resolved' && (
+                <button type="button" class="btn-primary min-h-10 px-4 text-xs" data-report-action="resolved" data-report-id={r.id}>
+                  <Check class="h-4 w-4" /> Resolve
+                </button>
+              )}
+              {r.status !== 'dismissed' && (
+                <button type="button" class="btn-ghost-danger min-h-10" data-report-action="dismissed" data-report-id={r.id}>
+                  <X class="h-4 w-4" /> Dismiss
+                </button>
+              )}
+            </div>
           </div>
-          <div class="flex gap-2">
-            <button data-review={r.id} class="btn-secondary px-3 py-1.5 text-xs">Reviewing</button>
-            <button data-resolve={r.id} class="btn-primary px-3 py-1.5 text-xs">Resolve</button>
-            <button data-dismiss={r.id} class="btn-secondary px-3 py-1.5 text-xs">Dismiss</button>
-          </div>
-        </div>
-      </div>
-    ))}
-  </div>
+        </article>
+      ))}
+    </div>
+  )}
+
+  <script>
+    import { openAdminDialog, sendAdmin } from '@/lib/adminActions';
+    import { toast } from '@/lib/toast';
+    import { bootMotionUI } from '@/lib/motion/ui';
+
+    bootMotionUI();
+
+    const COPY: Record<string, { title: string; description: string; label: string }> = {
+      reviewing: {
+        title: 'Mark this report as under review?',
+        description: 'The reporter sees the status change; nothing else happens yet.',
+        label: 'Mark reviewing',
+      },
+      resolved: {
+        title: 'Resolve this report?',
+        description: 'Use this when the content or listing was actioned.',
+        label: 'Resolve',
+      },
+      dismissed: {
+        title: 'Dismiss this report?',
+        description: 'Use this when the report does not hold up.',
+        label: 'Dismiss',
+      },
+    };
+
+    document.querySelectorAll<HTMLElement>('[data-report-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.reportAction ?? '';
+        const id = button.dataset.reportId ?? '';
+        const copy = COPY[action];
+        if (!id || !copy) return;
+
+        openAdminDialog({
+          title: copy.title,
+          description: copy.description,
+          submitLabel: copy.label,
+          tone: action === 'dismissed' ? 'danger' : 'primary',
+          onSubmit: async () => {
+            const result = await sendAdmin('POST', `/api/admin/reports/${encodeURIComponent(id)}`, {
+              action,
+            });
+            if (!result.error) {
+              toast.success('Report updated');
+              window.setTimeout(() => window.location.reload(), 400);
+            }
+            return result;
+          },
+        });
+      });
+    });
+  </script>
 </AdminLayout>
-
-<script>
-  const post = async (id:string, action:string)=>{
-    const res=await fetch(`/api/admin/reports/${encodeURIComponent(id)}`,{method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action})});
-    if(res.ok) location.reload(); else alert('Failed');
-  };
-  document.querySelectorAll('[data-review]').forEach(b=> b.addEventListener('click', ()=> post((b as HTMLElement).dataset.review!,'reviewing')));
-  document.querySelectorAll('[data-resolve]').forEach(b=> b.addEventListener('click', ()=> post((b as HTMLElement).dataset.resolve!,'resolved')));
-  document.querySelectorAll('[data-dismiss]').forEach(b=> b.addEventListener('click', ()=> post((b as HTMLElement).dataset.dismiss!,'dismissed')));
-</script>

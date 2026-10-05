@@ -47,6 +47,11 @@ const allPgs = activeProperties();
       </div>
     </div>
 
+    <p id="live-note" class="mt-4 hidden items-center gap-2 border border-accent-300 bg-accent-100 px-3.5 py-2 text-sm font-semibold text-slate-800" role="status">
+      <span class="inline-flex h-2 w-2 shrink-0 animate-pulse rounded-full bg-brand-600" aria-hidden="true"></span>
+      <span id="live-note-text"></span>
+    </p>
+
     <div id="filter-bar" class="card pixel-corner relative mt-5 p-4" aria-label="Filters">
       <div class="flex flex-wrap items-center gap-2">
         <span class="inline-flex min-h-11 items-center gap-1.5 rounded-sm border border-slate-200 bg-brand-50 px-3 text-sm font-semibold text-brand-700">
@@ -98,7 +103,9 @@ const allPgs = activeProperties();
 </BaseLayout>
 
 <script>
-  const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-property]'));
+  // Live D1 listings join the same grid as the demo cards, so one filter pass
+  // and one sort cover both. `cards` is refreshed after they load.
+  let cards = Array.from(document.querySelectorAll<HTMLElement>('[data-property]'));
   const grid = document.getElementById('results-grid')!;
   const countEl = document.getElementById('result-count')!;
   const emptyEl = document.getElementById('empty-state')!;
@@ -165,7 +172,10 @@ const allPgs = activeProperties();
   const apply = () => {
     const visible: HTMLElement[] = [];
     cards.forEach((card) => {
-      const rent = Number(card.dataset.rent);
+      // A live listing with no room options yet has no known rent: show it
+      // rather than dropping it out of every budget band.
+      const rent = card.dataset.rent ? Number(card.dataset.rent) : NaN;
+      const budgetOk = Number.isNaN(rent) ? true : inBudget(rent);
       const roomTypes = card.dataset.roomtypes ?? '';
       const foodOk = filters.food ? card.dataset.food === 'yes' : true;
       const genderOk = filters.gender ? card.dataset.gender === filters.gender : true;
@@ -174,15 +184,16 @@ const allPgs = activeProperties();
         ? roomTypes.split(' ').includes(filters.roomType)
         : true;
 
-      const show = matchesQuery(card) && inBudget(rent) && roomTypeOk && genderOk && foodOk && verifiedOk;
+      const show = matchesQuery(card) && budgetOk && roomTypeOk && genderOk && foodOk && verifiedOk;
       card.classList.toggle('hidden', !show);
       if (show) visible.push(card);
     });
 
+    const rentOf = (card: HTMLElement) => Number(card.dataset.rent) || 0;
     if (filters.sort === 'price-asc') {
-      visible.sort((a, b) => Number(a.dataset.rent) - Number(b.dataset.rent));
+      visible.sort((a, b) => rentOf(a) - rentOf(b));
     } else if (filters.sort === 'price-desc') {
-      visible.sort((a, b) => Number(b.dataset.rent) - Number(a.dataset.rent));
+      visible.sort((a, b) => rentOf(b) - rentOf(a));
     }
     visible.forEach((card) => grid.appendChild(card));
 
@@ -236,4 +247,40 @@ const allPgs = activeProperties();
   clearBtnTop.addEventListener('click', clearAll);
 
   apply();
+
+  /* -------------------------------------------- live D1 listings ------ */
+  import { fetchLiveListings, liveCardHtml, wireLiveSaveButtons } from '@/lib/liveListings';
+
+  const liveNote = document.getElementById('live-note');
+  const liveNoteText = document.getElementById('live-note-text');
+
+  const loadLiveListings = async () => {
+    const listings = await fetchLiveListings({ limit: 12, q: filters.q, sort: filters.sort });
+    if (listings.length === 0) {
+      if (liveNote) liveNote.classList.add('hidden');
+      return;
+    }
+
+    // Build once, then move the nodes so the grid's children stay real cards
+    // rather than a nested wrapper the filters would ignore.
+    const holder = document.createElement('div');
+    holder.innerHTML = listings.map((listing) => liveCardHtml(listing)).join('');
+    const fragment = document.createDocumentFragment();
+    while (holder.firstElementChild) fragment.appendChild(holder.firstElementChild);
+    grid.prepend(fragment);
+
+    if (liveNoteText) {
+      liveNoteText.textContent = `${listings.length} live ${
+        listings.length === 1 ? 'listing' : 'listings'
+      } from owners on PG Hunter right now`;
+    }
+    liveNote?.classList.remove('hidden');
+    liveNote?.classList.add('flex');
+
+    cards = Array.from(grid.querySelectorAll<HTMLElement>('[data-property]'));
+    await wireLiveSaveButtons(grid);
+    apply();
+  };
+
+  void loadLiveListings();
 </script>

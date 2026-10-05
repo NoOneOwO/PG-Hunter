@@ -2,71 +2,218 @@
 export const prerender = false;
 import AdminLayout from '@/layouts/AdminLayout.astro';
 import { getDb } from '@/lib/server/auth';
+import { FileText, ExternalLink, Check, X, ShieldCheck } from '@lucide/astro';
+
 const url = new URL(Astro.request.url);
 const status = url.searchParams.get('status')?.trim() ?? 'pending';
-const valid=['pending','approved','rejected'];
+const valid = ['pending', 'approved', 'rejected'];
 const filter = valid.includes(status) ? status : 'pending';
+
 const db = getDb();
-const res = await db.prepare(
-  `SELECT d.*, u.name as owner_name, u.email as owner_email, ol.name as listing_name
-   FROM verification_documents d
-   JOIN users u ON u.id=d.owner_id
-   LEFT JOIN owner_listings ol ON ol.id=d.listing_id
-   WHERE d.status=?
-   ORDER BY d.created_at DESC LIMIT 50`
-).bind(filter).all();
+const res = await db
+  .prepare(
+    `SELECT d.*, u.name as owner_name, u.email as owner_email, ol.name as listing_name
+     FROM verification_documents d
+     JOIN users u ON u.id = d.owner_id
+     LEFT JOIN owner_listings ol ON ol.id = d.listing_id
+     WHERE d.status = ?
+     ORDER BY d.created_at DESC LIMIT 50`
+  )
+  .bind(filter)
+  .all();
+
+const counts = await db
+  .prepare(`SELECT status, COUNT(*) AS c FROM verification_documents GROUP BY status`)
+  .all<{ status: string; c: number }>()
+  .catch(() => ({ results: [] as { status: string; c: number }[] }));
+const countOf = (s: string) => counts.results.find((row) => row.status === s)?.c ?? 0;
+
+const filters = [
+  { key: 'pending', label: 'Pending', count: countOf('pending') },
+  { key: 'approved', label: 'Approved', count: countOf('approved') },
+  { key: 'rejected', label: 'Rejected', count: countOf('rejected') },
+];
 ---
 
 <AdminLayout title="Verification — Admin" active="verification">
-  <h1 class="text-2xl font-extrabold">Verification</h1>
-  <p class="mt-1 text-sm text-slate-500">Pending owner documents. Uses existing <code>verification_documents</code> + R2. Documents are never public.</p>
-
-  <div class="mt-4 flex gap-2">
-    {valid.map(v=>(
-      <a href={`/admin/verification?status=${v}`} class:list={['rounded-lg px-3 py-2 text-sm font-semibold', v===filter ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-700']}>{v}</a>
-    ))}
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="eyebrow">Evidence review</p>
+      <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Verification</h1>
+      <p class="mt-1 text-sm font-medium text-slate-500">
+        Owner documents live in R2 and are never public — admins fetch them through the
+        authenticated media route. Approving a document does <strong class="font-semibold">not</strong> grant a
+        badge; that is a separate decision on the listing with its own evidence.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {
+        filters.map((f) => (
+          <a
+            href={`/admin/verification?status=${f.key}`}
+            class:list={['chip min-h-10 gap-1.5', filter === f.key && 'is-active']}
+            aria-current={filter === f.key ? 'page' : undefined}
+          >
+            {f.label}
+            <span class:list={['text-xs font-bold', filter === f.key ? 'text-white/80' : 'text-slate-400']}>{f.count}</span>
+          </a>
+        ))
+      }
+    </div>
   </div>
 
-  <div class="mt-6 space-y-4">
-    {res.results.length===0 ? <p class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">No {filter} documents — “No data yet”.</p> : res.results.map((d:any)=>(
-      <div class="card p-5">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p class="text-sm font-bold">{d.doc_type} — {d.file_name}</p>
-            <p class="text-xs text-slate-500">{d.owner_name} ({d.owner_email}) · {d.listing_name ?? 'no PG linked'} · {new Date(d.created_at).toLocaleDateString()}</p>
-            <p class="mt-1"><span class="badge bg-amber-100 text-amber-800">{d.status}</span> {d.notes ? <span class="text-xs text-slate-500">— {d.notes}</span> : null}</p>
+  {res.results.length === 0 ? (
+    <div class="card pixel-corner relative mt-8 px-6 py-14 text-center">
+      <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="mt-5 text-base font-bold text-slate-900">No {filter} documents</p>
+      <p class="mt-1 text-sm text-slate-500">
+        Owners upload identity and ownership proof from their verification page.
+      </p>
+    </div>
+  ) : (
+    <div class="mt-6 flex flex-col gap-4">
+      {res.results.map((d: any) => (
+        <article class="card p-5" data-reveal>
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="badge border border-slate-200 bg-white text-slate-700">
+                  <FileText class="h-3.5 w-3.5" />
+                  {d.doc_type}
+                </span>
+                <span
+                  class={`badge ${
+                    d.status === 'approved'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : d.status === 'rejected'
+                        ? 'bg-rose-100 text-rose-700'
+                        : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {d.status}
+                </span>
+                <span class="text-xs font-medium text-slate-500">
+                  {new Date(d.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+
+              <p class="mt-2 text-sm font-semibold text-slate-800">{d.file_name}</p>
+              <p class="mt-1 text-xs font-medium text-slate-500">
+                {d.owner_name} · {d.owner_email} · {d.listing_name ?? 'no listing linked'}
+              </p>
+              {d.notes && (
+                <p class="mt-2 border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  Reviewer note: {d.notes}
+                </p>
+              )}
+            </div>
+
+            <div class="flex shrink-0 flex-wrap items-center gap-2">
+              <a
+                href={`/api/media/${d.file_key}`}
+                target="_blank"
+                rel="noopener"
+                class="btn-secondary min-h-10 px-4 text-xs"
+              >
+                <ExternalLink class="h-4 w-4" /> Open document
+              </a>
+              {filter === 'pending' && (
+                <>
+                  <button type="button" class="btn-primary min-h-10 px-4 text-xs" data-approve={d.id}>
+                    <Check class="h-4 w-4" /> Approve
+                  </button>
+                  <button type="button" class="btn-ghost-danger min-h-10" data-reject={d.id}>
+                    <X class="h-4 w-4" /> Reject
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-          <div class="flex gap-2">
-            {filter==='pending' ? (
-              <>
-                <button data-approve={d.id} class="btn-primary px-3 py-1.5 text-xs">Approve</button>
-                <button data-reject={d.id} class="btn-secondary px-3 py-1.5 text-xs">Reject</button>
-              </>
-            ) : <span class="badge bg-slate-100 text-slate-600">{d.status}</span>}
-          </div>
-        </div>
-        <p class="mt-3 text-xs text-slate-400">Document stored in R2 — admin can fetch via <code>/api/media/...</code> with admin auth (not public).</p>
-      </div>
-    ))}
-  </div>
-  <p class="mt-4 text-xs text-slate-500">Approve/reject via existing <code>PUT /api/admin/verifications/:id</code> — server-side <code>requireAdmin</code> enforced.</p>
+        </article>
+      ))}
+    </div>
+  )}
+
+  <p class="mt-6 flex items-start gap-2 border border-slate-200 bg-white p-4 text-xs leading-relaxed text-slate-500">
+    <ShieldCheck class="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+    Deciding here only marks the document reviewed. Granting “PG Hunter Verified” or
+    “Rishabh IRL Verified” happens on the listing itself, with the method and evidence recorded
+    on the verification ledger.
+  </p>
+
+  <script>
+    import { openAdminDialog, sendAdmin } from '@/lib/adminActions';
+    import { toast } from '@/lib/toast';
+    import { bootMotionUI } from '@/lib/motion/ui';
+
+    bootMotionUI();
+
+    document.querySelectorAll<HTMLElement>('[data-approve]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.dataset.approve ?? '';
+        if (!id) return;
+        openAdminDialog({
+          title: 'Approve this document?',
+          description:
+            'The owner is told the document checked out. This does not grant a verification badge — do that on the listing when the verification itself is complete.',
+          submitLabel: 'Approve document',
+          fields: [
+            {
+              name: 'notes',
+              label: 'Reviewer note',
+              type: 'textarea',
+              rows: 2,
+              placeholder: 'e.g. Lease matches the owner name and the listed address.',
+            },
+          ],
+          onSubmit: async (values) => {
+            const result = await sendAdmin('PUT', `/api/admin/verifications/${encodeURIComponent(id)}`, {
+              decision: 'approved',
+              notes: values.notes || undefined,
+            });
+            if (!result.error) {
+              toast.success('Document approved');
+              window.setTimeout(() => window.location.reload(), 400);
+            }
+            return result;
+          },
+        });
+      });
+    });
+
+    document.querySelectorAll<HTMLElement>('[data-reject]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.dataset.reject ?? '';
+        if (!id) return;
+        openAdminDialog({
+          title: 'Reject this document?',
+          description: 'Tell the owner exactly what was wrong so they can re-upload — the note is shown to them.',
+          submitLabel: 'Reject document',
+          tone: 'danger',
+          fields: [
+            {
+              name: 'notes',
+              label: 'Reason',
+              type: 'textarea',
+              rows: 3,
+              placeholder: 'e.g. Photo of the document is blurred — please re-upload a clear scan.',
+            },
+          ],
+          onSubmit: async (values) => {
+            const result = await sendAdmin(
+              'PUT',
+              `/api/admin/verifications/${encodeURIComponent(id)}`,
+              { decision: 'rejected', notes: values.notes || undefined }
+            );
+            if (!result.error) {
+              toast.success('Document rejected', 'The owner can upload a replacement.');
+              window.setTimeout(() => window.location.reload(), 400);
+            }
+            return result;
+          },
+        });
+      });
+    });
+  </script>
 </AdminLayout>
-
-<script>
-  document.querySelectorAll('[data-approve]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id=(btn as HTMLElement).dataset.approve!;
-      if(!confirm('Approve this verification?')) return;
-      const res=await fetch(`/api/admin/verifications/${encodeURIComponent(id)}`,{method:'PUT', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({decision:'approved'})});
-      if(res.ok) location.reload(); else alert('Failed');
-    });
-  });
-  document.querySelectorAll('[data-reject]').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id=(btn as HTMLElement).dataset.reject!;
-      const reason=prompt('Rejection reason (optional)') ?? undefined;
-      const res=await fetch(`/api/admin/verifications/${encodeURIComponent(id)}`,{method:'PUT', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({decision:'rejected', notes: reason})});
-      if(res.ok) location.reload(); else alert('Failed');
-    });
-  });
-</script>

@@ -10,6 +10,7 @@
     "preview": "astro preview",
     "check": "astro check",
     "test": "node --experimental-strip-types --test test/*.test.mts",
+    "seed:dev": "node --experimental-strip-types scripts/seed-dev.mts",
     "deploy": "npm run build && wrangler deploy",
     "astro": "astro"
   },

@@ -27,11 +27,23 @@ export async function GET(context: APIContext) {
     }
   }
 
-  const object = await getObject(key);
-  if (!object) return new Response('Not found', { status: 404 });
+  let object: Awaited<ReturnType<typeof getObject>>;
+  try {
+    object = await getObject(key);
+  } catch {
+    return new Response('Not found', { status: 404 });
+  }
+
+  if (!object) {
+    // If the object vanished from R2 after we knew the key existed, return a
+    // clean 404 so the browser never hangs on a stale URL.
+    return new Response('Not found', { status: 404 });
+  }
 
   const headers = new Headers();
   headers.set('Content-Type', object.httpMetadata?.contentType ?? 'application/octet-stream');
-  headers.set('Cache-Control', 'public, max-age=86400');
+  headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+  headers.set('Content-Length', String(object.size));
+
   return new Response(object.body, { headers });
 }

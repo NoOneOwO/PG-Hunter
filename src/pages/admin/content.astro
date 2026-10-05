@@ -2,31 +2,177 @@
 export const prerender = false;
 import AdminLayout from '@/layouts/AdminLayout.astro';
 import { getDb } from '@/lib/server/auth';
+import { Search, Image as ImageIcon, FileText, ListVideo } from '@lucide/astro';
+
+const url = new URL(Astro.request.url);
+const q = url.searchParams.get('q')?.trim() ?? '';
 const db = getDb();
-const media = await db.prepare(`SELECT m.*, ol.name as listing_name FROM media m LEFT JOIN owner_listings ol ON ol.id=m.listing_id ORDER BY m.created_at DESC LIMIT 50`).all().catch(()=>({results:[]} as any));
+
+const media = await db
+  .prepare(
+    `SELECT m.*, ol.name as listing_name, ol.city as listing_city, u.name as owner_name
+     FROM media m
+     LEFT JOIN owner_listings ol ON ol.id = m.listing_id
+     LEFT JOIN users u ON u.id = ol.owner_id
+     ${q ? 'WHERE (m.title LIKE ? OR ol.name LIKE ? OR u.name LIKE ?)' : ''}
+     ORDER BY m.created_at DESC LIMIT 50`
+  )
+  .bind(...(q ? [`%${q}%`, `%${q}%`, `%${q}%`] : []))
+  .all()
+  .catch(() => ({ results: [] }) as any);
+
+const rows = media.results as any[];
+
+const [counts, providerCounts] = await Promise.all([
+  db
+    .prepare(`SELECT type, COUNT(*) as n FROM media GROUP BY type`)
+    .all<{ type: string; n: number }>()
+    .catch(() => ({ results: [] }) as any),
+  db
+    .prepare(`SELECT provider, COUNT(*) as n FROM media GROUP BY provider`)
+    .all<{ provider: string; n: number }>()
+    .catch(() => ({ results: [] }) as any),
+]);
+
+const byType = (t: string) => counts.results.find((r: any) => r.type === t)?.n ?? 0;
+const byProvider = (p: string) => providerCounts.results.find((r: any) => r.provider === p)?.n ?? 0;
+const totalMedia = counts.results.reduce((a: number, c: any) => a + Number(c.n ?? 0), 0);
+
+const statCards = [
+  { label: 'Media objects', value: totalMedia, hint: 'Photos, videos and documents', Icon: ImageIcon },
+  { label: 'Photos', value: byType('photo'), hint: 'Stored in R2 or Unsplash', Icon: ImageIcon },
+  { label: 'Videos', value: byType('video'), hint: 'Mostly YouTube embeds', Icon: ListVideo },
+  { label: 'Documents', value: byType('document'), hint: 'Verification paperwork', Icon: FileText },
+];
+
+const badgeFor = (m: any) => {
+  if (m.type === 'photo') return 'badge border border-slate-200 bg-white text-slate-600';
+  if (m.type === 'video') return 'badge border border-rose-200 bg-rose-50 text-rose-700';
+  return 'badge border border-sky-200 bg-sky-50 text-sky-700';
+};
+
+/** Preview URL honouring the media route + CSP (self and ytimg only). */
+const previewFor = (m: any): string | null => {
+  if (m.type !== 'photo' && m.type !== 'video') return null;
+  if (m.provider === 'youtube' && m.external_id) return `https://i.ytimg.com/vi/${encodeURIComponent(m.external_id)}/mqdefault.jpg`;
+  if (m.provider === 'r2' && m.external_id && !m.external_id.startsWith('/')) return `/api/media/${m.external_id}`;
+  return null;
+};
 ---
 
 <AdminLayout title="Content — Admin" active="content">
-  <h1 class="text-2xl font-extrabold">Content</h1>
-  <p class="mt-1 text-sm text-slate-500">Foundation for Campus Creator pipeline. Shows existing <code>media</code> (PG photos/videos, R2/YouTube). No assignments/payouts yet.</p>
-
-  <div class="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-    <table class="w-full min-w-[700px] text-left text-sm">
-      <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-        <tr><th class="px-4 py-3">Type</th><th class="px-4 py-3">Provider</th><th class="px-4 py-3">Listing</th><th class="px-4 py-3">Title</th><th class="px-4 py-3">Created</th></tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100">
-        {media.results.length===0 ? <tr><td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">No media yet</td></tr> : media.results.map((m:any)=>(
-          <tr class="hover:bg-slate-50">
-            <td class="px-4 py-3"><span class="badge bg-slate-100 text-slate-700">{m.type}</span></td>
-            <td class="px-4 py-3 text-xs">{m.provider}</td>
-            <td class="px-4 py-3 text-xs">{m.listing_name ?? m.listing_id ?? '—'}</td>
-            <td class="px-4 py-3 text-xs">{m.title ?? '—'}</td>
-            <td class="px-4 py-3 text-xs">{new Date(m.created_at).toLocaleDateString()}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="eyebrow">Library</p>
+      <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Content</h1>
+      <p class="mt-1 text-sm font-medium text-slate-500">
+        Everything owners have uploaded — PG photos, walkthrough videos and verification paperwork.
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 text-xs font-semibold">
+      <span class="badge border border-slate-200 bg-white px-3 py-2 text-slate-600">R2 {byProvider('r2')}</span>
+      <span class="badge border border-slate-200 bg-white px-3 py-2 text-slate-600">YouTube {byProvider('youtube')}</span>
+      <span class="badge border border-slate-200 bg-white px-3 py-2 text-slate-600">Unsplash {byProvider('unsplash')}</span>
+    </div>
   </div>
-  <p class="mt-4 rounded-xl bg-slate-50 p-4 text-xs text-slate-500">Future creator assignments will appear here. No payout system in this phase.</p>
+
+  <div data-reveal-group class="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    {
+      statCards.map((card) => (
+        <div class="card p-5" data-hover-lift>
+          <span class="flex h-10 w-10 items-center justify-center bg-brand-50 text-brand-700">
+            <card.Icon class="h-5 w-5" />
+          </span>
+          <p class="mt-4 text-3xl font-extrabold tracking-tight text-slate-900" data-count-up={card.value}>
+            {card.value}
+          </p>
+          <p class="text-sm font-semibold text-slate-500">{card.label}</p>
+          <p class="mt-0.5 text-xs text-slate-400">{card.hint}</p>
+        </div>
+      ))
+    }
+  </div>
+
+  <form class="mt-6 flex flex-wrap items-center gap-2" data-reveal>
+    <label class="field w-full sm:w-80">
+      <Search class="h-4 w-4 shrink-0 text-slate-400" />
+      <span class="sr-only">Search content</span>
+      <input name="q" value={q} placeholder="Search title, listing or owner" class="w-full bg-transparent text-sm outline-none" />
+    </label>
+    <button class="btn-primary px-5">Search</button>
+    <a href="/admin/content" class="btn-secondary px-5">Clear</a>
+  </form>
+
+  {
+    rows.length === 0 ? (
+      <div class="card pixel-corner relative mt-8 px-6 py-14 text-center">
+        <div class="pixel-rule justify-center" aria-hidden="true">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <p class="mt-5 text-base font-bold text-slate-900">{q ? 'Nothing matches that search' : 'No media yet'}</p>
+        <p class="mt-1 text-sm text-slate-500">Uploads appear here the moment an owner adds them to a listing.</p>
+      </div>
+    ) : (
+      <div class="card mt-6 overflow-x-auto" data-reveal>
+        <table class="w-full min-w-[760px] text-left text-sm">
+          <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+            <tr>
+              <th class="px-4 py-3">Preview</th>
+              <th class="px-4 py-3">Kind</th>
+              <th class="px-4 py-3">Listing</th>
+              <th class="px-4 py-3">Title</th>
+              <th class="px-4 py-3">Uploaded</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {rows.map((m) => {
+              const preview = previewFor(m);
+              return (
+                <tr class="transition-colors hover:bg-brand-50/40">
+                  <td class="px-4 py-3">
+                    {preview ? (
+                      <img src={preview} alt="" width="56" height="32" class="h-8 w-14 border border-slate-200 object-cover" loading="lazy" />
+                    ) : (
+                      <span class="flex h-8 w-14 items-center justify-center bg-slate-100 text-slate-400">
+                        <FileText class="h-4 w-4" />
+                      </span>
+                    )}
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class={`badge ${badgeFor(m)}`}>{m.type}</span>
+                    <span class="mt-1 block text-xs text-slate-400">{m.provider}</span>
+                  </td>
+                  <td class="px-4 py-3 text-xs">
+                    <span class="font-semibold text-slate-800">{m.listing_name ?? 'Unassigned'}</span>
+                    {m.listing_city && <span class="block text-slate-400">{m.listing_city}</span>}
+                    {m.owner_name && <span class="block text-slate-400">by {m.owner_name}</span>}
+                  </td>
+                  <td class="px-4 py-3 text-xs text-slate-600">{m.title || <span class="text-slate-400">—</span>}</td>
+                  <td class="px-4 py-3 text-xs text-slate-500">
+                    {new Date(m.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  <p class="mt-4 text-xs text-slate-400" data-reveal>
+    Future creator assignments will appear here. No payout system in this phase — the Campus Creator pipeline lands later.
+  </p>
+
+  <script>
+    import { bootMotionUI } from '@/lib/motion/ui';
+    import { initCountUps } from '@/lib/countUp';
+    bootMotionUI();
+    initCountUps();
+  </script>
 </AdminLayout>

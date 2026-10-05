@@ -22,6 +22,11 @@ export interface AppUser {
   isAdmin?: boolean;
   phone?: string;
   collegeSlug?: string;
+  city?: string;
+  movingInMonth?: string;
+  budgetPref?: string;
+  availability?: string;
+  messageToOwners?: string;
   avatar?: string | null;
   createdAt: string;
   provider: string;
@@ -187,7 +192,13 @@ export const initialsOf = (name: string): string => {
 export const updateProfile = async (patch: {
   name?: string;
   phone?: string;
-  collegeSlug?: string;
+  /** `null` clears a field; omitting it leaves the stored value untouched. */
+  collegeSlug?: string | null;
+  city?: string | null;
+  movingInMonth?: string | null;
+  budgetPref?: string | null;
+  availability?: string | null;
+  messageToOwners?: string | null;
 }): Promise<{ user?: AppUser; error?: string }> => {
   try {
     const { user } = await api<{ user: AppUser }>('/api/profile', {

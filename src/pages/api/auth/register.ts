@@ -55,6 +55,11 @@ export async function POST(context: APIContext) {
     name,
     phone: null,
     college_slug: null,
+    city: null,
+    moving_in_month: null,
+    budget_pref: null,
+    availability: null,
+    message_to_owners: null,
     role,
     is_admin: 0,
     avatar_url: null,
@@ -64,8 +69,10 @@ export async function POST(context: APIContext) {
 
   await db
     .prepare(
-      `INSERT INTO users (id, email, password_hash, salt, provider, name, phone, college_slug, role, avatar_url, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO users (id, email, password_hash, salt, provider, name, phone, college_slug,
+                          city, moving_in_month, budget_pref, availability, message_to_owners,
+                          role, avatar_url, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       user.id,
@@ -76,6 +83,11 @@ export async function POST(context: APIContext) {
       user.name,
       user.phone,
       user.college_slug,
+      user.city,
+      user.moving_in_month,
+      user.budget_pref,
+      user.availability,
+      user.message_to_owners,
       user.role,
       user.avatar_url,
       user.created_at,

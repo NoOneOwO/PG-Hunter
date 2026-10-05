@@ -69,6 +69,18 @@ const CONNECT_SRC = isDev
 // than erroring anywhere visible. Declared before SCRIPT_SRC uses it.
 const CLOUDFLARE_RUM_SRC = 'https://static.cloudflareinsights.com';
 
+// Google account pictures are stored as absolute CDN URLs on `users.avatar_url`
+// (see the OAuth callback) and rendered directly by the profile header and the
+// nav pill. Without these hosts in img-src the browser refuses the image and the
+// user sees a broken-image icon after signing in with Google. Google serves the
+// same picture from several regional hosts, hence the range.
+const GOOGLE_AVATAR_HOSTS = [
+  'https://lh3.googleusercontent.com',
+  'https://lh4.googleusercontent.com',
+  'https://lh5.googleusercontent.com',
+  'https://lh6.googleusercontent.com',
+].join(' ');
+
 const SCRIPT_SRC = isDev ? "'self' 'unsafe-inline'" : `'self' ${CLOUDFLARE_RUM_SRC}`;
 
 /**
@@ -112,7 +124,7 @@ export const buildContentSecurityPolicy = (hashes: ContentSecurityPolicyHashes =
     // not exist until React mounts.
     `style-src ${STYLE_SRC}`,
     "style-src-attr 'unsafe-inline'",
-    "img-src 'self' data: blob: https://images.unsplash.com https://i.ytimg.com",
+    `img-src 'self' data: blob: ${GOOGLE_AVATAR_HOSTS} https://images.unsplash.com https://i.ytimg.com`,
     "font-src 'self' data: https://fonts.gstatic.com",
     "media-src 'self' blob:",
     `connect-src ${CONNECT_SRC}`,

@@ -8,6 +8,7 @@
  */
 
 import "./scenes-impl";
+import "./hero-city";
 
 export { mountScene, mountScenesIn } from "./core";
 export type { Painter, Rgb, Scene } from "./core";
