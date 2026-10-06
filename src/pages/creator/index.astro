@@ -1,0 +1,722 @@
+---
+/**
+ * /creator — the Campus Creator dashboard.
+ *
+ * One page, everything a creator came for:
+ *   status        — pending / approved / rejected, with the reviewer note
+ *   earnings      — summed from real approved assignments only
+ *   assignments   — the actual work, with start / submit actions
+ *   share link    — the creator's referral code, for bringing owners on
+ *   activity      — a factual timeline derived from real rows
+ *
+ * Prerendered with a client auth gate (the same pattern as /owner and
+ * /profile); every byte of data comes from /api/creator/me, which re-checks the
+ * session server-side.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import {
+  ArrowRight,
+  BadgeCheck,
+  Camera,
+  ClipboardList,
+  Clock3,
+  Copy,
+  IndianRupee,
+  Link2,
+  LogOut,
+  Mail,
+  Pencil,
+  Share2,
+  Sparkles,
+  TrendingUp,
+  Users,
+  Wallet,
+} from '@lucide/astro';
+---
+
+<BaseLayout
+  title="Creator dashboard — PG Hunter"
+  description="Your PG Hunter Campus Creator status, assignments, earnings and share link."
+  noindex
+>
+  <section class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <span class="eyebrow"><Wallet class="h-3.5 w-3.5" /> Campus Creator</span>
+        <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+          Creator dashboard
+        </h1>
+        <p class="mt-1 text-sm font-medium text-slate-500">
+          Your application, the PGs assigned to you, and what you have earned.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="/earn" class="btn-secondary">Programme details</a>
+        <a href="/creator/apply" class="btn-secondary">
+          <Pencil class="h-4 w-4" /> My details
+        </a>
+        <button id="creator-logout" type="button" class="btn-secondary text-rose-600 hover:bg-rose-50">
+          <LogOut class="h-4 w-4" /> Log out
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="creator-loading" class="mt-8 card p-6" role="status">
+      <div class="flex items-center gap-3">
+        <span class="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-brand-100 border-t-brand-600"></span>
+        <p class="text-sm font-medium text-slate-500">Loading your creator space…</p>
+      </div>
+    </div>
+
+    <!-- Not registered yet -->
+    <div id="creator-none" class="hidden">
+      <div class="card pixel-corner relative mt-8 px-6 py-14 text-center">
+        <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <span class="mx-auto mt-6 flex h-14 w-14 items-center justify-center bg-brand-50 text-brand-700">
+          <Sparkles class="h-6 w-6" />
+        </span>
+        <h2 class="mt-5 text-xl font-extrabold tracking-tight text-slate-900">
+          You are not a creator yet
+        </h2>
+        <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
+          Apply once, and this page becomes your workspace: assigned PGs, submissions and
+          payouts. It is free and takes about two minutes.
+        </p>
+        <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <a href="/creator/apply" class="btn-primary px-8">
+            Register as a creator
+            <ArrowRight class="h-4 w-4" />
+          </a>
+          <a href="/earn" class="btn-secondary px-8">See how it works</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- The dashboard -->
+    <div id="creator-root" class="hidden">
+      <!-- Status banner -->
+      <div id="status-banner" class="mt-8 border p-5 sm:p-6">
+        <div class="flex flex-wrap items-start gap-4">
+          <span id="status-icon" class="flex h-11 w-11 shrink-0 items-center justify-center">
+            <Clock3 class="h-5 w-5" />
+          </span>
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span id="status-badge" class="badge bg-slate-100 text-slate-600">—</span>
+              <p id="status-title" class="text-base font-extrabold tracking-tight text-slate-900">
+                Application status
+              </p>
+            </div>
+            <p id="status-detail" class="mt-1.5 text-sm leading-relaxed text-slate-600"></p>
+            <p id="status-note" class="mt-3 hidden border px-3 py-2 text-sm"></p>
+            <a id="status-cta" href="/creator/apply" class="btn-primary mt-4 hidden px-6">
+              Fix and resubmit
+              <ArrowRight class="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Earnings + work -->
+      <div data-reveal-group class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div class="card p-5">
+          <span class="flex h-10 w-10 items-center justify-center bg-emerald-50 text-emerald-700">
+            <IndianRupee class="h-5 w-5" />
+          </span>
+          <p id="stat-lifetime" class="mt-4 text-3xl font-extrabold text-slate-900">₹0</p>
+          <p class="text-sm font-semibold text-slate-500">Approved earnings</p>
+          <p id="stat-lifetime-note" class="mt-1 text-xs text-slate-400">From approved assignments</p>
+        </div>
+        <div class="card p-5">
+          <span class="flex h-10 w-10 items-center justify-center bg-amber-50 text-amber-700">
+            <Wallet class="h-5 w-5" />
+          </span>
+          <p id="stat-pending" class="mt-4 text-3xl font-extrabold text-slate-900">₹0</p>
+          <p class="text-sm font-semibold text-slate-500">Awaiting payout</p>
+          <p id="stat-paid" class="mt-1 text-xs text-slate-400">₹0 paid so far</p>
+        </div>
+        <div class="card p-5">
+          <span class="flex h-10 w-10 items-center justify-center bg-sky-50 text-sky-700">
+            <TrendingUp class="h-5 w-5" />
+          </span>
+          <p id="stat-pipeline" class="mt-4 text-3xl font-extrabold text-slate-900">₹0</p>
+          <p class="text-sm font-semibold text-slate-500">In the pipeline</p>
+          <p id="stat-open" class="mt-1 text-xs text-slate-400">Nothing assigned right now</p>
+        </div>
+        <div class="card p-5">
+          <span class="flex h-10 w-10 items-center justify-center bg-brand-50 text-brand-700">
+            <Users class="h-5 w-5" />
+          </span>
+          <p id="stat-referrals" class="mt-4 text-3xl font-extrabold text-slate-900">0</p>
+          <p class="text-sm font-semibold text-slate-500">Owner referrals</p>
+          <p id="stat-referrals-note" class="mt-1 text-xs text-slate-400">Share your link to add more</p>
+        </div>
+      </div>
+
+      <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+        <!-- Assignments -->
+        <section class="card" aria-labelledby="assignments-heading" data-reveal>
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+            <div>
+              <h2 id="assignments-heading" class="text-base font-bold text-slate-900">Your assignments</h2>
+              <p id="assignments-summary" class="mt-0.5 text-xs font-medium text-slate-500">—</p>
+            </div>
+            <span class="badge bg-brand-100 text-brand-800">
+              <ClipboardList class="h-3.5 w-3.5" /> <span id="assignments-count">0</span> total
+            </span>
+          </div>
+          <div id="assignments" class="divide-y divide-slate-100"></div>
+          <div id="assignments-empty" class="hidden px-5 py-12 text-center">
+            <span class="mx-auto flex h-12 w-12 items-center justify-center bg-slate-100 text-slate-500">
+              <ClipboardList class="h-5 w-5" />
+            </span>
+            <p class="mt-4 text-sm font-bold text-slate-800">No assignments yet</p>
+            <p id="assignments-empty-detail" class="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-slate-500">
+              Once an admin assigns you a PG, it appears here with its brief, deadline and payout.
+            </p>
+          </div>
+        </section>
+
+        <!-- Sidebar -->
+        <aside class="flex flex-col gap-6">
+          <!-- Share -->
+          <section class="card pixel-corner relative p-6" aria-labelledby="share-heading" data-reveal>
+            <h2 id="share-heading" class="flex items-center gap-2 text-sm font-bold text-slate-900">
+              <Share2 class="h-4 w-4 text-brand-600" /> Your creator link
+            </h2>
+            <p class="mt-2 text-sm leading-relaxed text-slate-600">
+              Share this with a PG owner. When they sign up and list, it is counted as your
+              referral on this dashboard.
+            </p>
+            <p class="mt-4 text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase">Your code</p>
+            <p id="referral-code" class="mt-1 font-mono text-lg font-extrabold tracking-wide text-brand-700">—</p>
+
+            <label for="referral-link" class="mt-4 block text-xs font-semibold text-slate-700">
+              Share link
+            </label>
+            <div class="mt-1.5 flex items-stretch gap-2">
+              <input
+                id="referral-link"
+                type="text"
+                readonly
+                class="field min-w-0 flex-1 text-xs"
+                value=""
+                aria-label="Your creator share link"
+              />
+              <button id="copy-link" type="button" class="btn-secondary shrink-0 px-4" aria-label="Copy share link">
+                <Copy class="h-4 w-4" />
+              </button>
+            </div>
+
+            <div class="mt-4 flex flex-wrap items-center gap-2">
+              <a id="share-whatsapp" href="#" target="_blank" rel="noopener" class="btn-secondary min-h-10 px-4 text-xs">
+                Share on WhatsApp
+              </a>
+              <span id="referral-summary" class="text-xs font-medium text-slate-500">0 owners so far</span>
+            </div>
+          </section>
+
+          <!-- Profile -->
+          <section class="card p-6" aria-labelledby="profile-heading" data-reveal>
+            <div class="flex items-start justify-between gap-3">
+              <h2 id="profile-heading" class="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <Camera class="h-4 w-4 text-brand-600" /> Your creator profile
+              </h2>
+              <a href="/creator/apply" class="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:underline">
+                Edit
+              </a>
+            </div>
+            <dl class="mt-4 space-y-3 text-sm">
+              <div class="flex justify-between gap-3">
+                <dt class="text-slate-500">Name</dt>
+                <dd id="profile-name" class="min-w-0 truncate text-right font-semibold text-slate-800">—</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-slate-500">Covers</dt>
+                <dd id="profile-covers" class="min-w-0 text-right font-semibold text-slate-800">—</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-slate-500">Shoots</dt>
+                <dd id="profile-skill" class="text-right font-semibold text-slate-800">—</dd>
+              </div>
+              <div class="flex justify-between gap-3">
+                <dt class="text-slate-500">Payout UPI</dt>
+                <dd id="profile-upi" class="text-right font-semibold text-slate-800">—</dd>
+              </div>
+              <div id="profile-portfolio-row" class="flex justify-between gap-3">
+                <dt class="text-slate-500">Portfolio</dt>
+                <dd class="min-w-0 text-right">
+                  <a id="profile-portfolio" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-1 font-semibold text-brand-700 hover:underline">
+                    <Link2 class="h-3.5 w-3.5" /> Open
+                  </a>
+                </dd>
+              </div>
+            </dl>
+
+            <div id="profile-gaps" class="mt-5 hidden border border-amber-200 bg-amber-50 p-3.5">
+              <p class="text-xs font-bold text-amber-900">Finish your profile</p>
+              <ul id="profile-gaps-list" class="mt-2 space-y-1.5 text-xs text-amber-800"></ul>
+              <p class="mt-2 text-[11px] leading-relaxed text-amber-700">
+                A payout needs a UPI id; the rest helps us match work near you.
+              </p>
+            </div>
+          </section>
+
+          <!-- Activity -->
+          <section class="card" aria-labelledby="activity-heading" data-reveal>
+            <div class="border-b border-slate-100 px-5 py-4">
+              <h2 id="activity-heading" class="flex items-center gap-2 text-sm font-bold text-slate-900">
+                <BadgeCheck class="h-4 w-4 text-brand-600" /> Activity
+              </h2>
+            </div>
+            <ol id="activity" class="divide-y divide-slate-100"></ol>
+            <div id="activity-empty" class="hidden px-5 py-10 text-center">
+              <p class="text-sm font-semibold text-slate-600">Nothing yet</p>
+              <p class="mt-1 text-xs text-slate-500">
+                Your application, assignments and payouts will show up here.
+              </p>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <div class="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-6">
+        <p class="text-xs text-slate-400">
+          Questions about an assignment or a payout? Write to
+          <a href="mailto:hello@pghunter.in" class="font-semibold text-brand-700 hover:underline">hello@pghunter.in</a>.
+        </p>
+        <a href="/earn" class="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:underline">
+          <Mail class="h-4 w-4" /> Read the content rules
+        </a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { getSession, redirectToLogin, signOut } from '@/lib/auth';
+  import {
+    advanceCreatorAssignment,
+    assignmentActionFor,
+    assignmentStatusMeta,
+    copyText,
+    creatorShareLink,
+    creatorStatusMeta,
+    formatDue,
+    formatWhen,
+    getCreatorDashboard,
+    type CreatorAssignment,
+    type CreatorProfile,
+  } from '@/lib/creators';
+  import { formatINR } from '@/lib/format';
+  import { escapeAttr, escapeHtml, safeUrl } from '@/lib/html';
+  import { initMotionUI } from '@/lib/motion/ui';
+  import { toast } from '@/lib/toast';
+
+  const q = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const show = (id: string, on: boolean) => q(id).classList.toggle('hidden', !on);
+
+  /* -------------------------------------------------- helpers ------ */
+
+  /** Surface styling per application status — the banner has to read at a glance. */
+  const STATUS_SURFACE: Record<string, { wrap: string; icon: string; title: string }> = {
+    pending: {
+      wrap: 'border-amber-200 bg-amber-50',
+      icon: 'bg-amber-100 text-amber-700',
+      title: 'Under review',
+    },
+    approved: {
+      wrap: 'border-emerald-200 bg-emerald-50',
+      icon: 'bg-emerald-100 text-emerald-700',
+      title: 'Approved creator',
+    },
+    rejected: {
+      wrap: 'border-rose-200 bg-rose-50',
+      icon: 'bg-rose-100 text-rose-700',
+      title: 'Needs changes',
+    },
+  };
+
+  const STATUS_ICON: Record<string, string> = {
+    pending:
+      '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    approved:
+      '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    rejected:
+      '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+  };
+
+  const openAssignments = (list: CreatorAssignment[]) =>
+    list.filter((a) => a.status === 'assigned' || a.status === 'in_progress' || a.status === 'submitted').length;
+
+  /* ------------------------------------------------- render: head -- */
+
+  const renderStatus = (profile: CreatorProfile) => {
+    const surface = STATUS_SURFACE[profile.status] ?? STATUS_SURFACE.pending;
+    const meta = creatorStatusMeta[profile.status];
+    const banner = q('status-banner');
+
+    banner.className = `mt-8 border p-5 sm:p-6 ${surface.wrap}`;
+    q('status-icon').className = `flex h-11 w-11 shrink-0 items-center justify-center ${surface.icon}`;
+    q('status-icon').innerHTML = STATUS_ICON[profile.status] ?? STATUS_ICON.pending;
+    q('status-title').textContent = surface.title;
+    q('status-badge').textContent = meta.label;
+    q('status-badge').className = `badge ${meta.classes}`;
+
+    const detail = q('status-detail');
+    if (profile.status === 'approved') {
+      detail.textContent =
+        'You are on the creator roster. Assigned PGs appear below with their brief, deadline and payout.';
+    } else if (profile.status === 'pending') {
+      detail.textContent = meta.hint;
+    } else {
+      detail.textContent = 'An admin reviewed your application and asked for changes.';
+    }
+
+    if (profile.reviewNotes) {
+      const note = q('status-note');
+      note.textContent = `Reviewer note: ${profile.reviewNotes}`;
+      note.className =
+        profile.status === 'rejected'
+          ? 'mt-3 border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700'
+          : 'mt-3 border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600';
+      note.classList.remove('hidden');
+    }
+    if (profile.status === 'rejected') {
+      const cta = q<HTMLAnchorElement>('status-cta');
+      cta.classList.remove('hidden');
+      cta.href = '/creator/apply';
+    }
+  };
+
+  const renderProfile = (profile: CreatorProfile) => {
+    q('profile-name').textContent = profile.fullName;
+    q('profile-covers').textContent =
+      profile.areas.length > 0 ? `${profile.city} · ${profile.areas.join(', ')}` : profile.city;
+    q('profile-skill').textContent =
+      profile.primarySkill === 'both' ? 'Photo & video' : profile.primarySkill === 'photo' ? 'Photos' : 'Video';
+    q('profile-upi').textContent = profile.payoutUpi ?? 'Not added yet';
+
+    const portfolioRow = q('profile-portfolio-row');
+    const portfolioHref = safeUrl(profile.portfolioUrl);
+    if (portfolioHref) {
+      portfolioRow.classList.remove('hidden');
+      q<HTMLAnchorElement>('profile-portfolio').href = portfolioHref;
+    } else {
+      portfolioRow.classList.add('hidden');
+    }
+
+    const gaps = q('profile-gaps');
+    const list = q('profile-gaps-list');
+    if (profile.gaps.length === 0) {
+      gaps.classList.add('hidden');
+      list.replaceChildren();
+    } else {
+      gaps.classList.remove('hidden');
+      list.replaceChildren(
+        ...profile.gaps.map((item) => {
+          const li = document.createElement('li');
+          li.className = 'flex items-start gap-1.5';
+          li.innerHTML = '<span class="mt-0.5 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center" aria-hidden="true">•</span>';
+          li.appendChild(document.createTextNode(item));
+          return li;
+        })
+      );
+    }
+  };
+
+  const renderShare = (profile: CreatorProfile, referrals: { total: number; converted: number }) => {
+    const link = creatorShareLink(profile.referralCode);
+    q('referral-code').textContent = profile.referralCode;
+    q<HTMLInputElement>('referral-link').value = link;
+    q('referral-summary').textContent =
+      referrals.total === 0
+        ? 'No owners yet'
+        : `${referrals.total} owner${referrals.total === 1 ? '' : 's'}${referrals.converted ? ` · ${referrals.converted} listing` : ''}`;
+
+    const wa = q<HTMLAnchorElement>('share-whatsapp');
+    const message = `Hi! I'm a PG Hunter campus creator. List your PG on PG Hunter — here's my invite link: ${link}`;
+    wa.href = `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+    q<HTMLButtonElement>('copy-link').addEventListener('click', async () => {
+      const ok = await copyText(link);
+      if (ok) toast.success('Share link copied', 'Paste it to a PG owner.');
+      else toast.error('Could not copy automatically', 'Select the link and copy it manually.');
+    });
+  };
+
+  const renderStats = (
+    earnings: { lifetime: number; pending: number; paid: number; completedCount: number; inProgressPayout: number },
+    assignments: CreatorAssignment[],
+    referrals: { total: number; converted: number }
+  ) => {
+    q('stat-lifetime').textContent = formatINR(earnings.lifetime);
+    q('stat-lifetime-note').textContent =
+      earnings.completedCount === 0
+        ? 'No approved work yet'
+        : `${earnings.completedCount} approved assignment${earnings.completedCount === 1 ? '' : 's'}`;
+
+    q('stat-pending').textContent = formatINR(earnings.pending);
+    q('stat-paid').textContent = `${formatINR(earnings.paid)} paid so far`;
+
+    q('stat-pipeline').textContent = formatINR(earnings.inProgressPayout);
+    const open = openAssignments(assignments);
+    q('stat-open').textContent = open === 0 ? 'Nothing assigned right now' : `${open} assignment${open === 1 ? '' : 's'} in flight`;
+
+    q('stat-referrals').textContent = String(referrals.total);
+    q('stat-referrals-note').textContent =
+      referrals.converted > 0 ? `${referrals.converted} went on to list` : 'Share your link to add more';
+  };
+
+  /* ------------------------------------------- render: assignments -- */
+
+  const assignmentCard = (assignment: CreatorAssignment): string => {
+    const meta = assignmentStatusMeta[assignment.status];
+    const place = [assignment.locality, assignment.city].filter(Boolean).join(', ');
+    const paid = assignment.status === 'approved' && assignment.paidAt;
+
+    // The allowed next action is decided by the shared rule module, so the
+    // dashboard can never offer a transition the API would refuse.
+    const next = assignmentActionFor(assignment.status);
+    let action = '';
+    if (next === 'start') {
+      action = `<button type="button" class="btn-primary min-h-10 px-4 text-xs" data-act="start" data-id="${escapeAttr(assignment.id)}">Start assignment</button>`;
+    } else if (next === 'submit' || next === 'resubmit') {
+      const label = next === 'resubmit' ? 'Resubmit' : 'Submit work';
+      action = `<button type="button" class="btn-primary min-h-10 px-4 text-xs" data-act="open" data-id="${escapeAttr(assignment.id)}">${label}</button>`;
+    } else if (assignment.status === 'approved') {
+      action = paid
+        ? `<span class="badge bg-emerald-100 text-emerald-800">Paid ${escapeHtml(formatWhen(assignment.paidAt))}</span>`
+        : '<span class="badge bg-amber-100 text-amber-800">Payout pending</span>';
+    } else {
+      action = '<span class="text-xs font-medium text-slate-500">Awaiting admin review</span>';
+    }
+
+    return `
+      <article class="px-5 py-5" data-assignment="${escapeAttr(assignment.id)}">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="truncate text-sm font-bold text-slate-900">${escapeHtml(assignment.pgName || assignment.title)}</p>
+            <p class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500">
+              ${place ? `<span class="inline-flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>${escapeHtml(place)}</span>` : ''}
+              <span class="inline-flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4"/><path d="M3 10h18"/></svg>${escapeHtml(formatDue(assignment.dueAt))}</span>
+            </p>
+          </div>
+          <span class="badge ${meta.classes}">
+            <span class="h-1.5 w-1.5 rounded-full ${meta.dot}"></span>${escapeHtml(meta.label)}
+          </span>
+        </div>
+
+        ${assignment.brief ? `<p class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-600">${escapeHtml(assignment.brief)}</p>` : ''}
+
+        ${
+          assignment.status === 'rejected' && assignment.rejectedReason
+            ? `<p class="mt-3 border border-rose-200 bg-rose-50 px-3 py-2 text-xs leading-relaxed text-rose-700">Sent back: ${escapeHtml(assignment.rejectedReason)}</p>`
+            : ''
+        }
+
+        ${
+          assignment.submissionUrl
+            ? `<p class="mt-3 text-xs text-slate-500">Submitted: <a href="${escapeAttr(safeUrl(assignment.submissionUrl) ?? '#')}" target="_blank" rel="noopener" class="font-semibold text-brand-700 hover:underline">your upload</a>${assignment.submissionNote ? ` · ${escapeHtml(assignment.submissionNote)}` : ''}</p>`
+            : ''
+        }
+
+        <div class="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span class="text-base font-extrabold text-slate-900">${escapeHtml(formatINR(assignment.payout))}</span>
+          <span class="text-xs font-medium text-slate-500">payout on approval</span>
+          <div class="ml-auto">${action}</div>
+        </div>
+
+        <form data-submit-form="${escapeAttr(assignment.id)}" class="mt-4 hidden border-t border-slate-100 pt-4">
+          <label class="block text-xs font-semibold text-slate-700" for="sub-url-${escapeAttr(assignment.id)}">
+            Link to your upload
+          </label>
+          <input
+            id="sub-url-${escapeAttr(assignment.id)}"
+            name="url"
+            type="url"
+            class="field mt-1.5 w-full text-sm"
+            placeholder="https://drive.google.com/…"
+          />
+          <label class="mt-3 block text-xs font-semibold text-slate-700" for="sub-note-${escapeAttr(assignment.id)}">
+            Note for the reviewer <span class="font-normal text-slate-400">(optional)</span>
+          </label>
+          <textarea
+            id="sub-note-${escapeAttr(assignment.id)}"
+            name="note"
+            rows="2"
+            maxlength="1000"
+            class="mt-1.5 w-full resize-none rounded-sm border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none"
+            placeholder="Anything the reviewer should know about this shoot."
+          ></textarea>
+          <p class="mt-1.5 text-[11px] leading-relaxed text-slate-500">
+            Keep the raw files in your own storage and share a link the reviewer can open.
+          </p>
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <button type="submit" class="btn-primary min-h-10 px-4 text-xs">Send for review</button>
+            <button type="button" class="btn-secondary min-h-10 px-4 text-xs" data-act="cancel">Cancel</button>
+          </div>
+        </form>
+      </article>`;
+  };
+
+  const renderAssignments = (assignments: CreatorAssignment[]) => {
+    const host = q('assignments');
+    q('assignments-count').textContent = String(assignments.length);
+
+    if (assignments.length === 0) {
+      host.replaceChildren();
+      show('assignments-empty', true);
+      q('assignments-summary').textContent = 'Nothing assigned yet';
+      q('assignments-empty-detail').textContent =
+        'Once an admin assigns you a PG, it appears here with its brief, deadline and payout.';
+      return;
+    }
+
+    show('assignments-empty', false);
+    const rewards = assignments.reduce((sum, item) => sum + item.payout, 0);
+    q('assignments-summary').textContent = `${formatINR(rewards)} total across all assignments`;
+    host.innerHTML = assignments.map(assignmentCard).join('');
+  };
+
+  /* ---------------------------------------------- render: activity -- */
+
+  const renderActivity = (activity: { id: string; title: string; detail: string; at: string }[]) => {
+    const host = q('activity');
+    if (activity.length === 0) {
+      host.replaceChildren();
+      show('activity-empty', true);
+      return;
+    }
+    show('activity-empty', false);
+    host.innerHTML = activity
+      .map(
+        (item) => `
+        <li class="flex items-start gap-3 px-5 py-4">
+          <span class="mt-1.5 h-2 w-2 shrink-0 bg-brand-600" aria-hidden="true"></span>
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm font-semibold text-slate-900">${escapeHtml(item.title)}</span>
+            <span class="mt-0.5 block truncate text-xs text-slate-500">${escapeHtml(item.detail)}</span>
+          </span>
+          <span class="shrink-0 text-xs font-medium text-slate-400">${escapeHtml(formatWhen(item.at))}</span>
+        </li>`
+      )
+      .join('');
+  };
+
+  /* ---------------------------------------------- interactions ------ */
+
+  /** One delegated listener per host, so re-rendering never stacks handlers. */
+  const wireAssignmentHost = (rerender: () => Promise<void>) => {
+    const host = q('assignments');
+
+    host.addEventListener('click', async (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-act]');
+      if (!button) return;
+      const id = button.dataset.id ?? '';
+      const article = host.querySelector<HTMLElement>(`[data-assignment="${CSS.escape(id)}"]`);
+      const form = article?.querySelector<HTMLFormElement>(`[data-submit-form="${CSS.escape(id)}"]`);
+
+      if (button.dataset.act === 'start') {
+        button.disabled = true;
+        const { error } = await advanceCreatorAssignment(id, 'start');
+        if (error) {
+          button.disabled = false;
+          toast.error('Could not start that assignment', error);
+          return;
+        }
+        toast.success('Assignment started', 'Shoot it, then submit from here.');
+        await rerender();
+        return;
+      }
+
+      if (button.dataset.act === 'open') {
+        form?.classList.toggle('hidden');
+        form?.querySelector<HTMLInputElement>('input[name="url"]')?.focus();
+        return;
+      }
+
+      if (button.dataset.act === 'cancel') {
+        form?.classList.add('hidden');
+      }
+    });
+
+    host.addEventListener('submit', async (event) => {
+      const form = (event.target as HTMLElement).closest<HTMLFormElement>('[data-submit-form]');
+      if (!form) return;
+      event.preventDefault();
+      const id = form.dataset.submitForm ?? '';
+      const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (!submit || submit.disabled) return;
+
+      const data = new FormData(form);
+      const url = String(data.get('url') ?? '').trim();
+      const note = String(data.get('note') ?? '').trim();
+      if (!url) {
+        toast.error('Add a link to your upload', 'The reviewer needs something they can open.');
+        return;
+      }
+
+      submit.disabled = true;
+      submit.textContent = 'Sending…';
+      const { error } = await advanceCreatorAssignment(id, 'submit', { url, note });
+      if (error) {
+        submit.disabled = false;
+        submit.textContent = 'Send for review';
+        toast.error('Could not submit that assignment', error);
+        return;
+      }
+      toast.success('Submitted for review', 'An admin will check it and the payout follows.');
+      await rerender();
+    });
+  };
+
+  /* ------------------------------------------------------ boot ----- */
+
+  void (async () => {
+    const user = await getSession();
+    if (!user) {
+      redirectToLogin('/creator');
+      return;
+    }
+
+    const load = async () => {
+      const { data, error } = await getCreatorDashboard();
+      if (error || !data) {
+        show('creator-loading', false);
+        if (error === 'Not logged in.') {
+          redirectToLogin('/creator');
+          return;
+        }
+        show('creator-none', true);
+        return;
+      }
+
+      show('creator-loading', false);
+
+      if (!data.profile) {
+        show('creator-none', true);
+        return;
+      }
+
+      show('creator-root', true);
+      renderStatus(data.profile);
+      renderProfile(data.profile);
+      renderShare(data.profile, data.referrals);
+      renderStats(data.earnings, data.assignments, data.referrals);
+      renderAssignments(data.assignments);
+      renderActivity(data.activity);
+      initMotionUI();
+    };
+
+    wireAssignmentHost(load);
+    await load();
+  })();
+
+  q<HTMLButtonElement>('creator-logout').addEventListener('click', async () => {
+    await signOut();
+    window.location.href = '/';
+  });
+</script>

@@ -1,0 +1,45 @@
+---
+/**
+ * GradientBackdrop — the iridescent, cursor-reactive band behind a PG headline.
+ *
+ * Replaces the old pixel room scene, which read as noise behind a long listing
+ * title. This is a flowing gradient in the brand palette that leans toward the
+ * cursor on a mouse and drifts on its own everywhere else.
+ *
+ * It is a plain canvas mounted by an external module script rather than a React
+ * island on purpose: the public demo page is prerendered, but the live-listing
+ * page (/pgs/live/[id]) is served on demand under the middleware CSP, which
+ * cannot allow an island's inline runtime. A module script is `'self'` and
+ * therefore works identically on both.
+ *
+ *   <GradientBackdrop />
+ */
+interface Props {
+  /** Extra classes for the wrapper. It is already `absolute inset-0`. */
+  class?: string;
+}
+
+const { class: className = '' } = Astro.props;
+---
+
+<div
+  class:list={['gd-root pointer-events-none absolute inset-0 overflow-hidden', className]}
+  aria-hidden="true"
+>
+  <canvas data-gradient class="gd-canvas"></canvas>
+</div>
+
+<script>
+  import { mountGradientsIn } from '@/lib/gradient';
+  import { afterFirstLayout } from '@/lib/motion/ui';
+
+  // The engine sizes its back buffer from the measured box, so mounting before
+  // the first layout pass would measure 0x0 and leave the canvas blank.
+  let teardown: (() => void) | null = null;
+  const boot = () => {
+    teardown?.();
+    teardown = mountGradientsIn();
+  };
+  afterFirstLayout(boot);
+  document.addEventListener('astro:page-load', () => afterFirstLayout(boot));
+</script>

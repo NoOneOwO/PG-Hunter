@@ -107,12 +107,18 @@ export const getCurrentSession = (): Promise<AppUser | null> => getSession();
 
 const friendlyError = (message: string): string => message;
 
-/** Create a new account with email + password. */
+/**
+ * Create a new account with email + password.
+ *
+ * `ref` is an optional creator code (see /creator): the owner sign-up flow
+ * carries it from `?ref=` in the share link so the creator gets credited.
+ */
 export const register = async (input: {
   name: string;
   email: string;
   password: string;
   role?: 'student' | 'owner';
+  ref?: string;
 }): Promise<AuthResult> => {
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
@@ -124,7 +130,13 @@ export const register = async (input: {
   try {
     const { user } = await api<{ user: AppUser }>('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ name, email, password: input.password, role: input.role ?? 'student' }),
+      body: JSON.stringify({
+        name,
+        email,
+        password: input.password,
+        role: input.role ?? 'student',
+        ref: input.ref,
+      }),
     });
     emit(user);
     return { user };

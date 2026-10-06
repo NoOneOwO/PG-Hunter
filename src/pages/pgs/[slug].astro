@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import PixelScene from '@/components/PixelScene.astro';
+import GradientBackdrop from '@/components/GradientBackdrop.astro';
 import VideoPlayer from '@/components/VideoPlayer.astro';
 import VerificationBadge from '@/components/VerificationBadge.astro';
 import { amenityBySlug } from '@/data/amenities';
@@ -66,14 +66,13 @@ const availableRooms = p.rooms.filter((r) => r.available).length;
 
     <div class="relative mt-6 overflow-hidden border border-slate-200 bg-brand-50 p-5 sm:p-6">
       {/*
-        The room scene backs the title block. It is the one page whose subject
-        *is* a room, so the artwork is the listing rather than decoration.
+        The gradient band backs the title block: a moving iridescence that
+        leans toward the cursor. The scrim in front keeps the long listing
+        title at full contrast (slate-900 over near-opaque brand-50).
       */}
-      <div class="pointer-events-none absolute inset-0" aria-hidden="true">
-        <PixelScene scene="room" pixel={9} maxCols={180} class="h-full w-full" />
-      </div>
+      <GradientBackdrop />
       <div
-        class="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-50 via-brand-50/80 to-brand-50/10"
+        class="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-50/92 via-brand-50/70 to-brand-50/15"
         aria-hidden="true"
       >
       </div>

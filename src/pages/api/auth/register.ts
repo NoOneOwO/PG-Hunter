@@ -13,6 +13,7 @@ import {
   syncAdminFlag,
   type UserRow,
 } from '@/lib/server/auth';
+import { recordCreatorReferral } from '@/lib/server/creators';
 
 export const prerender = false;
 
@@ -96,6 +97,17 @@ export async function POST(context: APIContext) {
     .run();
 
   if (await syncAdminFlag(db, user.email)) user.is_admin = 1;
+
+  // Creator attribution. An owner account that arrived through a creator's
+  // share link is credited to that creator — but a referral problem must never
+  // cost someone their account, so a failure here is logged, not thrown.
+  if (role === 'owner' && typeof body.ref === 'string' && body.ref) {
+    try {
+      await recordCreatorReferral(db, body.ref, user, 'Signed up through a creator link');
+    } catch (err) {
+      console.error('auth_register: recording creator referral failed', err);
+    }
+  }
 
   const token = await createSession(db, user.id);
   context.cookies.set(SESSION_COOKIE, token, sessionCookieOpts(context));

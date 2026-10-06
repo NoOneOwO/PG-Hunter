@@ -23,13 +23,25 @@ import {
   LogOut,
   Shield,
   ExternalLink,
+  Camera,
 } from '@lucide/astro';
 import { currentUser, isAdmin, publicUser } from '@/lib/server/auth';
 
 interface Props {
   title?: string;
   description?: string;
-  active?: 'dashboard' | 'pgs' | 'owners' | 'students' | 'verification' | 'experiences' | 'reports' | 'content' | 'analytics' | 'settings';
+  active?:
+    | 'dashboard'
+    | 'pgs'
+    | 'owners'
+    | 'students'
+    | 'creators'
+    | 'verification'
+    | 'experiences'
+    | 'reports'
+    | 'content'
+    | 'analytics'
+    | 'settings';
 }
 
 const { title = 'Admin — PG Hunter', description = 'PG Hunter admin control room.', active = 'dashboard' } = Astro.props;
@@ -58,6 +70,7 @@ const nav = [
   { key: 'pgs', label: 'Listings', href: '/admin/pgs', Icon: Building2 },
   { key: 'owners', label: 'Owners', href: '/admin/owners', Icon: Users },
   { key: 'students', label: 'Students', href: '/admin/students', Icon: GraduationCap },
+  { key: 'creators', label: 'Creators', href: '/admin/creators', Icon: Camera },
   { key: 'verification', label: 'Verification', href: '/admin/verification', Icon: BadgeCheck },
   { key: 'experiences', label: 'Experiences', href: '/admin/experiences', Icon: Star },
   { key: 'reports', label: 'Reports', href: '/admin/reports', Icon: Flag },

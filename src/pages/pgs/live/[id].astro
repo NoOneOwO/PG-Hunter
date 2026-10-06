@@ -16,7 +16,7 @@
 export const prerender = false;
 
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import PixelScene from '@/components/PixelScene.astro';
+import GradientBackdrop from '@/components/GradientBackdrop.astro';
 import VideoPlayer from '@/components/VideoPlayer.astro';
 import VerificationBadge from '@/components/VerificationBadge.astro';
 import { amenityBySlug } from '@/data/amenities';
@@ -140,11 +140,12 @@ const listedOn = l
 
         {/* ------------------------------------------------ title band ---- */}
         <div class="relative mt-6 overflow-hidden border border-slate-200 bg-brand-50 p-5 sm:p-6">
-          <div class="pointer-events-none absolute inset-0" aria-hidden="true">
-            <PixelScene scene="room" pixel={9} maxCols={180} class="h-full w-full" />
-          </div>
+          {/* Same iridescent band as the demo detail page. The module script it
+              mounts ships as an external chunk, so it works under the CSP this
+              on-demand route gets from middleware. */}
+          <GradientBackdrop />
           <div
-            class="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-50 via-brand-50/80 to-brand-50/10"
+            class="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-50/92 via-brand-50/70 to-brand-50/15"
             aria-hidden="true"
           />
           <div class="relative">

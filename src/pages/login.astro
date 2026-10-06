@@ -175,6 +175,11 @@ const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
   const requestedRole = params.get('role');
   const forceOwner = requestedRole === 'owner';
 
+  // ?ref=CODE is a Campus Creator's share link. It is reduced to the referral
+  // alphabet here so nothing unexpected travels in the body; the API validates
+  // it again and only credits an approved creator.
+  const creatorRef = (params.get('ref') ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+
   const tabLogin = document.getElementById('tab-login') as HTMLButtonElement;
   const tabSignup = document.getElementById('tab-signup') as HTMLButtonElement;
   const loginForm = document.getElementById('login-form') as HTMLFormElement;
@@ -301,6 +306,7 @@ const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
       email: String(data.get('email') ?? ''),
       password: String(data.get('password') ?? ''),
       role: (data.get('role') as 'student' | 'owner') ?? 'student',
+      ref: creatorRef || undefined,
     });
     signupSubmit.disabled = false;
     signupSubmit.innerHTML = 'Create free account <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';

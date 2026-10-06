@@ -1,0 +1,543 @@
+---
+/**
+ * Campus Creator moderation.
+ *
+ * Server-rendered (like /admin/experiences) so the queue is visible on first
+ * paint. Mutations go through the real admin APIs, which own the rules:
+ *   - approving an application is what unlocks assignments and referral credit;
+ *   - an assignment's payout is set when it is created, so every rupee a
+ *     creator sees traces back to work an admin actually assigned;
+ *   - marking a payout paid only stamps an already-approved row.
+ */
+export const prerender = false;
+
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { getDb } from '@/lib/server/auth';
+import {
+  countCreatorsByStatus,
+  listCreatorAssignments,
+  listCreators,
+  publicCreator,
+} from '@/lib/server/creators';
+import { creatorStatusMeta, assignmentStatusMeta, type CreatorStatus } from '@/lib/creatorRules';
+import { formatINR } from '@/lib/format';
+import { Check, X, Camera, HandCoins, Plus, Send, Clock3 } from '@lucide/astro';
+
+const url = new URL(Astro.request.url);
+const statusParam = url.searchParams.get('status')?.trim() ?? 'pending';
+const valid = ['pending', 'approved', 'rejected', 'all'];
+const status = valid.includes(statusParam) ? statusParam : 'pending';
+
+const db = getDb();
+const [rows, counts, assignmentRows, approvedRows] = await Promise.all([
+  listCreators(db, status === 'all' ? undefined : status),
+  countCreatorsByStatus(db),
+  listCreatorAssignments(db, 60),
+  listCreators(db, 'approved'),
+]);
+
+const creators = rows.map((row) => ({
+  ...publicCreator(row),
+  userName: row.user_name,
+  userEmail: row.user_email,
+}));
+
+// Shape matches openAdminDialog's select options ({ value, label }).
+const approvedOptions = approvedRows.map((row) => ({
+  value: row.user_id,
+  label: `${row.full_name || row.user_name} — ${row.city} (${row.user_email})`,
+}));
+
+const countOf = (key: CreatorStatus) => counts[key] ?? 0;
+
+const filters = [
+  { key: 'pending', label: 'Pending', count: countOf('pending') },
+  { key: 'approved', label: 'Approved', count: countOf('approved') },
+  { key: 'rejected', label: 'Rejected', count: countOf('rejected') },
+  { key: 'all', label: 'All', count: countOf('pending') + countOf('approved') + countOf('rejected') },
+];
+
+const pendingCount = countOf('pending');
+
+/** Assignments still needing an admin decision bubble to the top of the list. */
+const actionNeeded = assignmentRows.filter(
+  (row) => row.status === 'submitted' || (row.status === 'approved' && !row.paid_at)
+);
+const recentAssignments = assignmentRows.filter(
+  (row) => !(row.status === 'submitted' || (row.status === 'approved' && !row.paid_at))
+);
+
+const dueLabel = (value: string | null) =>
+  value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'No deadline';
+---
+
+<AdminLayout title="Campus Creators — Admin" active="creators">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="eyebrow">Earn with PG Hunter</p>
+      <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+        Campus Creators
+      </h1>
+      <p class="mt-1 text-sm font-medium text-slate-500">
+        Applications waiting for a decision, plus the shoots assigned to approved creators.
+        {pendingCount > 0 && (
+          <span class="ml-1 font-semibold text-amber-700">
+            {pendingCount} application{pendingCount === 1 ? '' : 's'} pending.
+          </span>
+        )}
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {
+        filters.map((f) => (
+          <a
+            href={`/admin/creators?status=${f.key}`}
+            class:list={['chip min-h-10 gap-1.5', status === f.key && 'is-active']}
+            aria-current={status === f.key ? 'page' : undefined}
+          >
+            {f.label}
+            <span class:list={['text-xs font-bold', status === f.key ? 'text-white/80' : 'text-slate-400']}>
+              {f.count}
+            </span>
+          </a>
+        ))
+      }
+      <button
+        type="button"
+        id="assign-work"
+        class="btn-primary min-h-10 px-4 text-xs"
+        disabled={approvedOptions.length === 0}
+        data-creators={JSON.stringify(approvedOptions)}
+        title={approvedOptions.length === 0 ? 'Approve a creator first' : 'Assign a PG to a creator'}
+      >
+        <Plus class="h-4 w-4" /> Assign work
+      </button>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------ applications ---- -->
+  <section class="mt-8" aria-labelledby="applications-heading">
+    <h2 id="applications-heading" class="flex items-center gap-2 text-base font-bold text-slate-900">
+      <Camera class="h-4 w-4 text-brand-600" /> Applications
+    </h2>
+
+    {creators.length === 0 ? (
+      <div class="card pixel-corner relative mt-4 px-6 py-14 text-center">
+        <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <p class="mt-5 text-base font-bold text-slate-900">Nothing in this queue</p>
+        <p class="mt-1 text-sm text-slate-500">
+          Applications land here the moment someone registers at /creator/apply.
+        </p>
+      </div>
+    ) : (
+      <div class="mt-4 flex flex-col gap-4">
+        {creators.map((creator) => {
+          const meta = creatorStatusMeta[creator.status];
+          return (
+            <article class="card p-5" data-reveal data-creator={creator.userId}>
+              <div class="flex flex-wrap items-start justify-between gap-4">
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class={`badge ${meta.classes}`}>
+                      <span class={`h-1.5 w-1.5 rounded-full ${meta.dot}`}></span>
+                      {meta.label}
+                    </span>
+                    <span class="badge border border-slate-200 bg-white text-slate-600">
+                      {creator.primarySkill === 'both' ? 'Photo & video' : creator.primarySkill === 'photo' ? 'Photos' : 'Video'}
+                    </span>
+                    <span class="text-xs font-medium text-slate-500">
+                      Applied {new Date(creator.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+
+                  <p class="mt-3 text-sm font-bold text-slate-900">
+                    {creator.fullName}
+                    <span class="ml-2 font-medium text-slate-500">{creator.userEmail}</span>
+                  </p>
+                  <p class="mt-0.5 text-xs font-medium text-slate-500">
+                    {creator.city}
+                    {creator.areas.length > 0 ? ` · ${creator.areas.join(', ')}` : ''} · {creator.phone}
+                  </p>
+
+                  <p class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{creator.bio}</p>
+
+                  <p class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500">
+                    {creator.portfolioUrl ? (
+                      <a href={creator.portfolioUrl} target="_blank" rel="noopener" class="text-brand-700 hover:underline">
+                        Portfolio
+                      </a>
+                    ) : (
+                      <span>No portfolio link</span>
+                    )}
+                    {creator.equipment ? <span>Kit: {creator.equipment}</span> : null}
+                    {creator.availability ? <span>Free: {creator.availability}</span> : null}
+                    <span>UPI: {creator.payoutUpi ?? 'not added'}</span>
+                  </p>
+
+                  {creator.reviewNotes ? (
+                    <p class="mt-3 border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                      Last note: {creator.reviewNotes}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div class="flex shrink-0 flex-wrap gap-2">
+                  {creator.status !== 'approved' && (
+                    <button
+                      type="button"
+                      class="btn-primary min-h-10 px-4 text-xs"
+                      data-creator-action="approve"
+                      data-creator-id={creator.id}
+                      data-creator-name={creator.fullName || creator.userName}
+                    >
+                      <Check class="h-4 w-4" /> Approve
+                    </button>
+                  )}
+                  {creator.status === 'approved' && (
+                    <button
+                      type="button"
+                      class="btn-secondary min-h-10 px-4 text-xs"
+                      data-creator-action="reject"
+                      data-creator-id={creator.id}
+                      data-creator-name={creator.fullName || creator.userName}
+                    >
+                      <X class="h-4 w-4" /> Suspend
+                    </button>
+                  )}
+                  {creator.status === 'pending' && (
+                    <button
+                      type="button"
+                      class="btn-secondary min-h-10 px-4 text-xs"
+                      data-creator-action="reject"
+                      data-creator-id={creator.id}
+                      data-creator-name={creator.fullName || creator.userName}
+                    >
+                      <X class="h-4 w-4" /> Reject
+                    </button>
+                  )}
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    )}
+  </section>
+
+  <!-- ------------------------------------------------ assignments ---- -->
+  <section class="mt-10" aria-labelledby="assignments-heading">
+    <h2 id="assignments-heading" class="flex items-center gap-2 text-base font-bold text-slate-900">
+      <HandCoins class="h-4 w-4 text-brand-600" /> Assigned shoots
+    </h2>
+    <p class="mt-1 text-sm text-slate-500">
+      A payout is counted as earning once an assignment is approved. Marking it paid records that
+      the money actually moved.
+    </p>
+
+    {actionNeeded.length > 0 && (
+      <div class="mt-4">
+        <p class="text-xs font-bold tracking-[0.14em] text-amber-700 uppercase">Needs a decision</p>
+        <div class="mt-2 flex flex-col gap-3">
+          {actionNeeded.map((assignment) => (
+            <article class="card border-amber-200 p-5" data-assignment={assignment.id}>
+              <div class="flex flex-wrap items-start justify-between gap-4">
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class={`badge ${assignmentStatusMeta[assignment.status].classes}`}>
+                      {assignmentStatusMeta[assignment.status].label}
+                    </span>
+                    <span class="text-xs font-medium text-slate-500">
+                      {assignment.creator_name} · {assignment.creator_email}
+                    </span>
+                  </div>
+                  <p class="mt-2 text-sm font-bold text-slate-900">
+                    {assignment.pg_name}
+                    <span class="ml-2 font-medium text-slate-500">
+                      {formatINR(assignment.payout)} payout
+                    </span>
+                  </p>
+                  <p class="mt-0.5 text-xs font-medium text-slate-500">
+                    {[assignment.locality, assignment.city].filter(Boolean).join(', ') || 'Location not set'}
+                    {' · '}
+                    <Clock3 class="mr-0.5 inline h-3 w-3" />
+                    {dueLabel(assignment.due_at)}
+                  </p>
+                  {assignment.submission_note && (
+                    <p class="mt-2 border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                      {assignment.submission_note}
+                    </p>
+                  )}
+                  {assignment.submission_url && (
+                    <a
+                      href={assignment.submission_url}
+                      target="_blank"
+                      rel="noopener"
+                      class="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:underline"
+                    >
+                      <Send class="h-3.5 w-3.5" /> Open the submission
+                    </a>
+                  )}
+                </div>
+
+                <div class="flex shrink-0 flex-wrap gap-2">
+                  {assignment.status === 'submitted' && (
+                    <>
+                      <button
+                        type="button"
+                        class="btn-primary min-h-10 px-4 text-xs"
+                        data-assignment-action="approve"
+                        data-assignment-id={assignment.id}
+                        data-assignment-name={assignment.pg_name}
+                      >
+                        <Check class="h-4 w-4" /> Approve
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-secondary min-h-10 px-4 text-xs"
+                        data-assignment-action="reject"
+                        data-assignment-id={assignment.id}
+                        data-assignment-name={assignment.pg_name}
+                      >
+                        <X class="h-4 w-4" /> Send back
+                      </button>
+                    </>
+                  )}
+                  {assignment.status === 'approved' && !assignment.paid_at && (
+                    <button
+                      type="button"
+                      class="btn-primary min-h-10 px-4 text-xs"
+                      data-assignment-action="paid"
+                      data-assignment-id={assignment.id}
+                      data-assignment-name={assignment.pg_name}
+                    >
+                      <HandCoins class="h-4 w-4" /> Mark paid
+                    </button>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {recentAssignments.length > 0 && (
+      <div class="mt-6 overflow-x-auto border border-slate-200">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              <th scope="col" class="px-4 py-3 font-semibold">PG</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Creator</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Payout</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Status</th>
+              <th scope="col" class="px-4 py-3 font-semibold">Created</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {recentAssignments.map((assignment) => (
+              <tr>
+                <td class="px-4 py-3 font-semibold text-slate-800">{assignment.pg_name}</td>
+                <td class="px-4 py-3 text-slate-600">{assignment.creator_name}</td>
+                <td class="px-4 py-3 text-slate-700">{formatINR(assignment.payout)}</td>
+                <td class="px-4 py-3">
+                  <span class={`badge ${assignmentStatusMeta[assignment.status].classes}`}>
+                    {assignmentStatusMeta[assignment.status].label}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-xs text-slate-500">
+                  {new Date(assignment.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+
+    {assignmentRows.length === 0 && (
+      <p class="mt-4 border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
+        No shoots assigned yet. Approve a creator, then use “Assign work”.
+      </p>
+    )}
+  </section>
+
+  <script>
+    import { openAdminDialog, sendAdmin } from '@/lib/adminActions';
+    import { toast } from '@/lib/toast';
+    import { bootMotionUI } from '@/lib/motion/ui';
+
+    bootMotionUI();
+
+    /* ------------------------------------------ applications -------- */
+
+    document.querySelectorAll<HTMLElement>('[data-creator-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.creatorAction ?? '';
+        const id = button.dataset.creatorId ?? '';
+        const name = button.dataset.creatorName ?? 'this creator';
+        if (!id) return;
+        const approving = action === 'approve';
+
+        openAdminDialog({
+          title: approving ? `Approve ${name}?` : `Reject ${name}?`,
+          description: approving
+            ? 'Approved creators can be assigned PGs and earn referral credit for owners they bring on.'
+            : 'The creator sees this note on their dashboard and can fix the application and resubmit.',
+          submitLabel: approving ? 'Approve creator' : 'Reject application',
+          tone: approving ? 'primary' : 'danger',
+          fields: [
+            {
+              name: 'notes',
+              label: approving ? 'Internal note' : 'What should they change?',
+              type: 'textarea',
+              required: !approving,
+              rows: 3,
+              placeholder: approving
+                ? 'Optional context, e.g. strong portfolio, covers North Campus.'
+                : 'e.g. The portfolio link is private — share a public reel or drive folder.',
+              hint: 'Stored on the application and shown to the creator when they are rejected.',
+            },
+          ],
+          onSubmit: async (values) => {
+            const result = await sendAdmin('PUT', `/api/admin/creators/${encodeURIComponent(id)}`, {
+              decision: approving ? 'approved' : 'rejected',
+              notes: values.notes || undefined,
+            });
+            if (!result.error) {
+              toast.success(approving ? 'Creator approved' : 'Application rejected');
+              window.setTimeout(() => window.location.reload(), 450);
+            }
+            return result;
+          },
+        });
+      });
+    });
+
+    /* --------------------------------------------- assignments ------ */
+
+    document.querySelectorAll<HTMLElement>('[data-assignment-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.assignmentAction ?? '';
+        const id = button.dataset.assignmentId ?? '';
+        const name = button.dataset.assignmentName ?? 'this assignment';
+        if (!id) return;
+
+        if (action === 'reject') {
+          openAdminDialog({
+            title: `Send “${name}” back?`,
+            description: 'The creator can fix the shoot and resubmit it.',
+            submitLabel: 'Send back',
+            tone: 'danger',
+            fields: [
+              {
+                name: 'reason',
+                label: 'What needs fixing?',
+                type: 'textarea',
+                required: true,
+                rows: 3,
+                placeholder: 'e.g. Room 2 has no walkthrough clip, and the mess area is missing.',
+              },
+            ],
+            onSubmit: async (values) => {
+              const result = await sendAdmin(
+                'PUT',
+                `/api/admin/creator-assignments/${encodeURIComponent(id)}`,
+                { decision: 'rejected', reason: values.reason }
+              );
+              if (!result.error) {
+                toast.success('Sent back to the creator');
+                window.setTimeout(() => window.location.reload(), 450);
+              }
+              return result;
+            },
+          });
+          return;
+        }
+
+        if (action === 'paid') {
+          openAdminDialog({
+            title: `Mark “${name}” as paid?`,
+            description: 'Only do this once the money has actually left. The creator sees it as paid.',
+            submitLabel: 'Mark paid',
+            onSubmit: async () => {
+              const result = await sendAdmin(
+                'PUT',
+                `/api/admin/creator-assignments/${encodeURIComponent(id)}`,
+                { decision: 'paid' }
+              );
+              if (!result.error) {
+                toast.success('Payout marked paid');
+                window.setTimeout(() => window.location.reload(), 450);
+              }
+              return result;
+            },
+          });
+          return;
+        }
+
+        openAdminDialog({
+          title: `Approve “${name}”?`,
+          description:
+            'Approving counts the payout as earned on the creator dashboard. The amount was set when the assignment was created.',
+          submitLabel: 'Approve submission',
+          onSubmit: async () => {
+            const result = await sendAdmin('PUT', `/api/admin/creator-assignments/${encodeURIComponent(id)}`, {
+              decision: 'approved',
+            });
+            if (!result.error) {
+              toast.success('Submission approved', 'The payout now shows as awaiting payment.');
+              window.setTimeout(() => window.location.reload(), 450);
+            }
+            return result;
+          },
+        });
+      });
+    });
+
+    /* -------------------------------------------- assign work ------ */
+
+    const assignButton = document.getElementById('assign-work') as HTMLButtonElement | null;
+    assignButton?.addEventListener('click', () => {
+      const options = JSON.parse(assignButton.dataset.creators ?? '[]') as { value: string; label: string }[];
+      openAdminDialog({
+        title: 'Assign a PG to a creator',
+        description: 'The payout is fixed here and shown to the creator before they start.',
+        submitLabel: 'Create assignment',
+        fields: [
+          {
+            name: 'creatorId',
+            label: 'Creator',
+            type: 'select',
+            required: true,
+            options,
+          },
+          { name: 'title', label: 'Assignment title', type: 'text', required: true, placeholder: 'Room walkthrough + photos' },
+          { name: 'pgName', label: 'PG name', type: 'text', required: true, placeholder: 'Sunrise PG, Kamla Nagar' },
+          { name: 'locality', label: 'Locality', type: 'text', placeholder: 'Kamla Nagar' },
+          { name: 'city', label: 'City', type: 'text', placeholder: 'Delhi' },
+          { name: 'payout', label: 'Payout (₹)', type: 'text', required: true, placeholder: '1500', hint: 'Whole rupees. Counted as earning only after the submission is approved.' },
+          { name: 'dueAt', label: 'Due date', type: 'text', placeholder: '2026-10-31', hint: 'Optional, YYYY-MM-DD.' },
+          { name: 'brief', label: 'Brief', type: 'textarea', rows: 3, placeholder: 'What to shoot, access details, who to meet.' },
+        ],
+        onSubmit: async (values) => {
+          const result = await sendAdmin('POST', '/api/admin/creator-assignments', {
+            creatorId: values.creatorId,
+            title: values.title,
+            pgName: values.pgName,
+            locality: values.locality || undefined,
+            city: values.city || undefined,
+            payout: Number.parseInt(values.payout, 10),
+            dueAt: values.dueAt || undefined,
+            brief: values.brief || undefined,
+          });
+          if (!result.error) {
+            toast.success('Assignment created', 'The creator sees it on their dashboard now.');
+            window.setTimeout(() => window.location.reload(), 450);
+          }
+          return result;
+        },
+      });
+    });
+  </script>
+</AdminLayout>

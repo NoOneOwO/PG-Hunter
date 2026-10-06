@@ -1,12 +1,11 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import PixelScene from '@/components/PixelScene.astro';
 import SearchPanel from '@/components/SearchPanel.astro';
 import TrustStrip from '@/components/TrustStrip.astro';
 import PropertyCard from '@/components/PropertyCard.astro';
 import { ArrowRight, SlidersHorizontal, ArrowUpDown, Building2 } from '@lucide/astro';
 
-import Aurora from '@/components/bits/Aurora';
+import HeroScene from '@/components/bits/HeroScene';
 import BlurText from '@/components/bits/BlurText';
 import CountUp from '@/components/bits/CountUp';
 import StarBorder from '@/components/bits/StarBorder';
@@ -23,16 +22,22 @@ const localityCount = localities.length;
   <!-- ---------------------------------------------------------- hero -->
   <section class="relative overflow-hidden border-b border-slate-200 bg-brand-50">
     {/*
-      Layered hero, per the design decision: the React Bits Aurora drifts
-      furthest back, the pixel engine paints the living street over it, and
-      the scrims keep the headline legible without flattening either layer.
+      Layered hero: HeroScene paints a finished dusk skyline at build time and
+      the island then gives it life — windows coming on in a wave, drifting
+      clouds, and a three-plane parallax that follows the cursor. The scrim is
+      deliberately heavy on the left, where the headline and search panel sit,
+      so the copy stays at full contrast over the artwork (slate-900 on
+      brand-50).
     */}
-    <Aurora client:load className="-z-20" />
-    <div class="pointer-events-none absolute inset-0" aria-hidden="true">
-      <PixelScene scene="hero-city" pixel={9} maxCols={200} class="h-full w-full" />
-    </div>
+    <HeroScene client:visible />
+    {/*
+      The scrim only covers the two-thirds that carries type (eyebrow, h1,
+      paragraph, stats, popular chips). Past that the artwork is left alone, so
+      the lit windows and the roof sign read at full strength instead of being
+      hazed over by a full-width veil.
+    */}
     <div
-      class="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-50 via-brand-50/80 to-brand-50/15"
+      class="pointer-events-none absolute inset-y-0 left-0 w-[68%] bg-gradient-to-r from-brand-50 via-brand-50/85 to-transparent"
       aria-hidden="true"
     >
     </div>

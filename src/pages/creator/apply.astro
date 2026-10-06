@@ -1,0 +1,587 @@
+---
+/**
+ * /creator/apply — "Register as a creator".
+ *
+ * The page the /earn CTA now lands on. It is a real registration form, not a
+ * dead end: signed-in users can apply (or fix and resubmit a rejected
+ * application), signed-out users are told to sign in first, and an account
+ * that is already pending/approved sees its status instead of a duplicate form.
+ *
+ * Validation is deliberately shared with the server: the client script imports
+ * `validateCreatorApplication` from src/lib/creatorRules.ts, the same pure
+ * module the API re-checks with, so the two can never drift.
+ *
+ * Prerendered (like /profile), so the auth gate is client-side and every byte
+ * of data still comes from the authenticated API.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import {
+  ArrowRight,
+  Camera,
+  Check,
+  ClipboardList,
+  IndianRupee,
+  Link2,
+  MapPin,
+  Phone,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+  UserRound,
+  Wallet,
+} from '@lucide/astro';
+---
+
+<BaseLayout
+  title="Register as a creator — Earn with PG Hunter"
+  description="Apply to the PG Hunter Campus Creator programme: shoot walkthroughs of assigned PGs near you, submit the work, get paid per approved assignment."
+  noindex
+>
+  <section class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+    <div class="grid grid-cols-1 gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
+      <!-- ------------------------------------------------------ main -->
+      <div class="min-w-0">
+        <span class="eyebrow"><Wallet class="h-3.5 w-3.5" /> Earn with PG Hunter</span>
+        <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <h1 class="mt-5 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+          Register as a creator
+        </h1>
+        <p class="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+          Shoot walkthroughs of the PGs we assign you near campus, upload them here, and get
+          paid for every assignment that passes review. One application, no fee.
+        </p>
+
+        <!-- Loading -->
+        <div id="apply-loading" class="card mt-8 p-6" role="status">
+          <div class="flex items-center gap-3">
+            <span class="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-brand-100 border-t-brand-600"></span>
+            <p class="text-sm font-medium text-slate-500">Checking your account…</p>
+          </div>
+        </div>
+
+        <!-- Signed out -->
+        <div id="apply-gate" class="card pixel-corner relative mt-8 hidden p-6 sm:p-8">
+          <span class="flex h-11 w-11 items-center justify-center bg-brand-50 text-brand-700">
+            <UserRound class="h-5 w-5" />
+          </span>
+          <h2 class="mt-4 text-lg font-extrabold tracking-tight text-slate-900">
+            Sign in to apply
+          </h2>
+          <p class="mt-2 text-sm leading-relaxed text-slate-600">
+            Applications are tied to your PG Hunter account so we can show you assignments,
+            submissions and payouts in one place. It takes a few seconds.
+          </p>
+          <div class="mt-5 flex flex-wrap gap-3">
+            <a id="gate-login" href="/login?next=%2Fcreator%2Fapply" class="btn-primary px-6">
+              Log in or sign up
+              <ArrowRight class="h-4 w-4" />
+            </a>
+            <a href="/earn" class="btn-secondary px-6">Back to the programme</a>
+          </div>
+        </div>
+
+        <!-- Already registered (pending / approved) -->
+        <div id="apply-existing" class="card pixel-corner relative mt-8 hidden p-6 sm:p-8">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="badge bg-brand-100 text-brand-800">Campus Creator</span>
+            <span id="existing-badge" class="badge bg-slate-100 text-slate-600">—</span>
+          </div>
+          <h2 id="existing-title" class="mt-4 text-lg font-extrabold tracking-tight text-slate-900">
+            You are already registered
+          </h2>
+          <p id="existing-detail" class="mt-2 text-sm leading-relaxed text-slate-600">
+            Your application is on file. Head to your creator dashboard for status, assignments
+            and earnings.
+          </p>
+          <div class="mt-5 flex flex-wrap gap-3">
+            <a href="/creator" class="btn-primary px-6">
+              Open creator dashboard
+              <ArrowRight class="h-4 w-4" />
+            </a>
+            <button id="existing-edit" type="button" class="btn-secondary px-6">
+              Update my details
+            </button>
+          </div>
+        </div>
+
+        <!-- Confirmation -->
+        <div id="apply-done" class="hidden">
+          <div class="card pixel-corner relative mt-8 p-6 sm:p-8">
+            <span class="flex h-11 w-11 items-center justify-center bg-emerald-50 text-emerald-700">
+              <Check class="h-5 w-5" />
+            </span>
+            <h2 class="mt-4 text-lg font-extrabold tracking-tight text-slate-900">
+              Application received
+            </h2>
+            <p class="mt-2 text-sm leading-relaxed text-slate-600">
+              Your application is now <strong class="font-semibold text-amber-700">pending review</strong>.
+              An admin reads every application — decisions usually land in your dashboard, and we
+              use the phone number you gave us if anything needs clarifying.
+            </p>
+
+            <div class="mt-5 border border-slate-200 bg-slate-50 p-4">
+              <p class="text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase">
+                What happens next
+              </p>
+              <ol class="mt-3 space-y-2.5 text-sm text-slate-700">
+                <li class="flex gap-2.5">
+                  <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center bg-brand-600 text-[11px] font-bold text-white">1</span>
+                  An admin reviews your application and portfolio.
+                </li>
+                <li class="flex gap-2.5">
+                  <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center bg-brand-600 text-[11px] font-bold text-white">2</span>
+                  Once approved, PGs near you are assigned to you with a brief and a payout.
+                </li>
+                <li class="flex gap-2.5">
+                  <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center bg-brand-600 text-[11px] font-bold text-white">3</span>
+                  Shoot, submit from your dashboard, and get paid when it passes review.
+                </li>
+              </ol>
+            </div>
+
+            <div class="mt-5 flex flex-wrap gap-3">
+              <a href="/creator" class="btn-primary px-6">
+                Go to creator dashboard
+                <ArrowRight class="h-4 w-4" />
+              </a>
+              <a href="/earn" class="btn-secondary px-6">Read the quality rules</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Application form -->
+        <form id="apply-form" class="mt-8 hidden" novalidate>
+          <div
+            id="apply-note"
+            class="hidden border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          >
+            <p class="font-semibold">Your last application needs changes</p>
+            <p id="apply-note-text" class="mt-1 leading-relaxed"></p>
+          </div>
+
+          <div
+            id="apply-error"
+            class="mt-4 hidden border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700"
+            role="alert"
+          ></div>
+
+          <div class="card mt-4 p-6 sm:p-8">
+            <h2 class="section-head text-base font-bold text-slate-900">Your details</h2>
+            <div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <label for="f-full-name" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Full name
+                </label>
+                <label class="field">
+                  <UserRound class="h-5 w-5 shrink-0 text-brand-600" />
+                  <span class="sr-only">Full name</span>
+                  <input id="f-full-name" name="fullName" type="text" autocomplete="name" class="w-full bg-transparent outline-none" placeholder="Riya Sharma" required />
+                </label>
+                <p id="e-fullName" class="mt-1.5 hidden text-xs font-medium text-rose-600"></p>
+              </div>
+
+              <div>
+                <label for="f-phone" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Phone (WhatsApp preferred)
+                </label>
+                <label class="field">
+                  <Phone class="h-5 w-5 shrink-0 text-brand-600" />
+                  <span class="sr-only">Phone</span>
+                  <input id="f-phone" name="phone" type="tel" autocomplete="tel" class="w-full bg-transparent outline-none" placeholder="+91 98765 43210" required />
+                </label>
+                <p id="e-phone" class="mt-1.5 hidden text-xs font-medium text-rose-600"></p>
+              </div>
+
+              <div>
+                <label for="f-city" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                  City you can cover
+                </label>
+                <label class="field">
+                  <MapPin class="h-5 w-5 shrink-0 text-brand-600" />
+                  <span class="sr-only">City</span>
+                  <input id="f-city" name="city" type="text" autocomplete="address-level2" class="w-full bg-transparent outline-none" placeholder="Delhi" required />
+                </label>
+                <p id="e-city" class="mt-1.5 hidden text-xs font-medium text-rose-600"></p>
+              </div>
+
+              <div>
+                <label for="f-areas" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Areas you cover <span class="font-normal text-slate-400">(optional)</span>
+                </label>
+                <label class="field">
+                  <MapPin class="h-5 w-5 shrink-0 text-brand-600" />
+                  <span class="sr-only">Areas</span>
+                  <input id="f-areas" name="areas" type="text" class="w-full bg-transparent outline-none" placeholder="Kamla Nagar, Mukherjee Nagar" />
+                </label>
+                <p id="e-areas" class="mt-1.5 hidden text-xs font-medium text-rose-600"></p>
+                <p class="mt-1.5 text-xs text-slate-500">Comma separated. Helps us assign PGs near you.</p>
+              </div>
+            </div>
+
+            <fieldset class="mt-7">
+              <legend class="text-sm font-semibold text-slate-700">What do you mainly shoot?</legend>
+              <div id="skill-group" class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
+                  <input type="radio" name="primarySkill" value="video" class="sr-only" />
+                  <Camera class="h-4 w-4" /> Video walkthroughs
+                </label>
+                <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
+                  <Sparkles class="h-4 w-4" /> Photos
+                </label>
+                <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-700">
+                  <Check class="h-4 w-4" /> Both
+                </label>
+              </div>
+              <p id="e-primarySkill" class="mt-1.5 hidden text-xs font-medium text-rose-600"></p>
+            </fieldset>
+
+            <div class="mt-7">
+              <label for="f-bio" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                Short introduction
+              </label>
+              <textarea
+                id="f-bio"
+                name="bio"
+                rows="4"
+                maxlength="600"
+                class="w-full resize-none rounded-sm border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none"
+                placeholder="Where you study or work, the shoots you have done, and how you usually travel to a PG."
+                required
+              ></textarea>
+              <div class="mt-1.5 flex items-center justify-between gap-3">
+                <p id="e-bio" class="hidden text-xs font-medium text-rose-600"></p>
+                <p id="bio-count" class="ml-auto text-xs text-slate-400">0 / 600</p>
+              </div>
+            </div>
+
+            <h2 class="section-head mt-9 text-base font-bold text-slate-900">Your work</h2>
+            <div class="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div class="sm:col-span-2">
+                <label for="f-portfolio" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Portfolio link <span class="font-normal text-slate-400">(optional, but it helps)</span>
+                </label>
+                <label class="field">
+                  <Link2 class="h-5 w-5 shrink-0 text-brand-600" />
+                  <span class="sr-only">Portfolio link</span>
+                  <input id="f-portfolio" name="portfolioUrl" type="url" class="w-full bg-transparent outline-none" placeholder="https://drive.google.com/… or an Instagram reel" />
+                </label>
+                <p id="e-portfolioUrl" class="mt-1.5 hidden text-xs font-medium text-rose-600"></p>
+                <p class="mt-1.5 text-xs text-slate-500">We open it, so make sure it is public.</p>
+              </div>
+
+              <div>
+                <label for="f-equipment" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Kit you shoot with <span class="font-normal text-slate-400">(optional)</span>
+                </label>
+                <input id="f-equipment" name="equipment" type="text" class="field" placeholder="Phone + gimbal, or a mirrorless camera" />
+                <p id="e-equipment" class="mt-1.5 hidden text-xs font-medium text-rose-600"></p>
+              </div>
+
+              <div>
+                <label for="f-availability" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                  When are you usually free? <span class="font-normal text-slate-400">(optional)</span>
+                </label>
+                <input id="f-availability" name="availability" type="text" class="field" placeholder="Weekends, after 4 pm on weekdays" />
+                <p id="e-availability" class="mt-1.5 hidden text-xs font-medium text-rose-600"></p>
+              </div>
+            </div>
+
+            <h2 class="section-head mt-9 text-base font-bold text-slate-900">Getting paid</h2>
+            <div class="mt-6">
+              <label for="f-upi" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                UPI id <span class="font-normal text-slate-400">(optional now, required before your first payout)</span>
+              </label>
+              <label class="field">
+                <IndianRupee class="h-5 w-5 shrink-0 text-brand-600" />
+                <span class="sr-only">UPI id</span>
+                <input id="f-upi" name="payoutUpi" type="text" class="w-full bg-transparent outline-none" placeholder="yourname@bank" autocomplete="off" />
+              </label>
+              <p id="e-payoutUpi" class="mt-1.5 hidden text-xs font-medium text-rose-600"></p>
+              <p class="mt-1.5 text-xs text-slate-500">
+                Payouts are made against approved assignments. You can add or change this later
+                from your dashboard.
+              </p>
+            </div>
+
+            <div class="mt-8 flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <p class="text-xs leading-relaxed text-slate-500">
+                By applying you agree to the content rules on
+                <a href="/earn" class="font-semibold text-brand-700 hover:underline">Earn with PG Hunter</a>.
+              </p>
+              <button id="apply-submit" type="submit" class="btn-primary shrink-0 px-8">
+                <span id="apply-submit-label">Submit application</span>
+                <Send class="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- ----------------------------------------------------- aside -->
+      <aside class="lg:pt-4">
+        <div class="card pixel-corner relative p-6">
+          <h2 class="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <ClipboardList class="h-4 w-4 text-brand-600" /> How creators get work
+          </h2>
+          <ol class="mt-4 space-y-3 text-sm leading-relaxed text-slate-600">
+            <li class="flex gap-3">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center bg-brand-600 text-[11px] font-bold text-white">1</span>
+              <span>Apply with your details and a portfolio link.</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center bg-brand-600 text-[11px] font-bold text-white">2</span>
+              <span>An admin approves your application.</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center bg-brand-600 text-[11px] font-bold text-white">3</span>
+              <span>A PG near you is assigned with a brief and a payout amount.</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center bg-brand-600 text-[11px] font-bold text-white">4</span>
+              <span>You shoot, then submit from your dashboard.</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center bg-brand-600 text-[11px] font-bold text-white">5</span>
+              <span>After review, the payout is marked paid to your UPI id.</span>
+            </li>
+          </ol>
+        </div>
+
+        <div class="card mt-4 p-6">
+          <h2 class="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <Upload class="h-4 w-4 text-brand-600" /> What a submission needs
+          </h2>
+          <ul class="mt-4 space-y-2.5 text-sm leading-relaxed text-slate-600">
+            <li class="flex gap-2"><span class="mt-1.5 h-2 w-2 shrink-0 bg-brand-600"></span> Room photos and a PG exterior shot.</li>
+            <li class="flex gap-2"><span class="mt-1.5 h-2 w-2 shrink-0 bg-brand-600"></span> A room walkthrough and a common-area clip.</li>
+            <li class="flex gap-2"><span class="mt-1.5 h-2 w-2 shrink-0 bg-brand-600"></span> Food/mess and nearby-area notes.</li>
+            <li class="flex gap-2"><span class="mt-1.5 h-2 w-2 shrink-0 bg-brand-600"></span> Honest narration — no exaggerated claims.</li>
+          </ul>
+        </div>
+
+        <div class="mt-4 border border-brand-200 bg-brand-50 p-6">
+          <h2 class="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <ShieldCheck class="h-4 w-4 text-brand-700" /> No fee, ever
+          </h2>
+          <p class="mt-2 text-sm leading-relaxed text-slate-700">
+            Applying is free and we never ask a creator for money. If someone asks you to pay to
+            join the programme, report it to
+            <a href="mailto:hello@pghunter.in" class="font-semibold text-brand-700 hover:underline">hello@pghunter.in</a>.
+          </p>
+        </div>
+      </aside>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { getSession, redirectToLogin } from '@/lib/auth';
+  import { applyAsCreator, getCreatorDashboard, type CreatorProfile } from '@/lib/creators';
+  import { creatorStatusMeta, validateCreatorApplication } from '@/lib/creatorRules';
+
+  const q = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const show = (id: string, on: boolean) => q(id).classList.toggle('hidden', !on);
+
+  const form = q<HTMLFormElement>('apply-form');
+  const note = q('apply-note');
+  const noteText = q('apply-note-text');
+  const errorBox = q('apply-error');
+  const submit = q<HTMLButtonElement>('apply-submit');
+  const submitLabel = q('apply-submit-label');
+  const bioInput = q<HTMLTextAreaElement>('f-bio');
+  const bioCount = q('bio-count');
+
+  /** A rejected application is corrected and resubmitted rather than replaced. */
+  let resubmitting = false;
+
+  const FIELD_IDS: Record<string, string> = {
+    fullName: 'f-full-name',
+    phone: 'f-phone',
+    city: 'f-city',
+    areas: 'f-areas',
+    bio: 'f-bio',
+    portfolioUrl: 'f-portfolio',
+    equipment: 'f-equipment',
+    availability: 'f-availability',
+    payoutUpi: 'f-upi',
+  };
+
+  /** Clear every field error and the summary, before a fresh validation pass. */
+  const clearErrors = () => {
+    for (const key of [...Object.keys(FIELD_IDS), 'primarySkill']) {
+      const el = document.getElementById(`e-${key}`);
+      if (el) {
+        el.textContent = '';
+        el.classList.add('hidden');
+      }
+    }
+    for (const input of Array.from(form.querySelectorAll<HTMLElement>('[aria-invalid="true"]'))) {
+      input.removeAttribute('aria-invalid');
+    }
+    errorBox.classList.add('hidden');
+    errorBox.textContent = '';
+  };
+
+  const setBusy = (busy: boolean) => {
+    submit.disabled = busy;
+    submitLabel.textContent = busy
+      ? resubmitting
+        ? 'Resubmitting…'
+        : 'Submitting…'
+      : resubmitting
+        ? 'Resubmit application'
+        : 'Submit application';
+  };
+
+  const paintErrors = (errors: Record<string, string>) => {
+    let first: HTMLElement | null = null;
+    for (const [key, message] of Object.entries(errors)) {
+      const errorEl = document.getElementById(`e-${key}`);
+      if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.remove('hidden');
+      }
+      const input = document.getElementById(FIELD_IDS[key] ?? '');
+      if (input) {
+        input.setAttribute('aria-invalid', 'true');
+        if (!first) first = input;
+      }
+    }
+    if (errors.primarySkill) {
+      const radio = form.querySelector<HTMLInputElement>('input[name="primarySkill"]');
+      if (!first && radio) first = radio;
+    }
+    if (first) {
+      first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if ('focus' in first) (first as HTMLInputElement).focus({ preventScroll: true });
+    }
+  };
+
+  /** Read the form into the raw shape the shared rules expect. */
+  const readValues = () => ({
+    fullName: q<HTMLInputElement>('f-full-name').value,
+    phone: q<HTMLInputElement>('f-phone').value,
+    city: q<HTMLInputElement>('f-city').value,
+    areas: q<HTMLInputElement>('f-areas').value,
+    primarySkill: form.querySelector<HTMLInputElement>('input[name="primarySkill"]:checked')?.value ?? '',
+    bio: bioInput.value,
+    portfolioUrl: q<HTMLInputElement>('f-portfolio').value,
+    equipment: q<HTMLInputElement>('f-equipment').value,
+    availability: q<HTMLInputElement>('f-availability').value,
+    payoutUpi: q<HTMLInputElement>('f-upi').value,
+  });
+
+  const prefill = (profile: CreatorProfile) => {
+    q<HTMLInputElement>('f-full-name').value = profile.fullName;
+    q<HTMLInputElement>('f-phone').value = profile.phone;
+    q<HTMLInputElement>('f-city').value = profile.city;
+    q<HTMLInputElement>('f-areas').value = profile.areas.join(', ');
+    q<HTMLInputElement>('f-portfolio').value = profile.portfolioUrl ?? '';
+    q<HTMLInputElement>('f-equipment').value = profile.equipment ?? '';
+    q<HTMLInputElement>('f-availability').value = profile.availability ?? '';
+    q<HTMLInputElement>('f-upi').value = profile.payoutUpi ?? '';
+    const radio = form.querySelector<HTMLInputElement>(`input[name="primarySkill"][value="${profile.primarySkill}"]`);
+    if (radio) radio.checked = true;
+    bioInput.value = profile.bio;
+    bioCount.textContent = `${bioInput.value.length} / 600`;
+  };
+
+  const revealForm = () => {
+    show('apply-loading', false);
+    form.classList.remove('hidden');
+  };
+
+  /* --------------------------------------------------- boot -------- */
+
+  void (async () => {
+    const user = await getSession();
+    if (!user) {
+      show('apply-loading', false);
+      show('apply-gate', true);
+      return;
+    }
+
+    const { data, error } = await getCreatorDashboard();
+    if (error || !data) {
+      // The session may have lapsed between the two requests; the guard below
+      // sends them to login with the right destination.
+      show('apply-loading', false);
+      if (error === 'Not logged in.') {
+        redirectToLogin('/creator/apply');
+        return;
+      }
+      show('apply-gate', true);
+      return;
+    }
+
+    const profile = data.profile;
+
+    if (profile && profile.status !== 'rejected') {
+      show('apply-loading', false);
+      show('apply-existing', true);
+      const meta = creatorStatusMeta[profile.status];
+      q('existing-badge').textContent = meta.label;
+      q('existing-badge').className = `badge ${meta.classes}`;
+      q('existing-title').textContent =
+        profile.status === 'approved'
+          ? `You are approved, ${profile.fullName.split(' ')[0]}`
+          : 'Your application is under review';
+      q('existing-detail').textContent = meta.hint;
+      q('existing-edit').addEventListener('click', () => {
+        show('apply-existing', false);
+        prefill(profile);
+        revealForm();
+      });
+      return;
+    }
+
+    if (profile) {
+      prefill(profile);
+      resubmitting = true;
+      setBusy(false);
+      if (profile.reviewNotes) {
+        noteText.textContent = profile.reviewNotes;
+        note.classList.remove('hidden');
+      }
+    }
+
+    revealForm();
+  })();
+
+  /* ------------------------------------------------- form -------- */
+
+  bioInput.addEventListener('input', () => {
+    bioCount.textContent = `${bioInput.value.length} / 600`;
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (submit.disabled) return;
+    clearErrors();
+
+    const parsed = validateCreatorApplication(readValues());
+    if (!parsed.ok) {
+      paintErrors(parsed.errors);
+      return;
+    }
+
+    setBusy(true);
+
+    const { data, error, fieldErrors } = await applyAsCreator(parsed.value);
+
+    setBusy(false);
+    if (error || !data) {
+      if (fieldErrors) paintErrors(fieldErrors);
+      errorBox.textContent = error ?? 'Could not save your application. Please try again.';
+      errorBox.classList.remove('hidden');
+      errorBox.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
+
+    form.classList.add('hidden');
+    note.classList.add('hidden');
+    show('apply-done', true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+</script>

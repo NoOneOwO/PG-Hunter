@@ -1,6 +1,18 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import { Camera, Video, Building2, Utensils, MapPin, ShieldCheck, Wallet, Check, ArrowRight } from '@lucide/astro';
+import {
+  Camera,
+  Video,
+  Building2,
+  Utensils,
+  MapPin,
+  ShieldCheck,
+  Wallet,
+  Check,
+  ArrowRight,
+  IndianRupee,
+  LayoutDashboard,
+} from '@lucide/astro';
 ---
 
 <BaseLayout
@@ -20,8 +32,17 @@ import { Camera, Video, Building2, Utensils, MapPin, ShieldCheck, Wallet, Check,
         Go to the PGs we assign you and get them on PG Hunter. That’s it.
       </p>
       <div class="mt-6 flex flex-wrap justify-center gap-3">
-        <a href="/login?mode=signup" class="btn-primary px-8">Apply as Creator <ArrowRight class="h-4 w-4" /></a>
+        <a href="/creator/apply" class="btn-primary px-8">
+          Register as a creator <ArrowRight class="h-4 w-4" />
+        </a>
+        <a href="/creator" class="btn-secondary px-8">
+          <LayoutDashboard class="h-4 w-4" /> Already applied? Open dashboard
+        </a>
       </div>
+      <p class="mt-3 text-xs font-medium text-slate-500">
+        Free to apply. You are paid per assignment that passes review, and the payout is shown
+        before you start.
+      </p>
     </div>
 
     <div class="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2">
@@ -79,5 +100,51 @@ import { Camera, Video, Building2, Utensils, MapPin, ShieldCheck, Wallet, Check,
         </ul>
       </section>
     </div>
+
+    <section class="mx-auto mt-12 max-w-5xl">
+      <div class="card pixel-corner relative p-6 sm:p-8">
+        <div class="grid gap-8 lg:grid-cols-[1fr_1fr]">
+          <div>
+            <h2 class="section-head text-base font-bold text-slate-900">How earning works</h2>
+            <ul class="mt-4 space-y-3 text-sm leading-relaxed text-slate-600">
+              <li class="flex gap-2.5">
+                <IndianRupee class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                Every assignment carries its own payout amount, agreed before you start — no
+                per-photo guessing.
+              </li>
+              <li class="flex gap-2.5">
+                <Check class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                The payout counts once the assignment passes review, and it shows up in your
+                dashboard immediately.
+              </li>
+              <li class="flex gap-2.5">
+                <Wallet class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                Payouts go to the UPI id on your creator profile. You can add it at any point
+                before your first payout.
+              </li>
+              <li class="flex gap-2.5">
+                <LayoutDashboard class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                Your dashboard shows approved earnings, what is awaiting payout, and what is
+                still in the pipeline — separate figures, never a single vague total.
+              </li>
+            </ul>
+          </div>
+          <div class="border-t border-slate-100 pt-6 lg:border-l lg:border-t-0 lg:pt-0 lg:pl-8">
+            <h2 class="section-head text-base font-bold text-slate-900">Bring an owner, earn a referral</h2>
+            <p class="mt-4 text-sm leading-relaxed text-slate-600">
+              Every creator gets a share link. When a PG owner signs up through it, the referral
+              is recorded on your dashboard so you can see the owners you brought on. Any bonus
+              for that is added as a normal assignment, so it is always a visible line item.
+            </p>
+            <div class="mt-5 flex flex-wrap gap-3">
+              <a href="/creator/apply" class="btn-primary px-6">
+                Register as a creator <ArrowRight class="h-4 w-4" />
+              </a>
+              <a href="/for-owners" class="btn-secondary px-6">See the owner side</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </section>
 </BaseLayout>
