@@ -1,0 +1,43 @@
+---
+/**
+ * PG Hunter — logo badge.
+ *
+ * The one place the brand mark is rendered: public header, footer, owner
+ * header, admin shell and the login card all use this instead of a bare
+ * `<img src="/logo.svg">`.
+ *
+ * The artwork is a full-bleed navy tile, so it is framed rather than dumped on
+ * the page: a 2px white mat plus a hairline ring keeps it from reading as an
+ * unframed dark blob on the white surfaces every shell uses, and gives it the
+ * same hairline-border language as the cards around it.
+ *
+ * Sizing comes from the caller (h-7 w-7 in the admin sidebar, h-8 w-8 in the
+ * headers, h-10 w-10 on the login card) so the mark always matches the optical
+ * weight of the text beside it. The component only adds the framing.
+ */
+interface Props {
+  /** Tailwind sizing classes from the caller, e.g. `h-8 w-8`. */
+  class?: string;
+  /**
+   * Alt text. Empty by default: every header renders the brand name as text
+   * right beside the mark (and the home links carry their own aria-label), so
+   * the image is decorative there and announcing it twice is worse than
+   * silence. Only pass a value where the mark is the sole brand cue.
+   */
+  alt?: string;
+}
+
+const { class: sizeClass = 'h-8 w-8', alt = '' } = Astro.props;
+---
+
+<img
+  src="/logo.png"
+  alt={alt}
+  width="256"
+  height="256"
+  decoding="async"
+  class:list={[
+    'inline-block shrink-0 rounded-sm bg-white p-[2px] ring-1 ring-slate-900/10',
+    sizeClass,
+  ]}
+/>

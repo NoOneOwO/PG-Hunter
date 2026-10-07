@@ -1,4 +1,5 @@
 ---
+import LogoBadge from '@/components/LogoBadge.astro';
 import { LayoutDashboard, Building2, Inbox, BadgeCheck, UserRound, LogOut, ExternalLink, Menu, X } from '@lucide/astro';
 
 interface Props {
@@ -22,7 +23,7 @@ const navItems = [
 <header class="sticky top-0 z-40 border-b border-slate-200/70 bg-white/95 backdrop-blur">
   <div class="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
     <a href="/owner" class="flex items-center gap-2" aria-label="PG Hunter owner dashboard">
-      <img src="/favicon.svg" alt="" width="32" height="32" class="h-8 w-8" />
+      <LogoBadge class="h-8 w-8" />
       <span class="text-lg font-extrabold tracking-tight text-slate-900">
         PG<span class="text-brand-600">Hunter</span>
         <span class="ml-1 rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-brand-700">

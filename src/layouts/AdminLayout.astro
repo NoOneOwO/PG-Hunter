@@ -25,6 +25,7 @@ import {
   ExternalLink,
   Camera,
 } from '@lucide/astro';
+import LogoBadge from '@/components/LogoBadge.astro';
 import { currentUser, isAdmin, publicUser } from '@/lib/server/auth';
 
 interface Props {
@@ -88,7 +89,7 @@ const nav = [
     <title>{title}</title>
     <meta name="description" content={description} />
     <meta name="robots" content="noindex, nofollow" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="theme-color" content="#7a42e6" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -104,7 +105,7 @@ const nav = [
           {/* Desktop sidebar */}
           <aside class="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
             <div class="flex h-16 items-center gap-2 border-b border-slate-100 px-5">
-              <img src="/favicon.svg" alt="" width="28" height="28" class="h-7 w-7" />
+              <LogoBadge class="h-7 w-7" />
               <span class="text-sm font-extrabold tracking-tight text-slate-900">
                 PG<span class="text-brand-600">Hunter</span>
                 <span class="ml-1.5 rounded-sm bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
@@ -173,7 +174,7 @@ const nav = [
             {/* Mobile header */}
             <header class="sticky top-0 z-30 border-b border-slate-200 bg-white lg:hidden">
               <div class="flex h-16 items-center gap-3 px-4">
-                <img src="/favicon.svg" alt="" width="28" height="28" class="h-7 w-7" />
+                <LogoBadge class="h-7 w-7" />
                 <span class="flex items-center gap-1.5 text-sm font-extrabold">
                   PG<span class="text-brand-600">Hunter</span>
                   <span class="rounded-sm bg-brand-600 px-1.5 py-0.5 text-[10px] text-white">ADMIN</span>
