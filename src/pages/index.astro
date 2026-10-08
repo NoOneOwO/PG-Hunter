@@ -270,9 +270,12 @@ const localityCount = localities.length;
     if (stat) countUp(stat, total);
 
     if (loading) {
-      loading.textContent = total
-        ? `${total} live ${total === 1 ? 'PG' : 'PGs'} right now`
-        : 'No live listings yet.';
+      if (total === 0) {
+        // The empty card below already says this, and better — don't say it twice.
+        loading.classList.add('hidden');
+      } else {
+        loading.textContent = `${total} live ${total === 1 ? 'PG' : 'PGs'} right now`;
+      }
     }
 
     if (listings.length === 0) {
