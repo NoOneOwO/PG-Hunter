@@ -359,17 +359,22 @@ const tabs = [
     initialsEl.textContent = initialsOf(user.name);
     if (!img) return;
     const src = user.avatar ?? '';
+    // Show/hide by toggling the `hidden` CLASS, not the `hidden` property.
+    // The element carries Tailwind's `.hidden` (display:none) in its class
+    // attribute, and setting `img.hidden = false` only removes the HTML
+    // attribute — the class stayed put, so the photo was loaded and then
+    // never displayed. That is why an uploaded picture never appeared.
     if (!src) {
-      img.hidden = true;
+      img.classList.add('hidden');
       img.removeAttribute('src');
       return;
     }
-    img.hidden = true;
+    img.classList.add('hidden');
     img.onload = () => {
-      img.hidden = false;
+      img.classList.remove('hidden');
     };
     img.onerror = () => {
-      img.hidden = true;
+      img.classList.add('hidden');
     };
     img.src = src;
   };

@@ -154,21 +154,27 @@ const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortNa
 
   const flash = (el: HTMLElement, show: boolean) => el.classList.toggle('hidden', !show);
 
-  /** Paint the R2/Google picture over the initials, or fall back to them. */
+  /**
+   * Paint the R2/Google picture over the initials, or fall back to them.
+   *
+   * The show/hide toggles the `hidden` CLASS: `.hidden` is part of the img's
+   * class attribute, so setting `img.hidden = false` (the HTML property) left
+   * `display: none` in force and the freshly uploaded photo stayed invisible.
+   */
   const paintAvatar = (src: string | null | undefined) => {
     if (!src) {
-      avatarImg.hidden = true;
+      avatarImg.classList.add('hidden');
       avatarImg.removeAttribute('src');
       flash(avatarRemoveBtn, false);
       return;
     }
-    avatarImg.hidden = true;
+    avatarImg.classList.add('hidden');
     avatarImg.onload = () => {
-      avatarImg.hidden = false;
+      avatarImg.classList.remove('hidden');
       flash(avatarRemoveBtn, true);
     };
     avatarImg.onerror = () => {
-      avatarImg.hidden = true;
+      avatarImg.classList.add('hidden');
       flash(avatarRemoveBtn, false);
     };
     avatarImg.src = src;

@@ -124,7 +124,8 @@ const navItems = [
 </header>
 
 <script>
-  import { getSession, signOut, initialsOf } from '@/lib/auth';
+  import { getSession, onAuthChange, signOut, initialsOf } from '@/lib/auth';
+  import type { AppUser } from '@/lib/auth';
 
   const avatar = document.getElementById('owner-avatar')!;
   const avatarImg = document.getElementById('owner-avatar-img') as HTMLImageElement | null;
@@ -149,22 +150,36 @@ const navItems = [
     });
   });
 
-  getSession().then((user) => {
+  const paintAvatar = (user: AppUser | null) => {
     if (!user) return;
     avatar.textContent = initialsOf(user.name);
     nameEl.textContent = user.name.split(' ')[0];
 
     // Photo when there is one, initials otherwise. Hidden until it loads so a
-    // missing picture never flashes a broken-image icon in the nav.
+    // missing picture never flashes a broken-image icon in the nav — and
+    // toggled as a CLASS, because `.hidden` lives in the class attribute while
+    // `img.hidden` is a separate property. Setting the property left the class
+    // in place, so an uploaded photo never showed up here.
     const src = user.avatar ?? '';
-    if (!avatarImg || !src) return;
-    avatarImg.hidden = true;
+    if (!avatarImg) return;
+    if (!src) {
+      avatarImg.classList.add('hidden');
+      avatarImg.removeAttribute('src');
+      return;
+    }
+    avatarImg.classList.add('hidden');
     avatarImg.onload = () => {
-      avatarImg.hidden = false;
+      avatarImg.classList.remove('hidden');
     };
     avatarImg.onerror = () => {
-      avatarImg.hidden = true;
+      avatarImg.classList.add('hidden');
     };
     avatarImg.src = src;
-  });
+  };
+
+  // Paint on load, and again whenever the session changes — uploading a photo
+  // on /owner/profile emits an auth change, so the pill updates immediately
+  // instead of waiting for the next full page load.
+  getSession().then(paintAvatar);
+  onAuthChange(paintAvatar);
 </script>
