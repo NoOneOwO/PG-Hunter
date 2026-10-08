@@ -211,7 +211,7 @@ export const requireAdmin = async (
  * `/api/media/https://lh3.googleusercontent.com/...`, which 404s and left the
  * profile showing a broken-image icon after every fresh sign-in.
  */
-const avatarUrl = (value: string | null): string | null => {
+export const avatarUrlFor = (value: string | null): string | null => {
   if (!value) return null;
   if (/^https?:\/\//i.test(value)) return value;
   return value.startsWith('/') ? value : mediaUrl(value);
@@ -231,7 +231,7 @@ export const publicUser = (u: UserRow) => ({
   budgetPref: u.budget_pref ?? undefined,
   availability: u.availability ?? undefined,
   messageToOwners: u.message_to_owners ?? undefined,
-  avatar: avatarUrl(u.avatar_url),
+  avatar: avatarUrlFor(u.avatar_url),
   createdAt: u.created_at,
   provider: u.provider,
 });

@@ -25,6 +25,13 @@ export interface ListingRow {
   status: 'draft' | 'pending' | 'active' | 'rejected';
   verification_status: 'unverified' | 'pg_hunter_verified' | 'rishabh_irl_verified';
   rejection_reason: string | null;
+  /**
+   * Who created the row, and whether the team is running this page for the
+   * owner (migration 0011). Set on create and never rewritten on edit:
+   * `admin_managed` describes the arrangement, not who typed last.
+   */
+  created_by?: string | null;
+  admin_managed?: number;
   // Denormalised verification cache, written only by lib/server/verification.ts
   // (migration 0006). Never assign these outside that module.
   verified_at?: string | null;

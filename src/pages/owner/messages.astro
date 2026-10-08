@@ -1,0 +1,95 @@
+---
+/**
+ * Owner side of chat: /owner/messages.
+ *
+ * The conversation list and thread are the same component the student page
+ * uses (src/components/chat/ChatApp.tsx); only the "who can I start a chat
+ * with" list differs — here it is the students who already enquired.
+ *
+ * On-demand and covered by the /owner/* entry in wrangler.toml
+ * `run_worker_first`.
+ */
+export const prerender = false;
+
+import OwnerLayout from '@/layouts/OwnerLayout.astro';
+import ChatApp, { type ChatStarter } from '@/components/chat/ChatApp';
+import { currentUser, getDb } from '@/lib/server/auth';
+import { MessageSquare } from '@lucide/astro';
+
+const params = new URL(Astro.request.url).searchParams;
+const startStudentId = params.get('student')?.trim() ?? '';
+const startListingId = params.get('listing')?.trim() ?? '';
+
+// Same server-side session read AdminLayout uses; OwnerLayout guards the UI
+// client-side, but the starter list below must not be built for a stranger.
+const viewer = await currentUser(Astro as any);
+
+/**
+ * Students an owner may message: everyone who has enquired about one of their
+ * PGs, most recent first, one row per student.
+ */
+const starters: ChatStarter[] = [];
+if (viewer && (viewer.role === 'owner' || Boolean(viewer.is_admin))) {
+  const res = await getDb()
+    .prepare(
+      `SELECT s.id AS student_id, s.name AS student_name,
+              ol.name AS listing_name, ol.id AS listing_id,
+              MAX(l.created_at) AS latest
+         FROM leads l
+         JOIN users s ON s.id = l.student_id
+         LEFT JOIN owner_listings ol ON ol.id = l.property_id
+        WHERE l.property_id IN (SELECT id FROM owner_listings WHERE owner_id = ?)
+        GROUP BY s.id, s.name, ol.name, ol.id
+        ORDER BY latest DESC
+        LIMIT 50`
+    )
+    .bind(viewer.id)
+    .all<{
+      student_id: string;
+      student_name: string;
+      listing_name: string | null;
+      listing_id: string | null;
+    }>()
+    .catch(() => ({ results: [] as any[] }));
+
+  const seen = new Set<string>();
+  for (const row of res.results as any[]) {
+    if (seen.has(row.student_id)) continue;
+    seen.add(row.student_id);
+    starters.push({
+      title: row.student_name,
+      subtitle: row.listing_name ? `enquired about ${row.listing_name}` : 'enquired about your PG',
+      studentId: row.student_id,
+      listingId: row.listing_id ?? undefined,
+    });
+  }
+}
+---
+
+<OwnerLayout
+  title="Messages — Owner Dashboard — PG Hunter"
+  description="Chat with students about your PGs — photos, videos, documents and voice notes."
+  active="messages"
+>
+  <div data-reveal>
+    <p class="eyebrow">Owner workspace</p>
+    <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <h1 class="mt-5 flex items-center gap-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+      <MessageSquare class="h-6 w-6 text-brand-600" /> Messages
+    </h1>
+    <p class="mt-1 max-w-2xl text-sm font-medium text-slate-500">
+      Answer students directly instead of trading phone calls — share photos of the room, a short video, the
+      rent agreement or a voice note. Only you and that student can read the conversation.
+    </p>
+  </div>
+
+  <div class="mt-6">
+    <ChatApp
+      client:load
+      role="owner"
+      starters={starters}
+      startStudentId={startStudentId || undefined}
+      startListingId={startListingId || undefined}
+    />
+  </div>
+</OwnerLayout>

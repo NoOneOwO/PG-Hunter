@@ -52,6 +52,14 @@ export const RATE_LIMITS = {
   reports: { limit: 10, windowSeconds: 60 * 60 },
   /** Owner media uploads. */
   media_upload: { limit: 30, windowSeconds: 60 * 60 },
+  /**
+   * Chat messages and attachments. Generous compared with the other scopes:
+   * a real conversation is dozens of small writes, and a throttled reply in a
+   * live thread is far more annoying than a throttled like.
+   */
+  chat_send: { limit: 120, windowSeconds: 10 * 60 },
+  /** Thread polling. Sized so a 3-second poll for 10 minutes still fits. */
+  chat_read: { limit: 600, windowSeconds: 10 * 60 },
   /** Anything else that mutates state and is reachable while logged out. */
   api_write: { limit: 30, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitPolicy>;

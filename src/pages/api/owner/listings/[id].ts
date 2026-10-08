@@ -33,7 +33,16 @@ const num = (v: unknown): number | null =>
 const strArr = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 
-/** The listing must exist and the caller must own it (admins may view). */
+/**
+ * The listing must exist, and the caller must own it or be an admin.
+ *
+ * `forEdit` is about *other owners*: no owner may touch a listing that is not
+ * theirs. Admins are deliberately allowed through — at launch the team fills
+ * in owners' PG pages from the admin panel, so an admin edit is a supported
+ * flow, not an escalation. Writes still land on the owner's row (`owner_id`
+ * never changes), which is what keeps enquiries, verification and the public
+ * page on the owner's account.
+ */
 const ownedListing = async (context: APIContext, forEdit = false) => {
   const auth = await requireAuth(context);
   if ('error' in auth) return { error: auth.error, listing: null };
@@ -49,7 +58,7 @@ const ownedListing = async (context: APIContext, forEdit = false) => {
   if (row.owner_id !== user.id && !user.is_admin) {
     return { error: json({ error: 'Not your listing.' }, 403), listing: null };
   }
-  if (forEdit && row.owner_id !== user.id) {
+  if (forEdit && row.owner_id !== user.id && !user.is_admin) {
     return { error: json({ error: 'Only the owner can edit this listing.' }, 403), listing: null };
   }
   return { error: null, listing: { id, user } as { id: string; user: typeof user } };

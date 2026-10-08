@@ -68,6 +68,13 @@ export const rateLimitScopeFor = (pathname: string, method: string): RateLimitSc
   if (pathname.startsWith('/api/reports')) return 'reports';
   if (pathname.startsWith('/api/media')) return 'media_upload';
 
+  // Chat splits by verb: sending is limited like other writes, while polling a
+  // thread is a read and gets its own, much looser budget — a 3-second poll
+  // would otherwise exhaust the write allowance within a minute.
+  if (pathname.startsWith('/api/chat')) {
+    return MUTATING_METHODS.has(method.toUpperCase()) ? 'chat_send' : 'chat_read';
+  }
+
   if (pathname.startsWith('/api/') && MUTATING_METHODS.has(method.toUpperCase())) {
     return 'api_write';
   }

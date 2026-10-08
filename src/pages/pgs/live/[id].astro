@@ -28,6 +28,7 @@ import {
   Clock3,
   ShieldCheck,
   MessageCircle,
+  MessagesSquare,
   Check,
   Building2,
   Play,
@@ -511,6 +512,17 @@ const listedOn = l
                 <MessageCircle class="h-4 w-4" />
                 Send enquiry
               </button>
+              {/* Chat with the owner directly. The link carries the owner and
+                  the PG, and /messages opens that exact conversation (creating
+                  it if it does not exist yet). */}
+              <a
+                href={`/messages?owner=${encodeURIComponent(l.ownerId)}&listing=${encodeURIComponent(l.id)}`}
+                class="btn-secondary mt-2 w-full px-6"
+                id="message-owner-btn"
+              >
+                <MessagesSquare class="h-4 w-4" />
+                Message owner
+              </a>
               <p class="mt-3 text-xs leading-relaxed text-slate-500">
                 The owner sees your name{''}
                 and contact details only after you send an enquiry. PG Hunter never asks

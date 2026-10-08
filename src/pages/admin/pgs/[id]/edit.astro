@@ -1,0 +1,102 @@
+---
+/**
+ * Admin: manage a listing on the owner's behalf.
+ *
+ * Same form the owner sees, pointed at the same listing routes (which allow
+ * admins) so there is exactly one definition of "what a listing is". Writes
+ * always land on the owner's row — the admin never takes ownership of a page.
+ */
+export const prerender = false;
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import ListingForm from '@/components/owner/ListingForm.astro';
+import { getDb } from '@/lib/server/auth';
+import { fetchListing, listingDto } from '@/lib/server/listings';
+import { mediaUrl } from '@/lib/server/media';
+import { ArrowLeft, ExternalLink, UserRound } from '@lucide/astro';
+
+const { id } = Astro.params;
+const db = getDb();
+
+const found = id ? await fetchListing(db, id) : null;
+const listing = found ? listingDto(found.row, found.rooms, found.media, mediaUrl) : null;
+
+if (!listing || !found) {
+  Astro.response.status = 404;
+}
+
+const owner = found
+  ? await db
+      .prepare('SELECT id, name, email FROM users WHERE id = ?')
+      .bind(found.row.owner_id)
+      .first<{ id: string; name: string; email: string }>()
+  : null;
+
+const statusMeta: Record<string, { label: string; className: string }> = {
+  draft: { label: 'Draft', className: 'bg-slate-100 text-slate-600' },
+  pending: { label: 'Pending review', className: 'bg-amber-100 text-amber-800' },
+  active: { label: 'Live', className: 'bg-emerald-100 text-emerald-800' },
+  rejected: { label: 'Rejected', className: 'bg-rose-100 text-rose-700' },
+};
+---
+
+<AdminLayout title={listing ? `${listing.name} — Admin` : 'Listing — Admin'} active="pgs">
+  {
+    !listing || !found ? (
+      <div class="card mt-8 max-w-xl p-8 text-center">
+        <h1 class="text-lg font-extrabold text-slate-900">Listing not found</h1>
+        <p class="mt-2 text-sm text-slate-500">It may have been deleted.</p>
+        <a href="/admin/pgs" class="btn-secondary mt-5">Back to listings</a>
+      </div>
+    ) : (
+      <>
+        <div data-reveal>
+          <a
+            href="/admin/pgs"
+            class="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-brand-700"
+          >
+            <ArrowLeft class="h-4 w-4" /> Back to listings
+          </a>
+          <p class="eyebrow mt-4">Team setup</p>
+          <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{listing.name}</h1>
+              <span class={`badge ${statusMeta[listing.status]?.className ?? statusMeta.draft.className}`}>
+                {statusMeta[listing.status]?.label ?? 'Draft'}
+              </span>
+              {Boolean(found.row.admin_managed) && (
+                <span class="badge border border-sky-200 bg-sky-50 text-sky-800">Team-managed</span>
+              )}
+            </div>
+            {listing.status === 'active' && (
+              <a
+                href={`/pgs/live/${encodeURIComponent(listing.id)}`}
+                target="_blank"
+                rel="noopener"
+                class="btn-secondary min-h-10 px-4 text-xs"
+              >
+                View public page <ExternalLink class="h-3.5 w-3.5" />
+              </a>
+            )}
+          </div>
+          <p class="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+            <UserRound class="h-4 w-4 text-brand-600" />
+            Belongs to <span class="font-semibold text-slate-700">{owner?.name ?? 'Unknown owner'}</span>
+            <span class="text-slate-400">·</span>
+            <span class="text-xs">{owner?.email ?? '—'}</span>
+          </p>
+        </div>
+
+        {listing.rejectionReason && (
+          <p class="mt-5 border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+            Previously rejected: {listing.rejectionReason}
+          </p>
+        )}
+
+        <div class="mt-6 max-w-4xl">
+          <ListingForm mode="edit" listingId={listing.id} admin ownerId={found.row.owner_id} />
+        </div>
+      </>
+    )
+  }
+</AdminLayout>

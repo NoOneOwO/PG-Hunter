@@ -2,7 +2,7 @@
 export const prerender = false;
 import AdminLayout from '@/layouts/AdminLayout.astro';
 import { getDb } from '@/lib/server/auth';
-import { Search, Eye, Bookmark, MessageCircle, ExternalLink, CircleCheck, CircleX, RotateCcw, BadgeCheck, ShieldOff } from '@lucide/astro';
+import { Search, Eye, Bookmark, MessageCircle, ExternalLink, CircleCheck, CircleX, RotateCcw, BadgeCheck, ShieldOff, Plus, Pencil } from '@lucide/astro';
 
 const url = new URL(Astro.request.url);
 const q = url.searchParams.get('q')?.trim() ?? '';
@@ -106,11 +106,14 @@ const listings = res.results.map((r: any) => ({
         verification is recorded separately, with evidence.
       </p>
     </div>
-    <div class="flex flex-wrap gap-2 text-xs font-semibold">
+    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
       <span class="badge border border-slate-200 bg-white text-slate-600">{listings.length} shown</span>
       <span class="badge border border-amber-200 bg-amber-50 text-amber-800">
         {listings.filter((l: any) => l.status === 'pending').length} awaiting review
       </span>
+      <a href="/admin/pgs/new" class="btn-primary min-h-10 px-4">
+        <Plus class="h-4 w-4" /> Set up a PG for an owner
+      </a>
     </div>
   </div>
 
@@ -177,6 +180,11 @@ const listings = res.results.map((r: any) => ({
                       {l.plan === 'verified' ? 'Verified plan' : 'Basic plan'}
                     </span>
                   )}
+                  {Boolean(l.admin_managed) && (
+                    <span class="badge border border-sky-200 bg-sky-50 text-sky-800" title="The team set this page up for the owner">
+                      Team-managed
+                    </span>
+                  )}
                 </div>
                 <p class="mt-1.5 text-sm text-slate-500">
                   {l.locality}{l.locality && l.city ? ', ' : ''}{l.city} · {l.property_type} · {l.gender}
@@ -212,6 +220,10 @@ const listings = res.results.map((r: any) => ({
             </div>
 
             <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+              <a href={`/admin/pgs/${encodeURIComponent(l.id)}/edit`} class="btn-secondary min-h-10 px-4 text-xs">
+                <Pencil class="h-4 w-4" /> Manage page
+              </a>
+              <span class="hidden h-6 w-px bg-slate-200 sm:block" aria-hidden="true"></span>
               {l.status !== 'active' && (
                 <button
                   type="button"

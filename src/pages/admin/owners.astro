@@ -119,8 +119,7 @@ const statCards = [
         <p class="mt-1 text-sm text-slate-500">Owners appear here when they register for a listing account.</p>
       </div>
     ) : (
-      <div class="card mt-6 overflow-x-auto" data-reveal>
-        <table class="w-full min-w-[820px] text-left text-sm">
+      <div class="card mt-6 overflow-x-auto" data-reveal>          <table class="w-full min-w-[920px] text-left text-sm">
           <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase">
             <tr>
               <th class="px-4 py-3">Owner</th>
@@ -130,6 +129,7 @@ const statCards = [
               <th class="px-4 py-3 text-center">Live</th>
               <th class="px-4 py-3 text-center">Verified</th>
               <th class="px-4 py-3 text-center">Docs</th>
+              <th class="px-4 py-3 text-right">Setup</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
@@ -177,6 +177,15 @@ const statCards = [
                     ) : (
                       <span class="text-slate-400">—</span>
                     )}
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <a
+                      href={`/admin/pgs/new?owner=${encodeURIComponent(o.id)}`}
+                      class="inline-flex min-h-9 items-center gap-1 text-xs font-semibold whitespace-nowrap text-brand-700 hover:underline"
+                      title="Build this owner's PG page for them"
+                    >
+                      <Building2 class="h-3.5 w-3.5" /> Set up PG
+                    </a>
                   </td>
                 </tr>
               );

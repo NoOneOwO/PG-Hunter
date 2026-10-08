@@ -1,0 +1,119 @@
+---
+/**
+ * Student side of chat: /messages.
+ *
+ * On-demand (prerender = false) because the "start a conversation" list is the
+ * set of live PG pages in D1, and it is listed in wrangler.toml
+ * `run_worker_first` — a top-level navigation would otherwise be answered by
+ * the asset router's 404 page before the Worker ever ran.
+ */
+export const prerender = false;
+
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ChatApp, { type ChatStarter } from '@/components/chat/ChatApp';
+import { getDb } from '@/lib/server/auth';
+import { MessageSquare, LogIn } from '@lucide/astro';
+
+const params = new URL(Astro.request.url).searchParams;
+const startOwnerId = params.get('owner')?.trim() ?? '';
+const startListingId = params.get('listing')?.trim() ?? '';
+
+/**
+ * Who a student can message: the owners of live PG pages. One row per listing,
+ * so "which PG is this about?" is answered before the conversation starts.
+ */
+const liveRes = await getDb()
+  .prepare(
+    `SELECT ol.id AS listing_id, ol.name AS listing_name, ol.locality, ol.city,
+            u.id AS owner_id, u.name AS owner_name
+       FROM owner_listings ol
+       JOIN users u ON u.id = ol.owner_id
+      WHERE ol.status = 'active'
+      ORDER BY ol.updated_at DESC
+      LIMIT 50`
+  )
+  .all<{
+    listing_id: string;
+    listing_name: string;
+    locality: string;
+    city: string;
+    owner_id: string;
+    owner_name: string;
+  }>()
+  .catch(() => ({ results: [] as any[] }));
+
+const starters: ChatStarter[] = liveRes.results.map((row: any) => ({
+  title: row.listing_name,
+  subtitle: [row.locality, row.city].filter(Boolean).join(', ') + ` · ${row.owner_name}`,
+  ownerId: row.owner_id,
+  listingId: row.listing_id,
+}));
+---
+
+<BaseLayout
+  title="Messages — PG Hunter"
+  description="Chat with PG owners about rooms, rent and visits — with photos, videos and voice notes."
+  noindex
+>
+  <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <div data-reveal>
+      <p class="eyebrow">Your conversations</p>
+      <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <h1 class="mt-5 flex items-center gap-2 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+        <MessageSquare class="h-6 w-6 text-brand-600" /> Messages
+      </h1>
+      <p class="mt-1 max-w-2xl text-sm font-medium text-slate-500">
+        Talk to owners directly — ask about rent, availability or a visit, and share photos, videos or a
+        voice note. Only you and that owner can read the conversation.
+      </p>
+    </div>
+
+    <div id="messages-loading" class="mx-auto max-w-md py-16 text-center" role="status">
+      <span class="mx-auto flex h-12 w-12 animate-spin items-center justify-center rounded-full border-4 border-brand-100 border-t-brand-600"></span>
+      <p class="mt-4 text-sm font-medium text-slate-500">Loading your messages…</p>
+    </div>
+
+    <div id="messages-gate" class="card mx-auto mt-8 hidden max-w-md p-8 text-center">
+      <LogIn class="mx-auto h-6 w-6 text-brand-600" />
+      <h2 class="mt-3 text-lg font-extrabold text-slate-900">Log in to see your messages</h2>
+      <p class="mt-1 text-sm text-slate-500">
+        Conversations are private to your account, so we need to know who you are first.
+      </p>
+      <a href="/login" class="btn-primary mt-5 justify-center">Log in or sign up</a>
+    </div>
+
+    <div id="messages-root" class="mt-6 hidden">
+      <ChatApp
+        client:load
+        role="student"
+        starters={starters}
+        startOwnerId={startOwnerId || undefined}
+        startListingId={startListingId || undefined}
+      />
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { getSession } from '@/lib/auth';
+
+  const loading = document.getElementById('messages-loading')!;
+  const gate = document.getElementById('messages-gate')!;
+  const root = document.getElementById('messages-root')!;
+
+  void (async () => {
+    const user = await getSession();
+    loading.classList.add('hidden');
+
+    if (!user) {
+      gate.classList.remove('hidden');
+      return;
+    }
+    // Owners have their own shell; keep the two workspaces separate.
+    if (user.role === 'owner' && !user.isAdmin) {
+      window.location.replace('/owner/messages');
+      return;
+    }
+    root.classList.remove('hidden');
+  })();
+</script>

@@ -1,0 +1,157 @@
+---
+/**
+ * Admin: step one of setting a PG page up for an owner.
+ *
+ * The launch workflow this exists for: an owner registers and sends us their
+ * PG's details over WhatsApp; the team then builds the page here, on the
+ * owner's account. Nobody has to be comfortable with the listing form.
+ *
+ * The owner is picked first and the page reloads with `?owner=<id>`, so the
+ * listing form is handed a fixed owner rather than a value that could be
+ * swapped after the fact.
+ */
+export const prerender = false;
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import ListingForm from '@/components/owner/ListingForm.astro';
+import { getDb } from '@/lib/server/auth';
+import { ArrowLeft, Building2, Check, Search, UserRound } from '@lucide/astro';
+
+interface OwnerRow {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+}
+
+const url = new URL(Astro.request.url);
+const ownerId = url.searchParams.get('owner')?.trim() ?? '';
+const q = url.searchParams.get('q')?.trim() ?? '';
+
+const db = getDb();
+const ownersRes = q
+  ? await db
+      .prepare(
+        `SELECT id, name, email, created_at FROM users
+         WHERE role = 'owner' AND (name LIKE ? OR email LIKE ?)
+         ORDER BY created_at DESC LIMIT 50`
+      )
+      .bind(`%${q}%`, `%${q}%`)
+      .all<OwnerRow>()
+  : await db
+      .prepare("SELECT id, name, email, created_at FROM users WHERE role = 'owner' ORDER BY created_at DESC LIMIT 50")
+      .all<OwnerRow>();
+
+const owners = ownersRes.results;
+
+// The chosen owner must be a real owner account — otherwise the form below
+// would happily create a listing nobody can ever manage.
+const selected = ownerId
+  ? await db
+      .prepare("SELECT id, name, email, created_at FROM users WHERE id = ? AND role = 'owner'")
+      .bind(ownerId)
+      .first<OwnerRow>()
+  : null;
+
+const initials = (name: string) =>
+  (name ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('') || 'O';
+---
+
+<AdminLayout title="Set up a PG — Admin" active="pgs">
+  <div data-reveal>
+    <a href="/admin/pgs" class="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-brand-700">
+      <ArrowLeft class="h-4 w-4" /> Back to listings
+    </a>
+    <p class="eyebrow mt-4">Team setup</p>
+    <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Set up a PG for an owner</h1>
+    <p class="mt-1 text-sm font-medium text-slate-500">
+      Build the page on the owner's account. It stays a private draft until it is approved, and the owner can
+      manage it from their own dashboard afterwards.
+    </p>
+  </div>
+
+  {
+    selected ? (
+      <div class="mt-6 max-w-4xl">
+        <div class="card flex flex-wrap items-center gap-4 p-5">
+          <span class="flex h-12 w-12 shrink-0 items-center justify-center bg-brand-50 text-base font-extrabold text-brand-700">
+            {initials(selected.name)}
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-semibold tracking-wide text-slate-500 uppercase">Page belongs to</p>
+            <p class="truncate text-base font-extrabold text-slate-900">{selected.name}</p>
+            <p class="truncate text-xs text-slate-500">{selected.email}</p>
+          </div>
+          <span class="badge border border-emerald-200 bg-emerald-50 text-emerald-800">
+            <Check class="mr-1 h-3.5 w-3.5" /> Owner account
+          </span>
+          <a href="/admin/pgs/new" class="btn-secondary min-h-10 px-4 text-xs">Change owner</a>
+        </div>
+        <div class="mt-6">
+          <ListingForm mode="create" admin ownerId={selected.id} />
+        </div>
+      </div>
+    ) : (
+      <div class="mt-6 max-w-4xl">
+        <div class="card p-5">
+          <h2 class="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <UserRound class="h-4 w-4 text-brand-600" /> Which owner is this page for?
+          </h2>
+          <p class="mt-1 text-xs text-slate-500">
+            Pick the account the page will belong to. Enquiries, verification and payouts always follow the owner.
+          </p>
+
+          <form class="mt-4 flex flex-wrap items-center gap-2" method="get">
+            <label class="field w-full sm:w-72">
+              <Search class="h-4 w-4 shrink-0 text-slate-400" />
+              <span class="sr-only">Search owners</span>
+              <input name="q" value={q} placeholder="Search owner name or email" class="w-full bg-transparent text-sm outline-none" />
+            </label>
+            <button class="btn-secondary px-5">Search</button>
+          </form>
+
+          {
+            owners.length === 0 ? (
+              <div class="mt-5 border border-dashed border-slate-200 px-5 py-10 text-center">
+                <Building2 class="mx-auto h-6 w-6 text-slate-400" />
+                <p class="mt-3 text-sm font-bold text-slate-900">
+                  {q ? 'No owners match that search' : 'No owner accounts yet'}
+                </p>
+                <p class="mt-1 text-xs text-slate-500">
+                  {q
+                    ? 'Try a different name or email.'
+                    : 'Ask the owner to create an account first — then their page can be set up here.'}
+                </p>
+              </div>
+            ) : (
+              <ul class="mt-5 flex flex-col divide-y divide-slate-100 border border-slate-100">
+                {owners.map((o) => (
+                  <li class="flex flex-wrap items-center gap-3 px-4 py-3">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center bg-brand-50 text-xs font-extrabold text-brand-700">
+                      {initials(o.name)}
+                    </span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block truncate text-sm font-semibold text-slate-900">{o.name}</span>
+                      <span class="block truncate text-xs text-slate-500">{o.email}</span>
+                    </span>
+                    <a
+                      href={`/admin/pgs/new?owner=${encodeURIComponent(o.id)}`}
+                      class="btn-primary min-h-10 px-4 text-xs"
+                    >
+                      Set up their PG <Building2 class="h-4 w-4" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+        </div>
+      </div>
+    )
+  }
+</AdminLayout>

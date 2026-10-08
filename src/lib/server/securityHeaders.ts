@@ -149,8 +149,12 @@ export const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
+  // `microphone=(self)` is required by chat voice notes: MediaRecorder cannot
+  // start without it, and the previous `microphone=()` refused the permission
+  // outright. Camera stays off — chat sends video as a file, so nothing needs
+  // live camera access.
   'Permissions-Policy':
-    'geolocation=(self), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()',
+    'geolocation=(self), camera=(), microphone=(self), payment=(), usb=(), interest-cohort=()',
   'Cross-Origin-Opener-Policy': 'same-origin',
   // The legacy XSS auditor is worse than useless and has false positives;
   // the modern control is CSP above.

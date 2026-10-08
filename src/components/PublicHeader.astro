@@ -1,6 +1,6 @@
 ---
 import LogoBadge from '@/components/LogoBadge.astro';
-import { Menu, X, UserRound, Bookmark, Compass, Wallet, LayoutDashboard } from '@lucide/astro';
+import { Menu, X, UserRound, Bookmark, Compass, Wallet, LayoutDashboard, MessageSquare } from '@lucide/astro';
 
 interface Props {
   activePath?: string;
@@ -9,9 +9,9 @@ interface Props {
 const { activePath = Astro.url.pathname } = Astro.props;
 
 // Role-aware public header:
-// - Student: Explore / Saved / Earn with PG Hunter (no prominent For Owners)
+// - Student: Explore / Saved / Messages / Earn with PG Hunter (no prominent For Owners)
 // - Guest:   Explore / Saved / Earn + For Owners
-// - Owner on public routes: Explore / Saved / Dashboard (Earn hidden), profile pill routes to /owner/profile
+// - Owner on public routes: Explore / Saved / Dashboard (Earn and Messages hidden), profile pill routes to /owner/profile
 // Owner shell itself lives in OwnerHeader (/owner/*).
 //
 // There is deliberately no Profile *tab*: the account is reached through the
@@ -50,6 +50,16 @@ const tabs = [
     label: 'Saved',
     icon: Bookmark,
     active: isActive('/saved'),
+  },
+  {
+    key: 'messages',
+    href: '/messages',
+    label: 'Messages',
+    icon: MessageSquare,
+    active: isActive('/messages'),
+    // Students only: owners message from their own shell (/owner/messages),
+    // and a guest has no conversations to show.
+    studentOnly: true,
   },
   {
     key: 'earn',
@@ -118,6 +128,7 @@ const tabs = [
                 tab.active ? tabActive : tabIdle,
                 tab.guestOnly && 'inline-flex',
                 tab.ownerOnly && 'hidden',
+                tab.studentOnly && 'hidden',
               ]}
               aria-current={tab.active ? 'page' : undefined}
             >
@@ -206,6 +217,7 @@ const tabs = [
               'flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
               tab.active ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
               tab.ownerOnly && 'hidden',
+              tab.studentOnly && 'hidden',
             ]}
           >
             {tab.icon ? <tab.icon class="h-4 w-4" /> : null}
@@ -319,6 +331,8 @@ const tabs = [
   const navForOwnersMobile = document.querySelector<HTMLElement>('[data-nav="for-owners-mobile"]');
   const navDashboardMobile = document.querySelector<HTMLElement>('[data-nav="dashboard-mobile"]');
   const navEarnMobile = document.querySelector<HTMLElement>('[data-nav="earn-mobile"]');
+  const navMessages = document.querySelector<HTMLElement>('[data-nav="messages"]');
+  const navMessagesMobile = document.querySelector<HTMLElement>('[data-nav="messages-mobile"]');
 
   const showFlex = (el: HTMLElement | null, show: boolean) => {
     if (!el) return;
@@ -378,9 +392,11 @@ const tabs = [
     showFlex(navForOwners, !loggedIn);
     showFlex(navDashboard, isOwner);
     showFlex(navEarn, !isOwner);
+    showFlex(navMessages, loggedIn && !isOwner);
     showFlexMobile(navForOwnersMobile, !loggedIn);
     showFlexMobile(navDashboardMobile, isOwner);
     showFlexMobile(navEarnMobile, !isOwner);
+    showFlexMobile(navMessagesMobile, loggedIn && !isOwner);
 
     // The tab set just changed shape, so the indicator's resting box moved.
     placeIndicator();

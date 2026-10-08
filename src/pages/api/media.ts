@@ -38,8 +38,29 @@ export async function POST(context: APIContext) {
   if (invalid) return json({ error: invalid }, 400);
 
   const db = getDb();
+
+  // Resolve the target listing BEFORE storing bytes. The old order saved the
+  // object first and checked ownership afterwards, so a rejected upload still
+  // left an orphan in R2. Admins may upload to an owner's listing (they set
+  // pages up on owners' behalf) and the object is namespaced under that
+  // owner's folder, not the admin's — a PG's assets stay in one place.
+  let namespaceId = user.id;
+  if (listingId) {
+    const target = await db
+      .prepare('SELECT id, owner_id FROM owner_listings WHERE id = ?')
+      .bind(listingId)
+      .first<{ id: string; owner_id: string }>();
+    if (!target) return json({ error: 'Listing not found.' }, 404);
+    if (target.owner_id !== user.id && !user.is_admin) {
+      return json({ error: 'Not your listing.' }, 403);
+    }
+    namespaceId = target.owner_id;
+  }
+
   const folder =
-    purpose === 'verification' ? `verification/${user.id}` : `owners/${user.id}/${purpose}`;
+    purpose === 'verification'
+      ? `verification/${user.id}`
+      : `owners/${namespaceId}/${purpose}`;
   const key = await storeObject(folder, file.name, file.type, await file.arrayBuffer());
 
   if (purpose === 'verification') {
@@ -55,15 +76,6 @@ export async function POST(context: APIContext) {
       ok: true,
       file: { id: docId, key, url: mediaUrl(key), fileName: file.name, purpose },
     });
-  }
-
-  // Listing image/document: attach to the owner's listing when one is given.
-  if (listingId) {
-    const owned = await db
-      .prepare('SELECT id FROM owner_listings WHERE id = ? AND owner_id = ?')
-      .bind(listingId, user.id)
-      .first();
-    if (!owned) return json({ error: 'Listing not found.' }, 404);
   }
 
   const mediaId = crypto.randomUUID();

@@ -98,6 +98,13 @@ run_worker_first = [
   "/owner/plans/*",
   "/owner/listings/*/edit",
   "/owner/listings/*/edit/*",
+  # Chat. Both pages render their on-demand half server-side: /messages lists
+  # the live PG pages a student can start a conversation about, and
+  # /owner/messages lists the students who have enquired. Neither exists as a
+  # static asset, so without these entries a plain navigation would 404.
+  "/messages",
+  "/messages/*",
+  "/owner/messages",
 ]
 
 # Override the site URL used for OAuth redirect URIs. Leave unset to derive

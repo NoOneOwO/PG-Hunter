@@ -442,6 +442,21 @@ export const getOwnerOverview = (): Promise<OwnerOverview> => api('/api/owner/me
 
 export const getOwnerListings = (): Promise<{ listings: Listing[] }> => api('/api/owner/listings');
 
+/**
+ * Admin: create a PG page that belongs to another owner.
+ *
+ * The listing lands on the owner's account (`ownerId`), not the admin's — the
+ * team runs the setup, the owner keeps the page.
+ */
+export const createListingForOwner = (
+  ownerId: string,
+  input: ListingInput
+): Promise<{ listing: Listing }> =>
+  api('/api/admin/listings', {
+    method: 'POST',
+    body: JSON.stringify({ ...input, ownerId }),
+  });
+
 export const getOwnerListing = (id: string): Promise<{ listing: Listing }> =>
   api(`/api/owner/listings/${encodeURIComponent(id)}`);
 

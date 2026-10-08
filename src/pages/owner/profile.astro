@@ -1,6 +1,6 @@
 ---
 import OwnerLayout from '@/layouts/OwnerLayout.astro';
-import { UserRound, Phone, LogOut, Check, ShieldCheck, Building2, Mail } from '@lucide/astro';
+import { UserRound, Phone, LogOut, Check, ShieldCheck, Building2, Mail, ImageUp, Trash2 } from '@lucide/astro';
 import { colleges } from '@/data/colleges';
 
 const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortName, name: c.name }));
@@ -27,7 +27,10 @@ const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortNa
   <div id="profile-root" class="hidden">
     <div class="mt-6 card border border-slate-200 p-6 sm:p-8" data-reveal>
       <div class="flex flex-wrap items-center gap-4">
-        <span id="profile-avatar" class="flex h-16 w-16 items-center justify-center rounded-sm bg-brand-600 text-2xl font-extrabold text-white">?</span>
+        <span class="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-brand-600 text-2xl font-extrabold text-white">
+          <img id="profile-avatar-img" alt="" class="absolute inset-0 hidden h-full w-full object-cover" referrerpolicy="no-referrer" />
+          <span id="profile-avatar">?</span>
+        </span>
         <div class="min-w-0 flex-1">
           <h2 id="profile-name" class="truncate text-2xl font-extrabold tracking-tight text-slate-900">—</h2>
           <p id="profile-email" class="truncate text-sm text-slate-500">—</p>
@@ -40,6 +43,21 @@ const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortNa
         <a href="/owner/listings" class="btn-secondary">
           <Building2 class="h-4 w-4" /> My PGs
         </a>
+      </div>
+
+      {/* Profile picture. The bytes go to R2 through /api/profile/avatar, the
+          same endpoint the student profile uses — owners were only missing the
+          control, not the storage. */}
+      <div class="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
+        <button id="avatar-upload-btn" type="button" class="btn-secondary">
+          <ImageUp class="h-4 w-4" /> Change photo
+        </button>
+        <button id="avatar-remove-btn" type="button" class="hidden items-center gap-1.5 rounded-sm px-3 py-2 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50">
+          <Trash2 class="h-4 w-4" /> Remove
+        </button>
+        <input id="avatar-input" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" />
+        <p class="text-xs text-slate-500">JPEG, PNG or WebP up to 5 MB. Shown on your listings and enquiries.</p>
+        <p id="avatar-status" class="hidden w-full text-xs font-medium" role="status"></p>
       </div>
 
       <form id="profile-form" class="mt-8 grid grid-cols-1 gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2">
@@ -106,6 +124,8 @@ const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortNa
   import {
     getSession,
     updateProfile,
+    uploadAvatar,
+    removeAvatar,
     signOut,
     redirectToLogin,
     initialsOf,
@@ -126,8 +146,71 @@ const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortNa
   const savedNote = document.getElementById('profile-saved-note')!;
   const profileError = document.getElementById('profile-error')!;
   const logoutBtn = document.getElementById('logout-btn') as HTMLButtonElement;
+  const avatarImg = document.getElementById('profile-avatar-img') as HTMLImageElement;
+  const avatarInput = document.getElementById('avatar-input') as HTMLInputElement;
+  const avatarUploadBtn = document.getElementById('avatar-upload-btn') as HTMLButtonElement;
+  const avatarRemoveBtn = document.getElementById('avatar-remove-btn') as HTMLButtonElement;
+  const avatarStatus = document.getElementById('avatar-status')!;
 
   const flash = (el: HTMLElement, show: boolean) => el.classList.toggle('hidden', !show);
+
+  /** Paint the R2/Google picture over the initials, or fall back to them. */
+  const paintAvatar = (src: string | null | undefined) => {
+    if (!src) {
+      avatarImg.hidden = true;
+      avatarImg.removeAttribute('src');
+      flash(avatarRemoveBtn, false);
+      return;
+    }
+    avatarImg.hidden = true;
+    avatarImg.onload = () => {
+      avatarImg.hidden = false;
+      flash(avatarRemoveBtn, true);
+    };
+    avatarImg.onerror = () => {
+      avatarImg.hidden = true;
+      flash(avatarRemoveBtn, false);
+    };
+    avatarImg.src = src;
+  };
+
+  const sayAvatar = (message: string, ok: boolean) => {
+    avatarStatus.textContent = message;
+    avatarStatus.className = `w-full text-xs font-medium ${ok ? 'text-emerald-700' : 'text-rose-700'}`;
+    flash(avatarStatus, Boolean(message));
+  };
+
+  avatarUploadBtn.addEventListener('click', () => avatarInput.click());
+
+  avatarInput.addEventListener('change', async () => {
+    const file = avatarInput.files?.[0];
+    avatarInput.value = '';
+    if (!file) return;
+    avatarUploadBtn.disabled = true;
+    sayAvatar('Uploading…', true);
+    const { user, error } = await uploadAvatar(file);
+    avatarUploadBtn.disabled = false;
+    if (error) return sayAvatar(error, false);
+    if (user) {
+      avatar.textContent = initialsOf(user.name);
+      paintAvatar(user.avatar);
+      sayAvatar('Profile picture updated.', true);
+      setTimeout(() => sayAvatar('', true), 2500);
+    }
+  });
+
+  avatarRemoveBtn.addEventListener('click', async () => {
+    avatarRemoveBtn.disabled = true;
+    const { user, error } = await removeAvatar();
+    avatarRemoveBtn.disabled = false;
+    if (error) return sayAvatar(error, false);
+    if (user) {
+      avatar.textContent = initialsOf(user.name);
+      paintAvatar(undefined);
+      sayAvatar('Profile picture removed.', true);
+      setTimeout(() => sayAvatar('', true), 2500);
+    }
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -166,6 +249,7 @@ const collegeOptions = colleges.map((c) => ({ slug: c.slug, shortName: c.shortNa
     }
 
     avatar.textContent = initialsOf(user.name);
+    paintAvatar(user.avatar);
     nameEl.textContent = user.name;
     emailEl.textContent = user.email;
     roleEl.textContent = user.isAdmin ? 'Admin' : 'Owner';

@@ -6,9 +6,16 @@ import { propertyTypeOptions, genderOptions, foodTypeOptions } from '@/lib/owner
 interface Props {
   mode: 'create' | 'edit';
   listingId?: string;
+  /**
+   * Admin setup mode: the page being created belongs to `ownerId` (an owner
+   * account) rather than to the signed-in admin. Edits go through the same
+   * listing routes, which allow admins; only creation needs the owner.
+   */
+  admin?: boolean;
+  ownerId?: string;
 }
 
-const { mode, listingId } = Astro.props;
+const { mode, listingId, admin = false, ownerId } = Astro.props;
 const edit = mode === 'edit';
 ---
 
@@ -18,7 +25,9 @@ const edit = mode === 'edit';
       {edit ? 'Edit listing' : 'Add a PG'}
     </h2>
     <p class="mt-0.5 text-sm text-slate-500">
-      Save a draft any time — submit for review when you're ready.
+      {admin
+        ? "Set the page up on the owner's behalf. It stays a private draft until an admin approves it — the owner can keep managing it from their own dashboard afterwards."
+        : "Save a draft any time — submit for review when you're ready."}
     </p>
   </div>
 
@@ -27,6 +36,8 @@ const edit = mode === 'edit';
     class="grid grid-cols-1 gap-6 px-5 py-6"
     data-mode={mode}
     data-listing-id={listingId ?? ''}
+    data-admin={admin ? 'true' : 'false'}
+    data-owner-id={ownerId ?? ''}
   >
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div class="sm:col-span-2">
@@ -205,6 +216,7 @@ const edit = mode === 'edit';
 <script>
   import {
     createListing,
+    createListingForOwner,
     updateListing,
     submitListing,
     uploadFile,
@@ -222,6 +234,11 @@ const edit = mode === 'edit';
   const form = document.getElementById('listing-form') as HTMLFormElement;
   const mode = form.dataset.mode as 'create' | 'edit';
   const listingId = form.dataset.listingId || undefined;
+  // Admin panel mode: the team creates and edits a page on an owner's behalf.
+  const adminPanel = form.dataset.admin === 'true';
+  const ownerId = form.dataset.ownerId || undefined;
+  /** Where this form returns to afterwards — the admin list, or the owner's. */
+  const backTo = adminPanel ? '/admin/pgs' : '/owner/listings';
   const roomsEl = document.getElementById('rooms-editor')!;
   const addRoomBtn = document.getElementById('add-room-btn') as HTMLButtonElement;
   const rulesEl = document.getElementById('rules-editor')!;
@@ -556,7 +573,14 @@ const edit = mode === 'edit';
     if (!input.rooms.length) throw new Error('Add at least one room with a monthly rent.');
     if (input.rooms.some((r) => !r.rent || r.rent < 0)) throw new Error('Each room needs a valid monthly rent.');
     if (mode === 'edit' && listingId) {
+      // Same route either way: an admin edit is allowed by the listing route
+      // and always lands on the owner's row.
       const { listing } = await updateListing(listingId, input);
+      return listing;
+    }
+    if (adminPanel) {
+      if (!ownerId) throw new Error('Pick the owner this page belongs to before saving.');
+      const { listing } = await createListingForOwner(ownerId, input);
       return listing;
     }
     const { listing } = await createListing(input);
@@ -574,7 +598,9 @@ const edit = mode === 'edit';
       setStatus(successEl, mode === 'edit' ? 'Changes saved.' : 'Draft saved with your photos.');
       if (mode === 'create') {
         setTimeout(() => {
-          window.location.href = `/owner/listings/${listing.id}/edit`;
+          window.location.href = adminPanel
+            ? `/admin/pgs/${listing.id}/edit`
+            : `/owner/listings/${listing.id}/edit`;
         }, 1200);
       }
     } catch (err) {
@@ -595,7 +621,7 @@ const edit = mode === 'edit';
       await submitListing(listing.id);
       setStatus(successEl, 'Submitted for review! Our team will review your listing shortly.');
       setTimeout(() => {
-        window.location.href = '/owner/listings';
+        window.location.href = backTo;
       }, 1500);
     } catch (err) {
       setStatus(errorEl, (err as Error).message);

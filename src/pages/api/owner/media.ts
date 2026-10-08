@@ -41,7 +41,14 @@ const parseVideoUrl = (input: string): ParsedVideo | null => {
   return null;
 };
 
-/** Ensure the listing belongs to the caller (admins may also manage). */
+/**
+ * Ensure the caller may manage media on this listing.
+ *
+ * Owners may only touch their own listing; admins may touch any listing,
+ * because the team sets up and maintains owners' pages from the admin panel
+ * at launch. `userId` is always the acting user, so `uploaded_by` stays an
+ * honest record of who added the item.
+ */
 const ownedListingId = async (
   context: APIContext,
   listingId: string
@@ -53,10 +60,15 @@ const ownedListingId = async (
   }
 
   const db = getDb();
-  const row = await db
-    .prepare('SELECT id FROM owner_listings WHERE id = ? AND owner_id = ?')
-    .bind(listingId, auth.user.id)
-    .first<{ id: string }>();
+  const row = auth.user.is_admin
+    ? await db
+        .prepare('SELECT id FROM owner_listings WHERE id = ?')
+        .bind(listingId)
+        .first<{ id: string }>()
+    : await db
+        .prepare('SELECT id FROM owner_listings WHERE id = ? AND owner_id = ?')
+        .bind(listingId, auth.user.id)
+        .first<{ id: string }>();
   if (!row) return json({ error: 'Listing not found.' }, 404);
   return { listingId: row.id, userId: auth.user.id };
 };

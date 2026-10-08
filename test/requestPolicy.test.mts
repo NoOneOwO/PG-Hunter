@@ -135,6 +135,17 @@ test('feature routes map to their named scopes', () => {
   assert.equal(rateLimitScopeFor('/api/media/some/key', 'GET'), 'media_upload');
 });
 
+test('chat splits by verb: sending is throttled as a write, polling as a read', () => {
+  // A 3-second poll must not consume the send budget, and a send must not be
+  // able to hide behind the looser polling allowance.
+  assert.equal(rateLimitScopeFor('/api/chat', 'POST'), 'chat_send');
+  assert.equal(rateLimitScopeFor('/api/chat/abc-123', 'POST'), 'chat_send');
+  assert.equal(rateLimitScopeFor('/api/chat/abc-123/read', 'POST'), 'chat_send');
+  assert.equal(rateLimitScopeFor('/api/chat', 'GET'), 'chat_read');
+  assert.equal(rateLimitScopeFor('/api/chat/abc-123', 'GET'), 'chat_read');
+  assert.notEqual(rateLimitScopeFor('/api/chat', 'POST'), 'chat_read');
+});
+
 test('unlisted mutating API routes fall back to api_write', () => {
   assert.equal(rateLimitScopeFor('/api/listings', 'POST'), 'api_write');
   assert.equal(rateLimitScopeFor('/api/owner/listings/abc', 'PUT'), 'api_write');
@@ -151,6 +162,9 @@ test('non-API paths are never rate limited here', () => {
   assert.equal(rateLimitScopeFor('/', 'GET'), null);
   assert.equal(rateLimitScopeFor('/owner/listings', 'POST'), null);
   assert.equal(rateLimitScopeFor('/pgs/some-pg', 'GET'), null);
+  // The chat *pages* are not API routes; only their data endpoints are limited.
+  assert.equal(rateLimitScopeFor('/messages', 'GET'), null);
+  assert.equal(rateLimitScopeFor('/owner/messages', 'GET'), null);
 });
 
 test('named scopes take precedence over the generic api_write fallback', () => {
