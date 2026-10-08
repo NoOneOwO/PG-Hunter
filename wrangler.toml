@@ -89,9 +89,9 @@ run_worker_first = [
   # Bare index paths need their own entry: `/admin/*` does not match `/admin`.
   "/admin",
   "/admin/*",
-  # Live D1 listings: on-demand detail pages for real owner listings. The
-  # demo catalogue at /pgs/[slug] stays prerendered and is deliberately not
-  # matched here.
+  # Live D1 listings: the on-demand detail page for a real owner listing. It is
+  # the only /pgs route left — every listing on the site comes from D1, so a
+  # /pgs/<id> navigation must reach the Worker or it 404s as a missing asset.
   "/pgs/live",
   "/pgs/live/*",
   "/owner/plans",

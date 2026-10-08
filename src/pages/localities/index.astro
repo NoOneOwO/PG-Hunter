@@ -3,10 +3,6 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import PixelScene from '@/components/PixelScene.astro';
 import { MapPin, ArrowRight } from '@lucide/astro';
 import { localities } from '@/data/colleges';
-import { activeProperties } from '@/data/properties';
-
-const pgCount = (localityId: string): number =>
-  activeProperties().filter((p) => p.localityId === localityId).length;
 ---
 
 <BaseLayout
@@ -59,9 +55,12 @@ const pgCount = (localityId: string): number =>
             <span class="block truncate text-base font-bold text-slate-900 group-hover:text-brand-700">
               {l.name}
             </span>
-            <span class="block text-xs text-slate-500">
-              {l.city} · {pgCount(l.id)} PGs
-            </span>
+            {/*
+              No PG count here: at build time there is no board to count, and a
+              hard-coded number would be a lie the moment an owner publishes.
+              The area page counts its own live results.
+            */}
+            <span class="block text-xs text-slate-500">{l.city}</span>
           </span>
           <ArrowRight class="ml-auto h-5 w-5 shrink-0 text-slate-300 transition-colors group-hover:text-brand-600" />
         </a>

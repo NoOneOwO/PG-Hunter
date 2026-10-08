@@ -1,9 +1,13 @@
 import type { College, Locality } from './types';
 
 /**
- * MOCK DATA — development placeholder. Replaced by D1 in Phase 2.
- * Colleges and localities are representative of the Delhi ecosystem
- * the product plans to start in. Do not treat counts as live facts.
+ * Colleges and localities reference data.
+ *
+ * This is the browse vocabulary of the site — the search autocomplete, the
+ * college/locality landing pages and the profile college picker all read from
+ * here. It is real reference data, not listings: PGs live in D1 and are matched
+ * to an entry by the free-text locality/keyword search of `/api/listings`.
+ * Never derive a listing count from these arrays; ask the API.
  */
 
 export const colleges: College[] = [

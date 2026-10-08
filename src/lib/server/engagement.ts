@@ -6,7 +6,8 @@
  *   saved_pgs            = current wishlist state (UNIQUE user+property, existing)
  *   pg_experiences       = moderated student experiences (pending by default)
  *   listing_events       = legacy owner analytics (kept, not source for new stats)
- * listing_id is TEXT without FK to allow mock IDs (prop_*) and D1 UUIDs. Do NOT create a second truth.
+ * listing_id is TEXT without an FK so engagement rows never block a listing
+ * delete; ids are `owner_listings.id` values. Do NOT create a second truth.
  */
 
 import { getDb, nowIso } from './auth';

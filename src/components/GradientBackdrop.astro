@@ -7,10 +7,10 @@
  * cursor on a mouse and drifts on its own everywhere else.
  *
  * It is a plain canvas mounted by an external module script rather than a React
- * island on purpose: the public demo page is prerendered, but the live-listing
- * page (/pgs/live/[id]) is served on demand under the middleware CSP, which
- * cannot allow an island's inline runtime. A module script is `'self'` and
- * therefore works identically on both.
+ * island on purpose: the prerendered pages carry their CSP in `_headers` and the
+ * live-listing page (/pgs/live/[id]) is served on demand under the middleware
+ * CSP, which cannot allow an island's inline runtime. A module script is
+ * `'self'` and therefore works identically on both.
  *
  *   <GradientBackdrop />
  */

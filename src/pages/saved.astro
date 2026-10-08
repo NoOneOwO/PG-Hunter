@@ -67,8 +67,11 @@ import { Bookmark, ArrowRight } from '@lucide/astro';
 
   const render = async () => {
     const ids = await getSavedIds();
-    countEl.textContent = String(ids.length);
+    // Count what actually rendered: an id whose listing has since been
+    // unpublished or expired resolves to nothing, and the page must not claim
+    // a shortlist it cannot show.
     const count = await renderSavedGrid(grid, ids, { removable: true });
+    countEl.textContent = String(count);
     empty.classList.toggle('hidden', count > 0);
   };
 

@@ -2,7 +2,6 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import SearchPanel from '@/components/SearchPanel.astro';
 import TrustStrip from '@/components/TrustStrip.astro';
-import PropertyCard from '@/components/PropertyCard.astro';
 import { ArrowRight, SlidersHorizontal, ArrowUpDown, Building2 } from '@lucide/astro';
 
 import HeroScene from '@/components/bits/HeroScene';
@@ -10,11 +9,8 @@ import BlurText from '@/components/bits/BlurText';
 import CountUp from '@/components/bits/CountUp';
 import StarBorder from '@/components/bits/StarBorder';
 
-import { activeProperties } from '@/data/properties';
 import { colleges, localities } from '@/data/colleges';
 
-const popular = activeProperties().slice(0, 6);
-const totalPgs = activeProperties().length;
 const localityCount = localities.length;
 ---
 
@@ -63,9 +59,14 @@ const localityCount = localities.length;
 
           <dl class="mt-8 grid max-w-lg grid-cols-3 border border-slate-200 bg-white">
             <div class="border-r border-slate-200 px-4 py-3">
-              <dt class="text-xs font-medium text-slate-500">Listings</dt>
+              <dt class="text-xs font-medium text-slate-500">Live listings</dt>
+              {/*
+                The count is whatever D1 is serving right now — it starts at 0
+                and the page script counts up to the real total, so a launch
+                with no listings yet reads as an empty board, not a fake one.
+              */}
               <dd class="mt-0.5 text-xl font-extrabold tracking-tight text-slate-900">
-                <CountUp client:load to={totalPgs} />
+                <span id="stat-listings">0</span>
               </dd>
             </div>
             <div class="border-r border-slate-200 px-4 py-3">
@@ -106,17 +107,27 @@ const localityCount = localities.length;
 
   <TrustStrip />
 
-  <!-- ------------------------------------------------- popular PGs -->
-  <section aria-labelledby="popular-heading" class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+  <!-- ---------------------------------------------- live listings -->
+  {/*
+    The only listing grid on the home page, and it is filled from D1. There is
+    no bundled catalogue to fall back on: an empty board is the correct state
+    until owners publish, and it says so instead of padding the page with
+    invented PGs.
+  */}
+  <section
+    id="listings"
+    aria-labelledby="listings-heading"
+    class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16"
+  >
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <span class="eyebrow">Handpicked listings</span>
+        <span class="eyebrow">Live listings</span>
         <div class="pixel-rule mt-2.5" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-        <h2 id="popular-heading" class="mt-4 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-          Popular PGs near you
+        <h2 id="listings-heading" class="mt-4 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+          PGs on PG Hunter
         </h2>
         <p class="mt-1 text-sm font-medium text-slate-500">
-          {totalPgs} PGs found near your college
+          Every card here is a real PG, published by its owner and taking enquiries today.
         </p>
       </div>
 
@@ -138,48 +149,35 @@ const localityCount = localities.length;
       </div>
     </div>
 
-    <div data-reveal-group class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      {popular.map((p) => (
-        <PropertyCard property={p} />
-      ))}
+    <div
+      id="listings-grid"
+      data-reveal-group
+      class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+    ></div>
+
+    {/* Neutral until D1 answers, so the page never flashes a wrong state. */}
+    <p id="listings-loading" class="mt-8 text-sm font-medium text-slate-500" role="status">
+      Checking what's live…
+    </p>
+
+    <div id="listings-empty" class="card pixel-corner relative mt-8 hidden px-6 py-12 text-center">
+      <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="mt-5 text-lg font-bold text-slate-900">No PGs are listed yet</p>
+      <p class="mx-auto mt-1 max-w-md text-sm text-slate-500">
+        We're onboarding owners right now, one PG at a time. The moment a listing is
+        approved it appears here — every one of them real, with real photos and real rents.
+      </p>
+      <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <a href="/for-owners" class="btn-primary px-6">List your PG</a>
+        <a href="/colleges" class="btn-secondary px-6">Browse by college</a>
+      </div>
     </div>
 
     <div class="mt-8 flex justify-center">
       <a href="/pgs-near-you" class="btn-primary px-8">
-        View all PGs
+        Browse all PGs
         <ArrowRight class="h-4 w-4" />
       </a>
-    </div>
-  </section>
-
-  <!-- ------------------------------------------------ live rail -->
-  <section
-    id="live-section"
-    aria-labelledby="live-heading"
-    class="hidden border-t border-slate-200 bg-white"
-  >
-    <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-      <div class="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <span class="eyebrow">Live right now</span>
-          <div class="pixel-rule mt-2.5" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-          <h2 id="live-heading" class="mt-4 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-            Fresh from owners
-          </h2>
-          <p class="mt-1 text-sm font-medium text-slate-500">
-            Approved listings taking enquiries today — these are real, not samples.
-          </p>
-        </div>
-        <a
-          href="/pgs-near-you"
-          class="inline-flex min-h-11 items-center gap-1.5 border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-300"
-        >
-          See every live PG
-          <ArrowRight class="h-4 w-4" />
-        </a>
-      </div>
-
-      <div id="live-grid" class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"></div>
     </div>
   </section>
 
@@ -240,20 +238,48 @@ const localityCount = localities.length;
 </BaseLayout>
 
 <script>
-  // The live rail is filled from D1 after load. The section stays hidden until
-  // something real arrives, so the home page never shows an empty promise.
-  import { fetchLiveListings, renderLiveCards, wireLiveSaveButtons } from '@/lib/liveListings';
+  import { fetchLiveListingsPage, renderLiveCards, wireLiveSaveButtons } from '@/lib/liveListings';
 
-  const liveSection = document.getElementById('live-section');
-  const liveGrid = document.getElementById('live-grid');
+  const grid = document.getElementById('listings-grid');
+  const empty = document.getElementById('listings-empty');
+  const loading = document.getElementById('listings-loading');
+  const stat = document.getElementById('stat-listings');
 
-  if (liveSection && liveGrid) {
-    void (async () => {
-      const listings = await fetchLiveListings({ limit: 3 });
-      if (listings.length === 0) return;
-      renderLiveCards(liveGrid, listings);
-      liveSection.classList.remove('hidden');
-      await wireLiveSaveButtons(liveGrid);
-    })();
-  }
+  /** Count the hero stat up to a live value, matching the CountUp entrance. */
+  const countUp = (node: HTMLElement, to: number) => {
+    const format = new Intl.NumberFormat('en-IN');
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || to === 0) {
+      node.textContent = format.format(to);
+      return;
+    }
+    const started = performance.now();
+    const duration = 1200;
+    const step = (now: number) => {
+      const t = Math.min(1, (now - started) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      node.textContent = format.format(Math.round(to * eased));
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+
+  void (async () => {
+    const { listings, total } = await fetchLiveListingsPage({ limit: 6 });
+
+    // The hero stat counts the whole board, not the six cards shown here.
+    if (stat) countUp(stat, total);
+
+    if (loading) {
+      loading.textContent = total
+        ? `${total} live ${total === 1 ? 'PG' : 'PGs'} right now`
+        : 'No live listings yet.';
+    }
+
+    if (listings.length === 0) {
+      empty?.classList.remove('hidden');
+    } else if (grid) {
+      await renderLiveCards(grid, listings);
+      await wireLiveSaveButtons(grid);
+    }
+  })();
 </script>

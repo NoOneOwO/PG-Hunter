@@ -3,9 +3,9 @@
  *
  * The browser talks to the same-origin Worker API (/api/*) which owns
  * authentication and data access (Cloudflare D1). Sessions are httpOnly
- * cookies, so no tokens ever touch JavaScript. Property *listings* remain
- * mock data (src/data) until listings move into D1, so saved_pgs stores mock
- * property ids and the UI resolves them against src/data/properties.
+ * cookies, so no tokens ever touch JavaScript. Listings live in D1 too, so
+ * `saved_pgs.property_id` holds an `owner_listings.id` and the UI resolves it
+ * through `/api/listings?ids=…` (see lib/liveListings.ts).
  *
  * Backend setup: see CLOUDFLARE_SETUP.md.
  */

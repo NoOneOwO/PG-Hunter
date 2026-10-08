@@ -1,9 +1,7 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import PropertyCard from '@/components/PropertyCard.astro';
 import { Building2 } from '@lucide/astro';
 import { collegeBySlug, colleges } from '@/data/colleges';
-import { properties } from '@/data/properties';
 
 export function getStaticPaths() {
   return colleges.map((c) => ({ params: { slug: c.slug } }));
@@ -16,13 +14,12 @@ if (!college) {
   return Astro.redirect('/colleges');
 }
 
-const nearby = properties
-  .filter((p) => p.collegeDistances.some((d) => d.collegeId === college.id))
-  .sort(
-    (a, b) =>
-      a.collegeDistances.find((d) => d.collegeId === college.id)!.distanceMeters -
-      b.collegeDistances.find((d) => d.collegeId === college.id)!.distanceMeters
-  );
+/**
+ * What to ask D1 for. A listing almost never names the campus, so the area the
+ * college sits in ("Rohini" for DTU) carries most of the matches; the short
+ * name catches the owners who do spell it out.
+ */
+const searchTerms = [college.shortName, college.locality];
 ---
 
 <BaseLayout
@@ -52,26 +49,66 @@ const nearby = properties
             PGs near {college.shortName}
           </h1>
           <p class="mt-2 text-sm text-slate-600 sm:text-base">
-            {college.name} — <span class="font-semibold text-slate-800">{nearby.length} PGs found</span>
+            {college.name} — <span class="font-semibold text-slate-800"><span id="result-count">0</span> <span id="result-noun">PGs</span> found</span>
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <section aria-label="Listings" class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-    {nearby.length > 0 ? (
-      <div data-reveal-group class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {nearby.map((p) => (
-          <PropertyCard property={p} contextCollegeId={college.id} />
-        ))}
+  <section
+    id="college-page"
+    aria-label="Listings"
+    data-search-terms={searchTerms.join('|')}
+    class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"
+  >
+    <div id="college-grid" data-reveal-group class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"></div>
+
+    <p id="college-loading" class="text-sm font-medium text-slate-500" role="status">
+      Loading live listings near {college.shortName}…
+    </p>
+
+    <div id="college-empty" class="card pixel-corner relative hidden p-10 text-center">
+      <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="mt-5 text-base font-bold text-slate-900">No PGs listed near {college.shortName} yet</p>
+      <p class="mx-auto mt-1 max-w-md text-sm text-slate-500">
+        We're expanding college by college. Browse everything that is live right now, or
+        list a PG you own near {college.locality}.
+      </p>
+      <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <a href="/pgs-near-you" class="btn-primary px-6">Browse all PGs</a>
+        <a href="/for-owners" class="btn-secondary px-6">List your PG</a>
       </div>
-    ) : (
-      <div class="card pixel-corner relative p-10 text-center">
-        <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-        <p class="mt-5 text-base font-bold text-slate-900">No PGs listed near {college.shortName} yet</p>
-        <p class="mt-1 text-sm text-slate-500">We're expanding college by college. Check back soon.</p>
-      </div>
-    )}
+    </div>
   </section>
 </BaseLayout>
+
+<script>
+  // A college page is only a saved search over the live board — nothing is
+  // prerendered, so a listing that is unpublished stops appearing here too.
+  import { fetchLiveListingsFor, renderLiveCards, wireLiveSaveButtons } from '@/lib/liveListings';
+
+  const page = document.getElementById('college-page');
+  const grid = document.getElementById('college-grid');
+  const empty = document.getElementById('college-empty');
+  const loading = document.getElementById('college-loading');
+  const count = document.getElementById('result-count');
+  const noun = document.getElementById('result-noun');
+
+  const terms = (page?.dataset.searchTerms ?? '').split('|').filter(Boolean);
+
+  void (async () => {
+    const listings = await fetchLiveListingsFor(terms);
+    loading?.classList.add('hidden');
+    if (count) count.textContent = String(listings.length);
+    if (noun) noun.textContent = listings.length === 1 ? 'PG' : 'PGs';
+
+    if (listings.length === 0) {
+      empty?.classList.remove('hidden');
+      return;
+    }
+    if (!grid) return;
+    await renderLiveCards(grid, listings);
+    await wireLiveSaveButtons(grid);
+  })();
+</script>

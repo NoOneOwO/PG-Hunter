@@ -28,8 +28,14 @@ export async function POST(context: APIContext) {
     const exists = await db.prepare(`SELECT id FROM pg_experiences WHERE id = ?`).bind(target_id).first();
     if (!exists) return json({ error: 'Experience not found.' }, 404);
   } else if (target_type === 'pg') {
-    // Allow mock IDs, just check non-empty; for D1 listings, verify if exists but don't fail for mock
-    if (target_id.length < 3) return json({ error: 'Invalid pg id.' }, 400);
+    // Every PG id is a D1 listing id now, so an unknown one is a bad request.
+    // The old "accept any non-empty id" rule only existed to let reports point
+    // at the bundled mock catalogue, which is gone.
+    const exists = await db
+      .prepare(`SELECT id FROM owner_listings WHERE id = ?`)
+      .bind(target_id)
+      .first();
+    if (!exists) return json({ error: 'Listing not found.' }, 404);
   }
 
   const id = crypto.randomUUID();

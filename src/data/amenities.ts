@@ -1,5 +1,10 @@
-/** Amenity catalog — slug + human label + Lucide icon name.
- * MOCK reference list for development; the full list lives in D1 in Phase 2. */
+/**
+ * Amenity catalog — slug + human label.
+ *
+ * Real data, not a placeholder: owners pick from this list on the listing form
+ * and it is the display vocabulary for amenity chips on every card and detail
+ * page. `owner_listings.amenity_slugs` stores the slugs.
+ */
 
 export interface Amenity {
   slug: string;

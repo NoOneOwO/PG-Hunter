@@ -3,10 +3,6 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import PixelScene from '@/components/PixelScene.astro';
 import { Building2, ArrowRight } from '@lucide/astro';
 import { colleges } from '@/data/colleges';
-import { properties } from '@/data/properties';
-
-const pgCount = (collegeId: string): number =>
-  properties.filter((p) => p.collegeDistances.some((d) => d.collegeId === collegeId)).length;
 ---
 
 <BaseLayout
@@ -59,8 +55,13 @@ const pgCount = (collegeId: string): number =>
             <span class="block truncate text-base font-bold text-slate-900 group-hover:text-brand-700">
               {c.name}
             </span>
+            {/*
+              No PG count here: at build time there is no board to count, and a
+              hard-coded number would be a lie the moment an owner publishes.
+              The campus page counts its own live results.
+            */}
             <span class="block text-xs text-slate-500">
-              {c.locality} · {c.city} · {pgCount(c.id)} PGs
+              {c.locality} · {c.city}
             </span>
           </span>
           <ArrowRight class="ml-auto h-5 w-5 shrink-0 text-slate-300 transition-colors group-hover:text-brand-600" />

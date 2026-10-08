@@ -1,9 +1,7 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import PropertyCard from '@/components/PropertyCard.astro';
 import { MapPin } from '@lucide/astro';
 import { localityBySlug, localities } from '@/data/colleges';
-import { activeProperties, startingRent } from '@/data/properties';
 
 export function getStaticPaths() {
   return localities.map((l) => ({ params: { slug: l.slug } }));
@@ -16,9 +14,8 @@ if (!locality) {
   return Astro.redirect('/localities');
 }
 
-const nearby = activeProperties()
-  .filter((p) => p.localityId === locality.id)
-  .sort((a, b) => startingRent(a) - startingRent(b));
+/** What to ask D1 for: a listing's `locality` is free text the owner typed. */
+const searchTerms = [locality.name];
 ---
 
 <BaseLayout
@@ -48,26 +45,71 @@ const nearby = activeProperties()
             PGs in {locality.name}
           </h1>
           <p class="mt-2 text-sm text-slate-600 sm:text-base">
-            <span class="font-semibold text-slate-800">{nearby.length} PGs found</span>, sorted by starting rent.
+            <span class="font-semibold text-slate-800"><span id="result-count">0</span> <span id="result-noun">PGs</span> found</span>, cheapest first.
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <section aria-label="Listings" class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-    {nearby.length > 0 ? (
-      <div data-reveal-group class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {nearby.map((p) => (
-          <PropertyCard property={p} />
-        ))}
+  <section
+    id="locality-page"
+    aria-label="Listings"
+    data-search-terms={searchTerms.join('|')}
+    class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"
+  >
+    <div id="locality-grid" data-reveal-group class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"></div>
+
+    <p id="locality-loading" class="text-sm font-medium text-slate-500" role="status">
+      Loading live listings in {locality.name}…
+    </p>
+
+    <div id="locality-empty" class="card pixel-corner relative hidden p-10 text-center">
+      <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="mt-5 text-base font-bold text-slate-900">No PGs listed in {locality.name} yet</p>
+      <p class="mx-auto mt-1 max-w-md text-sm text-slate-500">
+        We're expanding area by area. Browse everything that is live right now, or list a
+        PG you own in {locality.name}.
+      </p>
+      <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+        <a href="/pgs-near-you" class="btn-primary px-6">Browse all PGs</a>
+        <a href="/for-owners" class="btn-secondary px-6">List your PG</a>
       </div>
-    ) : (
-      <div class="card pixel-corner relative p-10 text-center">
-        <div class="pixel-rule justify-center" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-        <p class="mt-5 text-base font-bold text-slate-900">No PGs listed in {locality.name} yet</p>
-        <p class="mt-1 text-sm text-slate-500">We're expanding area by area. Check back soon.</p>
-      </div>
-    )}
+    </div>
   </section>
 </BaseLayout>
+
+<script>
+  // Live board only — the page is a saved search over the same listings the
+  // browse page serves, so it can never disagree with it.
+  import { fetchLiveListingsFor, renderLiveCards, wireLiveSaveButtons } from '@/lib/liveListings';
+
+  const page = document.getElementById('locality-page');
+  const grid = document.getElementById('locality-grid');
+  const empty = document.getElementById('locality-empty');
+  const loading = document.getElementById('locality-loading');
+  const count = document.getElementById('result-count');
+  const noun = document.getElementById('result-noun');
+
+  const terms = (page?.dataset.searchTerms ?? '').split('|').filter(Boolean);
+
+  void (async () => {
+    // Cheapest first: area pages are used by students comparing rent locally.
+    const listings = (await fetchLiveListingsFor(terms, 60)).sort((a, b) => {
+      const rentA = a.minRent ?? Number.POSITIVE_INFINITY;
+      const rentB = b.minRent ?? Number.POSITIVE_INFINITY;
+      return rentA - rentB;
+    });
+    loading?.classList.add('hidden');
+    if (count) count.textContent = String(listings.length);
+    if (noun) noun.textContent = listings.length === 1 ? 'PG' : 'PGs';
+
+    if (listings.length === 0) {
+      empty?.classList.remove('hidden');
+      return;
+    }
+    if (!grid) return;
+    await renderLiveCards(grid, listings);
+    await wireLiveSaveButtons(grid);
+  })();
+</script>

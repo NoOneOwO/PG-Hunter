@@ -1,11 +1,13 @@
 /**
  * PG Hunter — live D1 listings on the public site.
  *
- * The demo catalogue (src/data) is prerendered; real owner listings live in D1
- * and can change at any moment, so they are fetched from the public
- * `GET /api/listings` endpoint and rendered into the same card design on the
- * client. Both worlds share one page: on /pgs-near-you the live cards are
- * merged into the prerendered grid, and the home page shows them as a rail.
+ * Listings only exist in D1 and can change at any moment, so every public
+ * surface fetches them from the `GET /api/listings` endpoint and renders them
+ * client-side through one card renderer. There is no bundled catalogue: an
+ * empty result is a legitimate answer, and the caller decides how to say so.
+ *
+ * Nothing here queries D1 directly — the API owns visibility rules (approved
+ * listings inside their plan window only), so a page can never render a draft.
  *
  * Everything that reaches the markup goes through the escaping helpers in
  * lib/html — a listing name, locality and description are owner input.
@@ -31,8 +33,17 @@ export interface LiveQuery {
   ids?: string[];
 }
 
-/** Fetch public listings; never throws — an empty list is a fine answer. */
-export const fetchLiveListings = async (query: LiveQuery = {}): Promise<LiveListing[]> => {
+/** Public listings plus the size of the matching board. */
+export interface LiveListingsPage {
+  listings: LiveListing[];
+  /** Total matches for the query — not the size of `listings`, which is one page. */
+  total: number;
+}
+
+/** Fetch one page of public listings; never throws — an empty page is fine. */
+export const fetchLiveListingsPage = async (
+  query: LiveQuery = {}
+): Promise<LiveListingsPage> => {
   const search = new URLSearchParams();
   if (query.limit) search.set('limit', String(query.limit));
   if (query.q) search.set('q', query.q);
@@ -44,12 +55,48 @@ export const fetchLiveListings = async (query: LiveQuery = {}): Promise<LiveList
 
   try {
     const res = await fetch(`/api/listings?${search.toString()}`, { credentials: 'same-origin' });
-    if (!res.ok) return [];
-    const data = (await res.json()) as { listings?: LiveListing[] };
-    return Array.isArray(data.listings) ? data.listings : [];
+    if (!res.ok) return { listings: [], total: 0 };
+    const data = (await res.json()) as { listings?: LiveListing[]; total?: number };
+    const listings = Array.isArray(data.listings) ? data.listings : [];
+    return {
+      listings,
+      total: typeof data.total === 'number' ? data.total : listings.length,
+    };
   } catch {
-    return [];
+    return { listings: [], total: 0 };
   }
+};
+
+/** Just the listings, for callers that do not need the board size. */
+export const fetchLiveListings = async (query: LiveQuery = {}): Promise<LiveListing[]> =>
+  (await fetchLiveListingsPage(query)).listings;
+
+/**
+ * Union of several keyword searches, de-duplicated by listing id.
+ *
+ * A college landing page has to match its short name ("DTU") *and* its area
+ * ("Rohini") — an owner rarely names the campus in their listing — and the API
+ * takes a single `q`. Terms run in parallel and a listing matching both only
+ * appears once.
+ */
+export const fetchLiveListingsFor = async (
+  terms: string[],
+  limit = 24
+): Promise<LiveListing[]> => {
+  const unique = [...new Set(terms.map((term) => term.trim()).filter(Boolean))];
+  if (unique.length === 0) return [];
+
+  const pages = await Promise.all(
+    unique.map((term) => fetchLiveListingsPage({ q: term, limit }))
+  );
+
+  const byId = new Map<string, LiveListing>();
+  for (const page of pages) {
+    for (const listing of page.listings) {
+      if (!byId.has(listing.id)) byId.set(listing.id, listing);
+    }
+  }
+  return [...byId.values()];
 };
 
 const verificationMeta = (status: Listing['verificationStatus']): { label: string; className: string } => {
@@ -74,7 +121,7 @@ const BOOKMARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height=
 const roomSummary = (listing: LiveListing): string =>
   [...new Set(listing.rooms.map((room) => room.occupancy || room.roomType))].join(' · ');
 
-/** One live listing as a card, matching PropertyCard's markup and classes. */
+/** One live listing as a card — the only listing card on the public site. */
 export const liveCardHtml = (listing: LiveListing, opts?: { removable?: boolean }): string => {
   const href = `/pgs/live/${encodeURIComponent(listing.id)}`;
   const image = coverOf(listing);
@@ -90,8 +137,8 @@ export const liveCardHtml = (listing: LiveListing, opts?: { removable?: boolean 
     )
     .join(' ');
 
-  // The demo cards carry data-* attributes that the browse filters read; live
-  // cards carry the same ones so one filter pass covers both worlds.
+  // The data-* attributes are the contract the browse page's filter pass reads;
+  // a new card field only works if the filter knows about it.
   const roomTypes = [...new Set(listing.rooms.map((room) => room.roomType))].join(' ');
 
   return `
@@ -172,11 +219,10 @@ export const renderLiveCards = async (
 };
 
 /**
- * Wire save buttons added after page load.
+ * Wire save buttons on cards that were injected after page load.
  *
- * PropertyCard's own script binds every `[data-save-btn]` present when it runs,
- * which is before these cards exist. Marking each button keeps the two binders
- * from double-binding the same element if the order ever changes.
+ * Marking each button keeps a second call from double-binding the same element,
+ * which matters on pages that render cards, re-render them, and then wire again.
  */
 export const wireLiveSaveButtons = async (root: ParentNode = document): Promise<void> => {
   const { getCurrentSession, isSaved, toggleSaved } = await import('@/lib/auth');
