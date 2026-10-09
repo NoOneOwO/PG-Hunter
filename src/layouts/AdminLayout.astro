@@ -24,9 +24,13 @@ import {
   Shield,
   ExternalLink,
   Camera,
+  HandCoins,
 } from '@lucide/astro';
 import LogoBadge from '@/components/LogoBadge.astro';
-import { currentUser, isAdmin, publicUser } from '@/lib/server/auth';
+import { currentUser, getDb, isAdmin, publicUser } from '@/lib/server/auth';
+import { getAdminInbox } from '@/lib/server/adminInbox';
+import NotificationBell from '@/components/admin/NotificationBell.astro';
+import type { AdminInboxItem } from '@/lib/adminInbox';
 
 interface Props {
   title?: string;
@@ -38,6 +42,7 @@ interface Props {
     | 'students'
     | 'creators'
     | 'verification'
+    | 'payments'
     | 'experiences'
     | 'reports'
     | 'content'
@@ -58,6 +63,21 @@ if (!user) {
   Astro.response.status = 403;
 }
 
+// Derived notification feed (never fabricated): real queue rows + this admin's
+// last-seen watermark. A missing table degrades to an empty inbox.
+let inboxItems: AdminInboxItem[] = [];
+let inboxUnread = 0;
+if (user && isAuthedAdmin) {
+  try {
+    const inbox = await getAdminInbox(getDb(), user.id);
+    inboxItems = inbox.items;
+    inboxUnread = inbox.unread;
+  } catch {
+    inboxItems = [];
+    inboxUnread = 0;
+  }
+}
+
 const adminAvatar = user ? publicUser(user).avatar : null;
 const initials = (user?.name ?? 'AD')
   .split(/\s+/)
@@ -73,6 +93,7 @@ const nav = [
   { key: 'students', label: 'Students', href: '/admin/students', Icon: GraduationCap },
   { key: 'creators', label: 'Creators', href: '/admin/creators', Icon: Camera },
   { key: 'verification', label: 'Verification', href: '/admin/verification', Icon: BadgeCheck },
+  { key: 'payments', label: 'Payments', href: '/admin/payments', Icon: HandCoins },
   { key: 'experiences', label: 'Experiences', href: '/admin/experiences', Icon: Star },
   { key: 'reports', label: 'Reports', href: '/admin/reports', Icon: Flag },
   { key: 'content', label: 'Content', href: '/admin/content', Icon: ImageIcon },
@@ -183,6 +204,7 @@ const nav = [
                   <Shield class="h-4 w-4 text-brand-600" />
                   {user?.name?.split(' ')[0] ?? 'Admin'}
                 </span>
+                <NotificationBell unread={inboxUnread} items={inboxItems} />
               </div>
               <nav class="flex gap-1.5 overflow-x-auto px-3 pb-3" aria-label="Admin">
                 {nav.map((item) => (
@@ -206,7 +228,10 @@ const nav = [
               <p class="text-sm font-semibold text-slate-500">
                 Admin control room · <span class="text-slate-900">{nav.find((n) => n.key === active)?.label}</span>
               </p>
-              <p class="text-xs text-slate-400">Signed in as {user?.email ?? ''}</p>
+              <div class="flex items-center gap-3">
+                <p class="text-xs text-slate-400">Signed in as {user?.email ?? ''}</p>
+                <NotificationBell unread={inboxUnread} items={inboxItems} />
+              </div>
             </div>
 
             <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">

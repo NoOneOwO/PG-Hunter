@@ -29,6 +29,13 @@ declare namespace Cloudflare {
     /** Optional site URL override for OAuth redirect URIs. */
     SITE_URL?: string;
     /**
+     * Platform UPI id shown to owners paying manually (plaintext var).
+     * Unset = checkout reports that payments are not configured yet.
+     */
+    UPI_ID?: string;
+    /** Payee name shown alongside the UPI id. */
+    UPI_PAYEE_NAME?: string;
+    /**
      * Optional salt for rate-limit identifier hashing.
      * Without it, identifiers are hashed with a bare SHA-256. Set it
      * (`wrangler secret put RATE_LIMIT_SALT`) to make the stored digests

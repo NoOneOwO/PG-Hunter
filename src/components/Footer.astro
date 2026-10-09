@@ -64,7 +64,7 @@ const owners = [
         </ul>
       </nav>
 
-      <nav aria-label="For Owners">
+      <nav id="footer-owners" aria-label="For Owners">
         <h2 class="text-xs font-bold tracking-[0.18em] text-slate-900 uppercase">For Owners</h2>
         <ul class="mt-4 flex flex-col gap-2.5 text-sm">
           {owners.map((item) => (
@@ -95,12 +95,16 @@ const owners = [
 </footer>
 
 <script>
-  // Subtle CTA visibility: hide for owners (they already list), show for students/guests.
-  import { getSession } from '@/lib/auth';
-  const cta = document.getElementById('footer-owner-cta');
-  if (cta) {
-    getSession().then((u) => {
-      if (u?.role === 'owner' || u?.isAdmin) cta.classList.add('hidden');
-    });
+  // Owner-acquisition column: relevant to guests and students weighing up a
+  // listing, not to people who already have an account. Hide the whole column
+  // (links + CTA) for anyone signed in; owners manage their PGs in the app.
+  import { getSession, onAuthChange } from '@/lib/auth';
+  const col = document.getElementById('footer-owners');
+  if (col) {
+    const render = (user: { role?: string; isAdmin?: boolean } | null) => {
+      col.classList.toggle('hidden', Boolean(user));
+    };
+    getSession().then(render);
+    onAuthChange(render);
   }
 </script>

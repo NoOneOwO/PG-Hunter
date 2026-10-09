@@ -2,6 +2,7 @@
 export const prerender = false;
 import AdminLayout from '@/layouts/AdminLayout.astro';
 import { getDb } from '@/lib/server/auth';
+import { revenueSummary } from '@/lib/server/payments';
 import { ShieldCheck, Users, Building2, Eye, Heart, ThumbsUp, ThumbsDown, ArrowRight, Clock } from '@lucide/astro';
 
 const db = getDb();
@@ -43,6 +44,8 @@ const totalListings = listingsRes.results.reduce((a: any, c: any) => a + c.n, 0)
 const pendingExps = byKey(expsRes.results, 'pending');
 const pendingVerifs = byKey(verifsRes.results, 'pending');
 const pendingReports = byKey(reportsRes.results, 'open');
+
+const revenue = await revenueSummary(db);
 
 const eng = (t: string) => byKey(engRes.results, t);
 const totalViews = eng('VIEW');
@@ -89,6 +92,7 @@ const attention = [
   { label: 'Verification documents', value: pendingVerifs, href: '/admin/verification', tone: 'amber' },
   { label: 'Open reports', value: pendingReports, href: '/admin/reports', tone: 'rose' },
   { label: 'Listings awaiting approval', value: byKey(listingsRes.results, 'pending'), href: '/admin/pgs?status=pending', tone: 'amber' },
+  { label: 'Payments to confirm', value: revenue.pendingCount, href: '/admin/payments', tone: 'amber' },
 ];
 const attentionTotal = attention.reduce((sum, item) => sum + item.value, 0);
 

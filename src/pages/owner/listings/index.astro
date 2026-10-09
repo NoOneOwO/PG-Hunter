@@ -46,7 +46,7 @@ import { Plus, Building2, ArrowRight } from '@lucide/astro';
 <script>
   import { getOwnerListings, deleteListing, submitListing } from '@/lib/auth';
   import type { Listing } from '@/lib/auth';
-  import { listingStatusMeta, minRentOf, formatShortDate } from '@/lib/owner';
+  import { listingStatusMeta, minRentOf, formatShortDate, listingPlanLabel } from '@/lib/owner';
   import { formatINR } from '@/lib/format';
   // Listing fields and the admin's rejection reason are rendered via innerHTML.
   import { escapeHtml } from '@/lib/html';
@@ -84,6 +84,9 @@ import { Plus, Building2, ArrowRight } from '@lucide/astro';
     const img = coverImage(l);
     const minRent = minRentOf(l);
     const canSubmit = l.status === 'draft' || l.status === 'rejected';
+    // The publication window only exists once a listing is approved. Shown as
+    // information; there is no owner-facing renewal in this build.
+    const planLabel = l.status === 'active' ? listingPlanLabel(l) : null;
     return `
     <article class="card flex flex-col overflow-hidden transition-shadow hover:shadow-card-hover" data-reveal>
       <a href="/owner/listings/${l.id}/edit" class="relative block aspect-[16/9] overflow-hidden bg-slate-100">
@@ -116,6 +119,10 @@ import { Plus, Building2, ArrowRight } from '@lucide/astro';
           <span class="text-lg font-extrabold text-brand-700">${minRent ? formatINR(minRent) + '/month' : '—'}</span>
           <span class="text-xs font-medium text-slate-500">starting from</span>
         </div>
+
+        ${planLabel
+          ? `<p class="inline-flex w-fit items-center gap-1 rounded-sm bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">${escapeHtml(planLabel)}</p>`
+          : ''}
 
         ${l.status === 'rejected' && l.rejectionReason
           ? `<p class="rounded-sm bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">${escapeHtml(l.rejectionReason)}</p>`

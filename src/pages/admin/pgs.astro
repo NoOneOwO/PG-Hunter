@@ -177,7 +177,7 @@ const listings = res.results.map((r: any) => ({
                   <span class={`badge ${vm.className}`}>{vm.label}</span>
                   {l.plan && (
                     <span class="badge border border-slate-200 bg-white text-slate-600">
-                      {l.plan === 'verified' ? 'Verified plan' : 'Basic plan'}
+                      {l.plan === 'verified' ? 'Annual Listing' : 'Basic plan'}
                     </span>
                   )}
                   {Boolean(l.admin_managed) && (

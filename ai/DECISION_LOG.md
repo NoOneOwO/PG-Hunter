@@ -379,3 +379,86 @@ mean the badge attested to a property that had changed underneath it.
 
 ### Status
 Approved
+
+---
+
+## Decision #011 — Basic Window Is 14 Days; the ₹1,499 Tier Is "Annual Listing"
+
+### Decision
+The free Basic listing window changes from 15 days to 14 days. The paid
+₹1,499 / 365-day tier keeps its plan slug `verified` (which also gates the
+physical visit + photography + video verification workflow) but is displayed to
+owners and admins as "Annual Listing".
+
+### Date
+2026-10-09
+
+### Reason
+The founder confirmed the product policy: Basic is a 14-day window, and the
+₹1,499 product is sold as an annual listing that includes the verification
+visit. The prior display name ("PG Hunter Verified") described only the
+verification half of the product and read as a different offering from the
+annual listing owners actually buy. This supersedes the window in Decision #009.
+
+### Alternatives
+- Treat the ₹1,499 tier as a listing-duration-only plan and move verification
+  out entirely. Rejected: the physical visit is still what the price pays for,
+  so separating them would misrepresent what an owner receives.
+- Rewrite the already-applied migration 0008. Rejected: an applied migration is
+  history; rewriting it would leave existing databases on the old values while a
+  fresh database got the new ones. Migration 0011 is the authoritative update.
+
+### Impact
+- `PLAN_WINDOW_DAYS.basic` is 14 (`src/lib/verificationRules.ts`); the
+  `plans` table's `duration_days` is display copy and must match it.
+- Migration 0011 updates the seeded catalogue for both existing and fresh
+  databases.
+- The verification *badge* labels ("PG Hunter Verified", "Rishabh IRL Verified")
+  are unchanged — only the purchasable plan's display name changed.
+- Prices (₹0 / ₹1,499), the 365-day window and the travel charge are unchanged.
+  No payment provider exists, so no payment is implied anywhere.
+
+### Status
+Approved
+
+## Decision #012 — Plan Payments Are Manual UPI, Confirmed by an Admin
+
+### Decision
+There is no payment gateway. An owner pays the platform's UPI id directly and
+submits the UPI reference/UTR (migration 0013, table `plan_payments`). The row is
+created as `submitted`; an admin confirms that the money actually arrived
+(`confirmed`) or rejects it (`rejected`). Only a `confirmed` row counts as
+revenue and only a confirmed row opens the paid plan window. The amount is copied
+from the `plans` catalogue at submission, so repricing later cannot rewrite what
+an owner was billed.
+
+### Date
+2026-10-09
+
+### Reason
+The founder chose a manual/UPI flow over integrating a gateway, so the product
+can take real money now without card processing, KYC or a provider contract.
+Everything must stay honest: nothing may imply a payment completed until an admin
+confirms it, and no placeholder UPI account may ever be shown as payable.
+
+### Alternatives
+- Integrate a payment gateway (Razorpay etc.). Deferred: needs a provider
+  account, API keys and reconciliation design; out of scope for this phase.
+- Auto-confirm on the owner's reference. Rejected: a reference is a claim, not
+  proof. Only a human checking the account statement may mark money received.
+
+### Impact
+- `plan_payments` (0013) is the payment ledger; `amount_inr` is frozen per row.
+- `src/lib/payments.ts` holds the pure rules (UPI config, reference validation,
+  status metadata, revenue summary); `src/lib/server/payments.ts` owns the D1
+  reads/writes. Tests: `test/payments.test.mts`.
+- Owner checkout (`/owner/plans/verified`) shows the UPI id and a reference form
+  when `UPI_ID` is configured; otherwise it says payments are not configured yet.
+- Admin `/admin/payments` is the confirmation queue with a confirmed-revenue
+  total; confirming opens the plan window via `ensurePlanWindow`. Verification
+  (the badge) is a separate ledger and is never granted by a payment.
+- The UPI id is a plaintext var (`UPI_ID`, `UPI_PAYEE_NAME`) because it is shown
+  publicly to payers; no secret is involved. It is unset by default.
+
+### Status
+Approved

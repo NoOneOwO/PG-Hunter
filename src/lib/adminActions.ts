@@ -275,8 +275,8 @@ export const listingModeration = (input: {
             type: 'select',
             value: 'verified',
             options: [
-              { value: 'verified', label: 'Verified plan — 365 days' },
-              { value: 'basic', label: 'Basic plan — 15 days' },
+              { value: 'verified', label: 'Annual Listing — 1 year' },
+              { value: 'basic', label: 'Basic plan — 14 days' },
             ],
             hint: 'An expired listing is hidden from the public site, never deleted.',
           },

@@ -125,6 +125,23 @@ export const rentRangeOf = (listing: Listing): string => {
 export const formatShortDate = (iso: string): string =>
   new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
+/**
+ * Publication window for a live listing, e.g. "Basic · live until 12 Aug 2026"
+ * or "Verified · expired 12 Aug 2026". Returns null when no window has been
+ * opened (drafts and pending listings have not been approved yet).
+ *
+ * This is informational only. Renewal is not implemented in this build, so
+ * callers must not render an action button from this label.
+ */
+export const listingPlanLabel = (
+  listing: Pick<Listing, 'plan' | 'expiresAt' | 'isExpired'>
+): string | null => {
+  if (!listing.expiresAt) return null;
+  const name = listing.plan === 'verified' ? 'Verified' : 'Basic';
+  const date = formatShortDate(listing.expiresAt);
+  return listing.isExpired ? `${name} · expired ${date}` : `${name} · live until ${date}`;
+};
+
 /** Relative label like "3d ago" / "2w ago" / "5 Aug 2026". */
 export const formatRelativeDate = (iso: string): string => {
   const then = new Date(iso).getTime();

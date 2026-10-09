@@ -5,10 +5,22 @@ import {
   TrendingUp,
   Inbox,
   BadgeCheck,
+  Wallet,
+  UserRound,
   Plus,
   ArrowRight,
 } from '@lucide/astro';
 import { listingStatusMeta } from '@/lib/owner';
+
+// The control-centre tiles. Each points at a real, implemented owner section —
+// no tile exists for a feature that is not built (see TRUTH_POLICY).
+const manageTiles = [
+  { href: '/owner/listings', label: 'Listings', hint: 'Add and edit PGs', Icon: Building2, iconClass: 'bg-brand-50 text-brand-700' },
+  { href: '/owner/leads', label: 'Enquiries', hint: 'Student messages', Icon: Inbox, iconClass: 'bg-sky-50 text-sky-700' },
+  { href: '/owner/verification', label: 'Verification', hint: 'Trust documents', Icon: BadgeCheck, iconClass: 'bg-accent-100 text-accent-500' },
+  { href: '/owner/plans', label: 'Plans', hint: 'Basic or Verified', Icon: Wallet, iconClass: 'bg-emerald-50 text-emerald-700' },
+  { href: '/owner/profile', label: 'Profile', hint: 'Account details', Icon: UserRound, iconClass: 'bg-slate-100 text-slate-700' },
+];
 ---
 
 <OwnerLayout title="Owner Dashboard — PG Hunter" active="dashboard">
@@ -68,6 +80,23 @@ import { listingStatusMeta } from '@/lib/owner';
         <p class="text-sm font-semibold text-slate-500">Verification</p>
       </a>
     </div>
+
+    <section class="mt-8" aria-labelledby="manage-heading" data-reveal>
+      <h2 id="manage-heading" class="text-base font-bold text-slate-900">Manage</h2>
+      <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5" data-reveal-group>
+        {manageTiles.map((tile) => (
+          <a href={tile.href} class="card card-hover flex items-start gap-3 p-4" data-hover-lift>
+            <span class:list={['flex h-10 w-10 shrink-0 items-center justify-center', tile.iconClass]}>
+              <tile.Icon class="h-5 w-5" />
+            </span>
+            <span class="min-w-0">
+              <span class="block text-sm font-bold text-slate-900">{tile.label}</span>
+              <span class="mt-0.5 block text-xs font-medium text-slate-500">{tile.hint}</span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </section>
 
     <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
       <section class="card lg:col-span-2" aria-labelledby="analytics-heading" data-reveal>

@@ -9,9 +9,10 @@ interface Props {
 const { activePath = Astro.url.pathname } = Astro.props;
 
 // Role-aware public header:
-// - Student: Explore / Saved / Messages / Earn with PG Hunter (no prominent For Owners)
-// - Guest:   Explore / Saved / Earn + For Owners
-// - Owner on public routes: Explore / Saved / Dashboard (Earn and Messages hidden), profile pill routes to /owner/profile
+// - Student: Home / Explore / Saved / Messages / Earn with PG Hunter (no prominent For Owners)
+// - Guest:   Home / Explore / Saved / Earn + For Owners
+// - Owner on public routes: Home / Explore / Dashboard (Saved, Messages and
+//   Earn hidden), profile pill routes to /owner/profile
 // Owner shell itself lives in OwnerHeader (/owner/*).
 //
 // There is deliberately no Profile *tab*: the account is reached through the
@@ -38,6 +39,12 @@ const tabIdle = 'text-slate-600 hover:bg-white/70 hover:text-slate-900';
 // keeps a consistent rhythm instead of a ragged one.
 const tabs = [
   {
+    key: 'home',
+    href: '/',
+    label: 'Home',
+    active: isActive('/'),
+  },
+  {
     key: 'explore',
     href: '/pgs-near-you',
     label: 'Explore',
@@ -50,6 +57,7 @@ const tabs = [
     label: 'Saved',
     icon: Bookmark,
     active: isActive('/saved'),
+    hiddenForOwner: true,
   },
   {
     key: 'messages',
@@ -328,11 +336,13 @@ const tabs = [
   const navForOwners = document.querySelector<HTMLElement>('[data-nav="for-owners"]');
   const navDashboard = document.querySelector<HTMLElement>('[data-nav="dashboard"]');
   const navEarn = document.querySelector<HTMLElement>('[data-nav="earn"]');
+  const navSaved = document.querySelector<HTMLElement>('[data-nav="saved"]');
   const navForOwnersMobile = document.querySelector<HTMLElement>('[data-nav="for-owners-mobile"]');
   const navDashboardMobile = document.querySelector<HTMLElement>('[data-nav="dashboard-mobile"]');
   const navEarnMobile = document.querySelector<HTMLElement>('[data-nav="earn-mobile"]');
   const navMessages = document.querySelector<HTMLElement>('[data-nav="messages"]');
   const navMessagesMobile = document.querySelector<HTMLElement>('[data-nav="messages-mobile"]');
+  const navSavedMobile = document.querySelector<HTMLElement>('[data-nav="saved-mobile"]');
 
   const showFlex = (el: HTMLElement | null, show: boolean) => {
     if (!el) return;
@@ -391,16 +401,18 @@ const tabs = [
     userMobile.classList.toggle('hidden', !loggedIn);
 
     // Nav items:
-    // - Student: Explore / Saved / Earn (For Owners hidden)
-    // - Guest:   Explore / Saved / Earn / For Owners
-    // - Owner:   Explore / Saved / Dashboard (Earn hidden), pill goes to /owner/profile
+    // - Student: Home / Explore / Saved / Messages / Earn (For Owners hidden)
+    // - Guest:   Home / Explore / Saved / Messages / Earn / For Owners
+    // - Owner:   Home / Explore / Dashboard (Saved, Messages and Earn hidden)
     showFlex(navForOwners, !loggedIn);
     showFlex(navDashboard, isOwner);
     showFlex(navEarn, !isOwner);
+    showFlex(navSaved, !isOwner);
     showFlex(navMessages, loggedIn && !isOwner);
     showFlexMobile(navForOwnersMobile, !loggedIn);
     showFlexMobile(navDashboardMobile, isOwner);
     showFlexMobile(navEarnMobile, !isOwner);
+    showFlexMobile(navSavedMobile, !isOwner);
     showFlexMobile(navMessagesMobile, loggedIn && !isOwner);
 
     // The tab set just changed shape, so the indicator's resting box moved.

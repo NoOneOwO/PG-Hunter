@@ -1,7 +1,14 @@
 ---
-// The amount shown here comes from the `plans` table (migration 0008) rather
-// than being typed into this file. No payment provider exists yet, so this page
-// must not imply a payment completed.
+/**
+ * Annual Listing checkout.
+ *
+ * The amount is read from the `plans` table (migration 0008), never typed here.
+ * There is no payment gateway: an owner pays the platform UPI id and submits the
+ * UPI reference, and an admin confirms it (migration 0013). Until an admin
+ * confirms, the UI says "awaiting confirmation" — it must never imply the money
+ * arrived. When no UPI id is configured, the page says so plainly instead of
+ * showing a placeholder account.
+ */
 export const prerender = false;
 import OwnerLayout from '@/layouts/OwnerLayout.astro';
 import {
@@ -12,16 +19,41 @@ import {
   ShieldCheck,
   ArrowRight,
   Info,
+  Clock3,
+  CircleCheck,
 } from '@lucide/astro';
 import { formatINR } from '@/lib/format';
 import { getPlans } from '@/lib/server/plans';
 import { resolvePlan } from '@/lib/plans';
+import { currentUser, getDb } from '@/lib/server/auth';
+import { listOwnerPayments, upiConfig } from '@/lib/server/payments';
+import { paymentStatusMeta, type PlanPayment } from '@/lib/payments';
 
 const plans = await getPlans();
 const verified = resolvePlan(plans, 'verified');
+const upi = upiConfig();
+
+const user = await currentUser(Astro as any);
+const isOwner = Boolean(user && user.role === 'owner');
+
+const url = new URL(Astro.request.url);
+const listingIdParam = url.searchParams.get('listing')?.trim() ?? '';
+const listingId = listingIdParam || null;
+
+// This owner's prior payment claims, so a returning payer sees the real state.
+let payments: PlanPayment[] = [];
+if (user && isOwner) {
+  payments = await listOwnerPayments(getDb(), user.id);
+}
+
+const latest = payments[0] ?? null;
+const hasPending = payments.some((p) => p.status === 'submitted');
+const hasConfirmed = payments.some((p) => p.status === 'confirmed');
+
+const loginHref = `/login?next=${encodeURIComponent(listingId ? `/owner/plans/verified?listing=${listingId}` : '/owner/plans/verified')}`;
 ---
 
-<OwnerLayout title="PG Hunter Verified — Checkout | PG Hunter" active="listings">
+<OwnerLayout title="Annual Listing — Checkout | PG Hunter" active="plans">
   <div class="mx-auto max-w-5xl">
     <a href="/owner/plans" class="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-brand-700">
       <span aria-hidden="true">←</span> Back to plans
@@ -31,11 +63,11 @@ const verified = resolvePlan(plans, 'verified');
       <!-- Left: what you get -->
       <div>
         <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-          PG Hunter Verified
+          Annual Listing
         </h1>
         <p class="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base">
-          We physically visit your PG, photograph it, shoot a walkthrough video and
-          verify it on camera — so students trust what they see.
+          List your PG for a full year. We physically visit it, photograph it, shoot a
+          walkthrough video and verify it on camera — so students trust what they see.
         </p>
 
         <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -81,14 +113,14 @@ const verified = resolvePlan(plans, 'verified');
         )}
       </div>
 
-      <!-- Right: price summary -->
+      <!-- Right: price summary + payment -->
       <aside class="lg:sticky lg:top-24 lg:self-start">
         <div class="card border border-slate-200 p-6">
           <h2 class="text-base font-bold text-slate-900">Price summary</h2>
           <p class="mt-1 text-xs text-slate-500">{verified.name}, valid for {verified.durationLabel}.</p>
           <dl class="mt-4 space-y-3 text-sm">
             <div class="flex items-center justify-between gap-3">
-              <dt class="text-slate-500">Verification fee ({verified.durationLabel})</dt>
+              <dt class="text-slate-500">Annual Listing fee ({verified.durationLabel})</dt>
               <dd class="font-semibold text-slate-900">{formatINR(verified.priceInr)}</dd>
             </div>
             <div class="flex items-center justify-between gap-3">
@@ -112,22 +144,181 @@ const verified = resolvePlan(plans, 'verified');
             </div>
           </dl>
 
-          <div role="alert" class="mt-5 rounded-sm bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-            <strong>Online payment is not available yet.</strong> This checkout is ready to
-            plug into a payment gateway. You can continue to the listing form and prepare
-            your PG in the meantime.
-          </div>
+          <!-- Prior payment state -->
+          {latest ? (
+            <div class="mt-5 border border-slate-200 p-4">
+              <p class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                Your last payment
+                <span class={`badge ${paymentStatusMeta[latest.status].classes}`}>
+                  <span class={`h-1.5 w-1.5 rounded-full ${paymentStatusMeta[latest.status].dot}`}></span>
+                  {paymentStatusMeta[latest.status].label}
+                </span>
+              </p>
+              <p class="mt-2 text-sm text-slate-700">
+                {formatINR(latest.amountInr)} · ref <span class="font-semibold">{latest.reference}</span>
+              </p>
+              <p class="mt-0.5 text-xs text-slate-500">
+                Submitted {new Date(latest.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                {latest.reviewNote ? ` · ${latest.reviewNote}` : ''}
+              </p>
+            </div>
+          ) : null}
 
-          <a href="/owner/listings/new" class="btn-primary mt-5 w-full">
-            Continue to listing form
-            <ArrowRight class="h-4 w-4" />
-          </a>
+          <!-- Payment options -->
+          {!user ? (
+            <div class="mt-5">
+              <div role="note" class="rounded-sm bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+                Sign in as an owner to pay and submit your UPI reference.
+              </div>
+              <a href={loginHref} class="btn-primary mt-4 w-full">
+                Sign in to continue
+                <ArrowRight class="h-4 w-4" />
+              </a>
+            </div>
+          ) : !isOwner ? (
+            <div role="note" class="mt-5 rounded-sm bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              Only owner accounts can purchase a listing plan. This account is a student.
+            </div>
+          ) : hasConfirmed ? (
+            <div class="mt-5 flex items-start gap-2 rounded-sm bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+              <CircleCheck class="mt-0.5 h-4 w-4 shrink-0" />
+              Your Annual Listing payment is confirmed. Create or renew your listing to use it.
+              <a href="/owner/listings/new" class="ml-1 font-bold underline">Start listing</a>
+            </div>
+          ) : !upi.configured ? (
+            <div role="alert" class="mt-5 rounded-sm bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              <strong>Payments are not configured yet.</strong> The platform UPI id has not been
+              set, so this checkout cannot take a payment. You can prepare your PG in the meantime.
+            </div>
+          ) : (
+            <div class="mt-5">
+              {hasPending ? (
+                <div class="mb-4 flex items-start gap-2 rounded-sm bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                  <Clock3 class="mt-0.5 h-4 w-4 shrink-0" />
+                  A payment is awaiting confirmation. Submitting again is usually not needed.
+                </div>
+              ) : null}
 
-          <p class="mt-4 text-center text-xs leading-relaxed text-slate-500">
-            Once payments are enabled, you'll complete your booking and select a visit slot here.
-          </p>
+              <div class="rounded-sm border border-slate-200 bg-slate-50 p-4">
+                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Pay by UPI</p>
+                <p class="mt-2 text-sm text-slate-700">
+                  Send <span class="font-extrabold text-slate-900">{formatINR(verified.priceInr)}</span>
+                  {upi.payeeName ? <> to <span class="font-semibold">{upi.payeeName}</span></> : null}
+                  on UPI id
+                </p>
+                <p class="mt-1 select-all break-all font-mono text-sm font-bold text-brand-700">{upi.upiId}</p>
+                <p class="mt-2 text-xs leading-relaxed text-slate-500">
+                  After paying, copy the UPI reference / UTR (12-digit number or the transaction id)
+                  from your payment app and enter it below.
+                </p>
+              </div>
+
+              <form id="payment-form" class="mt-4 flex flex-col gap-4" novalidate>
+                {listingId ? <input type="hidden" name="listingId" value={listingId} /> : null}
+                <div class="flex flex-col gap-1.5">
+                  <label for="reference" class="text-sm font-semibold text-slate-800">UPI reference / UTR</label>
+                  <input
+                    id="reference"
+                    name="reference"
+                    type="text"
+                    required
+                    maxlength="64"
+                    autocomplete="off"
+                    placeholder="e.g. 4023 1122 8899"
+                    class="w-full border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400"
+                  />
+                  <span id="reference-error" class="hidden text-xs font-medium text-rose-600"></span>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label for="note" class="text-sm font-semibold text-slate-800">
+                    Note for the team (optional)
+                  </label>
+                  <textarea
+                    id="note"
+                    name="note"
+                    rows="2"
+                    maxlength="500"
+                    placeholder="Anything we should know about this payment."
+                    class="w-full resize-none border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-brand-400"
+                  ></textarea>
+                </div>
+                <p id="payment-error" class="hidden border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700" role="alert"></p>
+                <button type="submit" class="btn-primary w-full">
+                  Submit payment for confirmation
+                  <ArrowRight class="h-4 w-4" />
+                </button>
+                <p class="text-center text-xs leading-relaxed text-slate-500">
+                  Your plan activates once the team confirms the payment. Nothing is marked paid
+                  automatically.
+                </p>
+              </form>
+            </div>
+          )}
         </div>
       </aside>
     </div>
   </div>
+
+  <script>
+    import { toast } from '@/lib/toast';
+
+    const form = document.getElementById('payment-form') as HTMLFormElement | null;
+    const errorEl = document.getElementById('payment-error') as HTMLElement | null;
+    const refError = document.getElementById('reference-error') as HTMLElement | null;
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!errorEl) return;
+      errorEl.classList.add('hidden');
+      refError?.classList.add('hidden');
+
+      const data = new FormData(form);
+      const payload = {
+        planSlug: 'verified',
+        listingId: String(data.get('listingId') ?? '') || undefined,
+        reference: String(data.get('reference') ?? ''),
+        note: String(data.get('note') ?? '') || undefined,
+      };
+
+      const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (submit) {
+        submit.disabled = true;
+        submit.textContent = 'Submitting…';
+      }
+
+      try {
+        const res = await fetch('/api/owner/payments', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          errors?: Record<string, string>;
+        };
+
+        if (!res.ok) {
+          if (result.errors?.reference && refError) {
+            refError.textContent = result.errors.reference;
+            refError.classList.remove('hidden');
+          }
+          errorEl.textContent = result.error ?? `Could not submit (${res.status}).`;
+          errorEl.classList.remove('hidden');
+          return;
+        }
+
+        toast.success('Payment submitted', 'The team will confirm it shortly.');
+        window.setTimeout(() => window.location.reload(), 700);
+      } catch {
+        errorEl.textContent = 'Network error — check your connection and try again.';
+        errorEl.classList.remove('hidden');
+      } finally {
+        if (submit) {
+          submit.disabled = false;
+          submit.textContent = 'Submit payment for confirmation';
+        }
+      }
+    });
+  </script>
 </OwnerLayout>

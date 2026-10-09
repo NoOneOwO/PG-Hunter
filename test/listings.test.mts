@@ -32,17 +32,17 @@ const DAY = 24 * 60 * 60 * 1000;
 const iso = (offsetMs: number) => new Date(Date.now() + offsetMs).toISOString();
 
 test('plan windows match the documented product rule', () => {
-  assert.equal(PLAN_WINDOW_DAYS.basic, 15);
+  assert.equal(PLAN_WINDOW_DAYS.basic, 14);
   assert.equal(PLAN_WINDOW_DAYS.verified, 365);
 });
 
 test('an unknown or absent plan falls back to the shorter window', () => {
   // A missing value must never be worth a free year of publication.
   assert.equal(planWindowDays('verified'), 365);
-  assert.equal(planWindowDays('basic'), 15);
-  assert.equal(planWindowDays(null), 15);
-  assert.equal(planWindowDays(undefined), 15);
-  assert.equal(planWindowDays('enterprise'), 15);
+  assert.equal(planWindowDays('basic'), 14);
+  assert.equal(planWindowDays(null), 14);
+  assert.equal(planWindowDays(undefined), 14);
+  assert.equal(planWindowDays('enterprise'), 14);
 });
 
 test('only the two known plans are accepted', () => {

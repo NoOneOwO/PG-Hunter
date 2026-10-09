@@ -15,10 +15,10 @@ export type ListingPlan = 'basic' | 'verified';
 export const LISTING_PLANS: readonly ListingPlan[] = ['basic', 'verified'];
 
 /**
- * Publication windows, in days: Basic 15, Verified 365 (product rule).
+ * Publication windows, in days: Basic 14, Verified 365 (product rule).
  */
 export const PLAN_WINDOW_DAYS: Record<ListingPlan, number> = {
-  basic: 15,
+  basic: 14,
   verified: 365,
 };
 

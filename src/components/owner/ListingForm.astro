@@ -223,6 +223,7 @@ const edit = mode === 'edit';
     getOwnerListing,
     addVideo,
     deleteMedia,
+    reorderMedia,
   } from '@/lib/auth';
   import type { Listing, ListingInput, ListingMedia } from '@/lib/auth';
   import { roomTypeOptions } from '@/lib/owner';
@@ -249,6 +250,8 @@ const edit = mode === 'edit';
   const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
   const foodCheckbox = form.querySelector<HTMLInputElement>('#f-food-available')!;
   const foodDetails = document.getElementById('food-details')!;
+  const photoGrid = document.getElementById('photo-grid') as HTMLElement | null;
+  const uploadStatus = document.getElementById('upload-status') as HTMLElement | null;
 
   const flash = (el: HTMLElement, show: boolean) => el.classList.toggle('hidden', !show);
   const setStatus = (el: HTMLElement, msg: string) => {
@@ -373,12 +376,12 @@ const edit = mode === 'edit';
     grid.innerHTML = photos
       .map(
         (m) => `
-        <div class="group relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-100" data-media-id="${escapeAttr(m.id)}">
-          <img src="${escapeAttr(safeImageSrc(m.url ?? m.externalId) ?? '')}" alt="${escapeAttr(m.title)}" loading="lazy" decoding="async" class="h-full w-full object-cover" />
-          <div class="absolute inset-0 flex items-start justify-between bg-gradient-to-b from-black/40 via-transparent to-black/40 p-2 opacity-0 transition-opacity group-hover:opacity-100">
-            <span class="flex h-6 w-6 items-center justify-center rounded-sm bg-white/90 text-slate-500 cursor-grab active:cursor-grabbing" data-drag-handle title="Drag to reorder">
+        <div class="group relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-100" data-media-id="${escapeAttr(m.id)}" data-photo-tile>
+          <img src="${escapeAttr(safeImageSrc(m.url ?? m.externalId) ?? '')}" alt="${escapeAttr(m.title)}" loading="lazy" decoding="async" draggable="false" class="h-full w-full object-cover" />
+          <div class="absolute inset-0 flex items-start justify-between bg-gradient-to-b from-black/40 via-transparent to-black/40 p-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+            <button type="button" class="flex h-6 w-6 touch-none select-none items-center justify-center rounded-sm bg-white/90 text-slate-500 cursor-grab active:cursor-grabbing" data-drag-handle title="Drag to reorder, or focus and use arrow keys" aria-label="Reorder photo: drag, or press arrow keys">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m8 6 4-4 4 4"/><path d="m8 18 4 4 4-4"/></svg>
-            </span>
+            </button>
             <button type="button" data-delete-media="${escapeAttr(m.id)}" class="flex h-6 w-6 items-center justify-center rounded-sm bg-white/90 text-rose-500 transition-colors hover:bg-rose-500 hover:text-white" aria-label="Delete photo">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
@@ -413,7 +416,6 @@ const edit = mode === 'edit';
   };
 
   const photoInput = document.getElementById('photo-input') as HTMLInputElement | null;
-  const uploadStatus = document.getElementById('upload-status') as HTMLElement | null;
   photoInput?.addEventListener('change', async () => {
     if (!uploadStatus) return;
     flash(uploadStatus, false);
@@ -454,6 +456,144 @@ const edit = mode === 'edit';
     photoInput.disabled = false;
     photoInput.value = '';
   });
+
+  /* ---- Photo reordering (drag + touch + keyboard) -------------------- */
+  const setUploadStatus = (msg: string, tone: 'info' | 'error' = 'info') => {
+    if (!uploadStatus) return;
+    uploadStatus.className =
+      tone === 'error' ? 'mt-2 text-sm font-medium text-rose-700' : 'mt-2 text-sm font-medium text-slate-500';
+    setStatus(uploadStatus, msg);
+  };
+
+  const photoIdsInOrder = (): string[] =>
+    photoGrid
+      ? Array.from(photoGrid.querySelectorAll<HTMLElement>('[data-photo-tile]')).map(
+          (tile) => tile.dataset.mediaId ?? ''
+        ).filter(Boolean)
+      : [];
+
+  /**
+   * Reorder the local `media` array so photos follow the given id order while
+   * videos keep their existing slots (photos and videos are rendered in
+   * separate sections, so only their relative order within a type matters).
+   */
+  const applyPhotoOrder = (ids: string[]) => {
+    const byId = new Map(media.map((m) => [m.id, m]));
+    const ordered = ids
+      .map((id) => byId.get(id))
+      .filter((m): m is ListingMedia => Boolean(m));
+    let i = 0;
+    media = media.map((m) => (m.type === 'photo' ? ordered[i++] ?? m : m));
+  };
+
+  /** Persist the current DOM order of photos. */
+  const persistPhotoOrder = async () => {
+    const ids = photoIdsInOrder();
+    if (ids.length < 2) return;
+    applyPhotoOrder(ids);
+
+    if (mode === 'create') {
+      const extras = pendingMediaIds.filter((id) => !ids.includes(id));
+      pendingMediaIds = [...ids, ...extras];
+      setUploadStatus('Photo order updated. It will be saved with the draft.');
+      return;
+    }
+    if (!listingId) return;
+    try {
+      await reorderMedia(listingId, ids);
+      setUploadStatus('Photo order saved.');
+    } catch (err) {
+      setUploadStatus(`Could not save photo order: ${(err as Error).message}`, 'error');
+    }
+  };
+
+  /**
+   * Pointer-driven sort for the photo grid. Works with mouse and touch, and a
+   * keyboard path is handled separately via the focusable drag handle.
+   */
+  if (photoGrid) {
+    let dragging: HTMLElement | null = null;
+    let pointerId = -1;
+    let startX = 0;
+    let startY = 0;
+    let moved = false;
+
+    const endDrag = (commit: boolean) => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      if (dragging) {
+        dragging.classList.remove('opacity-40', 'ring-2', 'ring-brand-500');
+        dragging = null;
+      }
+      document.body.classList.remove('select-none');
+      pointerId = -1;
+      if (commit && moved) void persistPhotoOrder();
+      moved = false;
+    };
+
+    const onMove = (e: PointerEvent) => {
+      if (!dragging || e.pointerId !== pointerId) return;
+      if (!moved) {
+        if (Math.hypot(e.clientX - startX, e.clientY - startY) < 6) return;
+        moved = true;
+        dragging.classList.add('opacity-40', 'ring-2', 'ring-brand-500');
+        document.body.classList.add('select-none');
+      }
+      e.preventDefault();
+      const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest(
+        '[data-photo-tile]'
+      ) as HTMLElement | null;
+      if (!over || over === dragging || !photoGrid.contains(over)) return;
+      const rect = over.getBoundingClientRect();
+      if (e.clientX > rect.left + rect.width / 2) over.after(dragging);
+      else over.before(dragging);
+    };
+
+    const onUp = (e: PointerEvent) => {
+      if (e.pointerId !== pointerId) return;
+      endDrag(true);
+    };
+
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      const handle = (e.target as HTMLElement | null)?.closest('[data-drag-handle]');
+      const tile = handle?.closest('[data-photo-tile]') as HTMLElement | null;
+      if (!tile) return;
+      e.preventDefault();
+      dragging = tile;
+      pointerId = e.pointerId;
+      startX = e.clientX;
+      startY = e.clientY;
+      moved = false;
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    };
+
+    photoGrid.addEventListener('pointerdown', onDown);
+
+    photoGrid.addEventListener('keydown', (e) => {
+      const handle = (e.target as HTMLElement | null)?.closest('[data-drag-handle]');
+      const tile = handle?.closest('[data-photo-tile]') as HTMLElement | null;
+      if (!tile || !photoGrid) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        const prev = tile.previousElementSibling;
+        if (prev) {
+          e.preventDefault();
+          photoGrid.insertBefore(tile, prev);
+          void persistPhotoOrder();
+        }
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        const next = tile.nextElementSibling;
+        if (next) {
+          e.preventDefault();
+          photoGrid.insertBefore(next, tile);
+          void persistPhotoOrder();
+        }
+      }
+    });
+  }
 
   /* ---- Video management --------------------------------------------- */
   const renderVideos = () => {

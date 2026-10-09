@@ -28,8 +28,14 @@ import {
 } from '../src/lib/plans.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const MIGRATION = join(here, '..', 'db', 'migrations', '0008_plans_pricing.sql');
-const sql = readFileSync(MIGRATION, 'utf8');
+const MIGRATION_DIR = join(here, '..', 'db', 'migrations');
+// The plan catalogue is defined by 0008 (seed) and corrected by 0011 (policy
+// update: Basic 14 days, ₹1,499 tier renamed to "Annual Listing"). Concatenate
+// both so the fallback constants are checked against the effective seed a fresh
+// database ends up with, not just the original 0008 values.
+const sql = ['0008_plans_pricing.sql', '0011_plan_policy_14d.sql']
+  .map((file) => readFileSync(join(MIGRATION_DIR, file), 'utf8'))
+  .join('\n');
 
 const row = (overrides: Partial<PlanRow> = {}): PlanRow => ({
   slug: 'basic',
@@ -37,9 +43,9 @@ const row = (overrides: Partial<PlanRow> = {}): PlanRow => ({
   tagline: 'List your PG and start receiving enquiries.',
   price_inr: 0,
   has_travel_charge: 0,
-  duration_days: 15,
-  duration_label: '15 days',
-  features: '["Live listing for 15 days"]',
+  duration_days: 14,
+  duration_label: '14 days',
+  features: '["Live listing for 14 days"]',
   checkout_note: null,
   is_active: 1,
   sort_order: 1,
@@ -52,8 +58,8 @@ const plan = (overrides: Partial<Plan> = {}): Plan => ({
   tagline: null,
   priceInr: 0,
   hasTravelCharge: false,
-  durationDays: 15,
-  durationLabel: '15 days',
+  durationDays: 14,
+  durationLabel: '14 days',
   features: [],
   checkoutNote: null,
   isActive: true,
@@ -87,8 +93,11 @@ test('the fallback catalogue matches the documented product rule', () => {
   const basic = resolvePlan([], 'basic');
   const verified = resolvePlan([], 'verified');
   assert.equal(basic.priceInr, 0);
+  assert.equal(basic.durationDays, 14);
   assert.equal(verified.priceInr, 1499);
   assert.equal(verified.durationDays, 365);
+  // The ₹1,499 tier is displayed as "Annual Listing" (slug stays `verified`).
+  assert.equal(verified.name, 'Annual Listing');
   // Travel is billed separately and only on the verified visit.
   assert.equal(verified.hasTravelCharge, true);
   assert.equal(basic.hasTravelCharge, false);

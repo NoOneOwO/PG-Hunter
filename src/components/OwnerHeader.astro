@@ -1,10 +1,10 @@
 ---
 import LogoBadge from '@/components/LogoBadge.astro';
-import { LayoutDashboard, Building2, Inbox, MessageSquare, BadgeCheck, UserRound, LogOut, ExternalLink, Menu, X } from '@lucide/astro';
+import { LayoutDashboard, Building2, Inbox, MessageSquare, BadgeCheck, Wallet, UserRound, LogOut, ExternalLink, Menu, X } from '@lucide/astro';
 
 interface Props {
   /** Slug of the active nav item. */
-  active?: 'dashboard' | 'listings' | 'leads' | 'messages' | 'verification' | 'profile';
+  active?: 'dashboard' | 'listings' | 'leads' | 'messages' | 'verification' | 'plans' | 'profile';
 }
 
 const { active = 'dashboard' } = Astro.props;
@@ -17,6 +17,7 @@ const navItems = [
   { key: 'leads', label: 'Enquiries', href: '/owner/leads', Icon: Inbox },
   { key: 'messages', label: 'Messages', href: '/owner/messages', Icon: MessageSquare },
   { key: 'verification', label: 'Verification', href: '/owner/verification', Icon: BadgeCheck },
+  { key: 'plans', label: 'Plans', href: '/owner/plans', Icon: Wallet },
   { key: 'profile', label: 'Profile', href: '/owner/profile', Icon: UserRound },
 ];
 ---

@@ -1,14 +1,16 @@
 /**
  * PG Hunter — listing plan windows and expiry.
  *
- * Basic listings run for 15 days; PG Hunter Verified listings run for 365
- * (see the product rule in the handoff and /ai/PRODUCT_REQUIREMENTS.md).
+ * Basic listings run for 14 days; Annual Listing (plan slug `verified`)
+ * listings run for 365 (see the product rule in the handoff and
+ * /ai/PRODUCT_REQUIREMENTS.md).
  * Expiry is enforced on READ: an expired listing disappears from public
  * results but is never deleted, so the owner keeps their data and can renew.
  *
- * `plan` is bookkeeping only. No payment provider exists yet, so nothing here
- * may imply that money changed hands — `price_paid`, orders and refunds are a
- * separate, later concern (Phase 3) and deliberately absent.
+ * `plan` records the publication window only. Money is tracked separately in
+ * `plan_payments` (migration 0013): an owner pays by UPI and an admin confirms,
+ * and only a confirmed payment opens a window via `ensurePlanWindow`. A plan
+ * window never implies the verification badge, which is its own ledger.
  */
 
 import { nowIso } from './auth';
@@ -31,7 +33,7 @@ export type { ListingPlan };
  * that were written.
  *
  * `renew` decides whether an existing window is restarted or preserved:
- *   - moderation/renewal          -> renew = true  (fresh 15/365 days)
+ *   - moderation/renewal          -> renew = true  (fresh 14/365 days)
  *   - an owner editing a listing  -> renew = false (never silently extended)
  *
  * The distinction matters. Without it, an owner could extend their Basic

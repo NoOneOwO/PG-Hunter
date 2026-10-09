@@ -365,6 +365,14 @@ export interface Listing {
   amenitySlugs: string[];
   status: 'draft' | 'pending' | 'active' | 'rejected';
   verificationStatus: 'unverified' | 'pg_hunter_verified' | 'rishabh_irl_verified';
+  /**
+   * Publication window. `plan` + `expiresAt` are set when the listing is
+   * approved; `isExpired` is the server's read of it. Display-only — there is
+   * no owner-facing renew path yet.
+   */
+  plan?: 'basic' | 'verified';
+  expiresAt?: string | null;
+  isExpired?: boolean;
   rejectionReason: string | null;
   rooms: ListingRoom[];
   media: ListingMedia[];

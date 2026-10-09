@@ -17,6 +17,7 @@ import {
   verifyOAuthState,
 } from '@/lib/server/oauth';
 import { googleErrorToCode } from '@/lib/server/oauthErrors';
+import { isRoleMismatch } from '@/lib/roles';
 
 export const prerender = false;
 
@@ -38,7 +39,18 @@ export async function GET(context: APIContext) {
   // Role requested via ?role=owner on the initial /api/auth/google call.
   // Existing users keep their stored role; this only affects brand-new Google accounts.
   const requestedRole = popOAuthRole(context);
+  const nextPath = safePath(popOAuthNext(context));
   const existing = await db.prepare('SELECT * FROM users WHERE email = ?').bind(profile.email).first<UserRow>();
+
+  // An existing account signing in through the wrong door (e.g. a student
+  // account using the owner door) is not a match. Do not start a session from
+  // the wrong door: send them back to choose, and the login screen explains it.
+  // The server never rewrites a stored role here.
+  if (existing && isRoleMismatch('owner', existing.role, Boolean(existing.is_admin)) && requestedRole === 'owner') {
+    return context.redirect(
+      `/login?error=role-mismatch&role=owner&next=${encodeURIComponent(nextPath)}`
+    );
+  }
 
   let user: UserRow;
   if (existing) {
@@ -82,5 +94,5 @@ export async function GET(context: APIContext) {
 
   const token = await createSession(db, user.id);
   context.cookies.set(SESSION_COOKIE, token, sessionCookieOpts(context));
-  return context.redirect(safePath(popOAuthNext(context)));
+  return context.redirect(nextPath);
 }
