@@ -32,11 +32,13 @@ export async function POST(context: APIContext) {
   const body = await readBody(context);
   if (!body) return json({ error: 'Invalid request body.' }, 400);
 
-  const listingId = String(body.listingId ?? '').trim() || null;
+  let listingId = String(body.listingId ?? '').trim() || null;
   const db = getDb();
 
   let studentId: string;
   let ownerId: string;
+  /** Only an owner may tag a thread as an enquiry reply, and only their own lead. */
+  let enquiryLeadId: number | null = null;
 
   if (viewer.role === 'owner') {
     studentId = String(body.studentId ?? '').trim();
@@ -47,6 +49,32 @@ export async function POST(context: APIContext) {
       .bind(studentId)
       .first<{ id: string }>();
     if (!student) return json({ error: 'That student account does not exist.' }, 404);
+
+    const leadRaw = Number(body.enquiryLeadId ?? 0);
+    if (Number.isFinite(leadRaw) && leadRaw > 0) {
+      enquiryLeadId = Math.trunc(leadRaw);
+      const lead = await db
+        .prepare('SELECT id, property_id, student_id FROM leads WHERE id = ?')
+        .bind(enquiryLeadId)
+        .first<{ id: number; property_id: string; student_id: string | null }>();
+      if (!lead) return json({ error: 'That enquiry could not be found.' }, 404);
+      // The thread may only claim an enquiry that is both about this student
+      // and about a listing this owner actually owns.
+      if (lead.student_id !== studentId) {
+        return json({ error: 'That enquiry was sent by a different student.' }, 403);
+      }
+      const owned = await db
+        .prepare('SELECT id FROM owner_listings WHERE id = ? AND owner_id = ?')
+        .bind(lead.property_id, ownerId)
+        .first<{ id: string }>();
+      if (!owned) return json({ error: 'That enquiry is not on one of your listings.' }, 403);
+      if (listingId && listingId !== lead.property_id) {
+        return json({ error: 'That enquiry is about a different PG.' }, 400);
+      }
+      // The PG comes from the lead itself, so the label always names the PG
+      // the student actually asked about.
+      listingId = lead.property_id;
+    }
   } else {
     ownerId = String(body.ownerId ?? '').trim();
     studentId = viewer.id;
@@ -68,7 +96,12 @@ export async function POST(context: APIContext) {
     if (!listing) return json({ error: 'That PG could not be found for this owner.' }, 404);
   }
 
-  const conversation = await findOrCreateConversation(db, { studentId, ownerId, listingId });
+  const conversation = await findOrCreateConversation(db, {
+    studentId,
+    ownerId,
+    listingId,
+    enquiryLeadId,
+  });
   const dto = (await listConversations(db, viewer.id)).find((c) => c.id === conversation.id) ?? null;
   return json({ conversation: dto, conversationId: conversation.id }, 201);
 }

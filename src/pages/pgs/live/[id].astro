@@ -2,16 +2,15 @@
 /**
  * Public detail page for a real D1 listing (owner_listings).
  *
- * The demo catalogue at /pgs/[slug] is prerendered from src/data; this route is
- * the live counterpart, so it runs on demand (prerender = false) and is listed
- * in wrangler.toml `run_worker_first`. Only listings that are BOTH approved and
- * inside their plan window render — a draft, a rejected listing or a lapsed
- * plan answers 404 rather than leaking a private row.
+ * This is the only listing detail route: it runs on demand (prerender = false)
+ * and is listed in wrangler.toml `run_worker_first`. Only listings that are
+ * BOTH approved and inside their plan window render — a draft, a rejected
+ * listing or a lapsed plan answers 404 rather than leaking a private row.
  *
- * Everything a student can do here is wired to the same engagement APIs the
- * demo pages use: views, save, like/dislike, experiences and enquiries all
- * accept the D1 listing id, and an enquiry lands in the owner's inbox because
- * /api/owner/leads matches on owner_listings.id.
+ * Everything a student can do here is wired to the engagement APIs: views,
+ * save, like/dislike, experiences and enquiries all accept the D1 listing id,
+ * and an enquiry lands in the owner's inbox because /api/owner/leads matches on
+ * owner_listings.id.
  */
 export const prerender = false;
 
@@ -62,8 +61,8 @@ if (!visible) {
 
 const l = visible ? listing! : null;
 
-// The badge component speaks the demo vocabulary ('listed' | tier); D1 reports
-// 'unverified' for an absent or lapsed claim.
+// The badge component speaks the browse vocabulary ('listed' | tier); D1
+// reports 'unverified' for an absent or lapsed claim.
 const badgeStatus = l
   ? l.verificationStatus === 'unverified'
     ? ('listed' as const)
@@ -141,7 +140,7 @@ const listedOn = l
 
         {/* ------------------------------------------------ title band ---- */}
         <div class="relative mt-6 overflow-hidden border border-slate-200 bg-brand-50 p-5 sm:p-6">
-          {/* Same iridescent band as the demo detail page. The module script it
+          {/* The module script it
               mounts ships as an external chunk, so it works under the CSP this
               on-demand route gets from middleware. */}
           <GradientBackdrop />
@@ -618,7 +617,7 @@ const listedOn = l
 </BaseLayout>
 
 <script>
-    // Engagement wiring shared with the demo detail page (views, saves,
+    // Engagement wiring for this page (views, saves,
     // likes/dislikes, experiences, enquiries) — all keyed by the D1 id.
     //
     // Astro hoists every <script> it finds, so this runs on the 404 state too:

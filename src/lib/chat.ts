@@ -20,6 +20,8 @@ export interface ChatConversation {
   id: string;
   listingId: string | null;
   listingName: string | null;
+  /** The owner opened this thread in answer to the student's enquiry. */
+  enquiryReply: boolean;
   counterpart: ChatCounterpart;
   lastMessage: { kind: ChatKind; preview: string; createdAt: string; fromMe: boolean } | null;
   unread: number;
@@ -51,6 +53,7 @@ export interface ChatThread {
     id: string;
     listingId: string | null;
     listingName: string | null;
+    enquiryReply: boolean;
     participants: { student: ChatCounterpart; owner: ChatCounterpart };
     canWrite: boolean;
   };
@@ -74,14 +77,16 @@ export const getConversations = (): Promise<{ conversations: ChatConversation[];
 /**
  * Start (or reopen) a conversation.
  *
- * Students pass `ownerId` (+ the PG it is about); owners pass `studentId`.
- * The server decides the other side from the session, so neither can name a
- * third participant.
+ * Students pass `ownerId` (+ the PG it is about); owners pass `studentId`,
+ * plus `enquiryLeadId` when the thread answers an enquiry — that is what the
+ * student's inbox labels as a reply. The server decides the other side from
+ * the session, so neither can name a third participant.
  */
 export const startConversation = (input: {
   ownerId?: string;
   studentId?: string;
   listingId?: string;
+  enquiryLeadId?: number;
 }): Promise<{ conversation: ChatConversation | null; conversationId: string }> =>
   api('/api/chat', { method: 'POST', body: JSON.stringify(input) });
 

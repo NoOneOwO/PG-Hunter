@@ -10,7 +10,7 @@ import { Inbox } from '@lucide/astro';
       <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
       <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Enquiries</h1>
       <p class="mt-1 text-sm font-medium text-slate-500">
-        Students interested in your PGs. Reach out to them directly.
+        Students interested in your PGs. Message them straight from an enquiry — they'll see it as a reply.
       </p>
     </div>
   </div>
@@ -76,6 +76,16 @@ import { Inbox } from '@lucide/astro';
       </div>
 
       ${lead.message ? `<p class="mt-3 rounded-sm bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700">${escapeHtml(lead.message)}</p>` : ''}
+
+      ${lead.student_id ? `
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <a href="/owner/messages?student=${encodeURIComponent(lead.student_id)}&listing=${encodeURIComponent(lead.property_id)}&enquiry=${encodeURIComponent(String(lead.id))}"
+           class="btn-primary inline-flex items-center gap-1.5 px-4 py-2 text-xs">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg>
+          Message student
+        </a>
+        <span class="text-xs font-medium text-slate-400">Opens a chat about ${escapeHtml(lead.property_name ?? 'your PG')} — it lands in their inbox as a reply to this enquiry.</span>
+      </div>` : ''}
     </article>`;
 
   const init = async () => {

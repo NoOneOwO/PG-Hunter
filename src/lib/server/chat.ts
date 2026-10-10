@@ -16,6 +16,8 @@ export interface ConversationRow {
   student_id: string;
   owner_id: string;
   listing_id: string | null;
+  /** The enquiry this thread answers, or null for a chat started any other way. */
+  enquiry_lead_id: number | null;
   created_at: string;
   last_message_at: string | null;
   student_read_at: string | null;
@@ -47,6 +49,8 @@ export interface ChatConversationDto {
   id: string;
   listingId: string | null;
   listingName: string | null;
+  /** The thread answers the student's enquiry — drives the student's inbox label. */
+  enquiryReply: boolean;
   /** Who the viewer is talking to. */
   counterpart: ChatCounterpart;
   lastMessage: { kind: ChatKind; preview: string; createdAt: string; fromMe: boolean } | null;
@@ -167,6 +171,7 @@ export const listConversations = async (
       id: row.id,
       listingId: row.listing_id,
       listingName: row.listing_name,
+      enquiryReply: row.enquiry_lead_id !== null,
       counterpart,
       lastMessage:
         row.last_kind && row.last_created
@@ -202,7 +207,13 @@ export const getConversation = (db: D1Database, id: string): Promise<Conversatio
  */
 export const findOrCreateConversation = async (
   db: D1Database,
-  input: { studentId: string; ownerId: string; listingId: string | null }
+  input: {
+    studentId: string;
+    ownerId: string;
+    listingId: string | null;
+    /** Set when the owner is answering an enquiry, so the student's inbox can say so. */
+    enquiryLeadId?: number | null;
+  }
 ): Promise<ConversationRow> => {
   const existing = input.listingId
     ? await db
@@ -217,17 +228,40 @@ export const findOrCreateConversation = async (
         )
         .bind(input.studentId, input.ownerId)
         .first<ConversationRow>();
-  if (existing) return existing;
+  if (existing) {
+    // A thread that already existed (the student messaged first) still becomes
+    // an enquiry reply the moment the owner answers the enquiry from the
+    // dashboard. Never the other way round: an established label is not
+    // withdrawn by a later visit that omits the lead.
+    if (input.enquiryLeadId && !existing.enquiry_lead_id) {
+      await db
+        .prepare('UPDATE conversations SET enquiry_lead_id = ? WHERE id = ?')
+        .bind(input.enquiryLeadId, existing.id)
+        .run();
+      return { ...existing, enquiry_lead_id: input.enquiryLeadId };
+    }
+    return existing;
+  }
 
   const id = crypto.randomUUID();
   const now = nowIso();
   await db
     .prepare(
-      `INSERT INTO conversations (id, student_id, owner_id, listing_id, created_at, last_message_at,
-                                  student_read_at, owner_read_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO conversations (id, student_id, owner_id, listing_id, enquiry_lead_id, created_at,
+                                  last_message_at, student_read_at, owner_read_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .bind(id, input.studentId, input.ownerId, input.listingId, now, now, now, now)
+    .bind(
+      id,
+      input.studentId,
+      input.ownerId,
+      input.listingId,
+      input.enquiryLeadId ?? null,
+      now,
+      now,
+      now,
+      now
+    )
     .run();
 
   const created = await getConversation(db, id);

@@ -59,6 +59,7 @@ export async function GET(context: APIContext) {
       id: conversation.id,
       listingId: conversation.listing_id,
       listingName,
+      enquiryReply: Boolean(conversation.enquiry_lead_id),
       participants,
       // The client uses this to decide whether to show a composer at all.
       canWrite: canWriteConversation(conversation, viewer.id),

@@ -19,6 +19,9 @@ import { MessageSquare } from '@lucide/astro';
 const params = new URL(Astro.request.url).searchParams;
 const startStudentId = params.get('student')?.trim() ?? '';
 const startListingId = params.get('listing')?.trim() ?? '';
+// Set when the owner got here from an enquiry row: the thread is then tagged
+// as a reply so the student's inbox says why the owner is writing.
+const startEnquiryLeadId = Number(params.get('enquiry') ?? 0);
 
 // Same server-side session read AdminLayout uses; OwnerLayout guards the UI
 // client-side, but the starter list below must not be built for a stranger.
@@ -90,6 +93,11 @@ if (viewer && (viewer.role === 'owner' || Boolean(viewer.is_admin))) {
       starters={starters}
       startStudentId={startStudentId || undefined}
       startListingId={startListingId || undefined}
+      startEnquiryLeadId={
+        Number.isFinite(startEnquiryLeadId) && startEnquiryLeadId > 0
+          ? Math.trunc(startEnquiryLeadId)
+          : undefined
+      }
     />
   </div>
 </OwnerLayout>

@@ -176,6 +176,17 @@ export const messagePreview = (kind: ChatKind, body: string): string => {
   return body.length > 90 ? `${body.slice(0, 90)}…` : body;
 };
 
+/**
+ * The line under a conversation the owner opened in answer to the student's
+ * enquiry — the student's inbox has to say why an owner is suddenly writing.
+ * Shared by the conversation list and the thread header so the two never
+ * disagree, and pure so it is unit tested like the rest of this file.
+ */
+export const enquiryReplyLabel = (listingName: string | null | undefined): string =>
+  listingName
+    ? `Reply to your enquiry about ${listingName}`
+    : 'Reply to your enquiry';
+
 /** Which side of a conversation the viewer is on. */
 export const viewerSide = (
   conversation: ConversationParties,

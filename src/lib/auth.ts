@@ -422,6 +422,8 @@ export interface OwnerLead {
   status: string;
   created_at: string;
   student_name: string | null;
+  /** Who sent it — the target of "Message student" on the enquiry row. */
+  student_id: string | null;
 }
 
 export interface OwnerOverview {

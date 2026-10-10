@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   CHAT_MIME_TYPES,
   MAX_AUDIO_MS,
+  enquiryReplyLabel,
   formatBytes,
   validateChatAttachment,
 } from "@/lib/chatRules";
@@ -56,6 +57,8 @@ interface Props {
   startOwnerId?: string;
   startStudentId?: string;
   startListingId?: string;
+  /** The enquiry being answered — tags the thread so the student's inbox can say so. */
+  startEnquiryLeadId?: number;
   /** People this viewer can start a new conversation with. */
   starters: ChatStarter[];
 }
@@ -203,6 +206,7 @@ export default function ChatApp({
   startOwnerId,
   startStudentId,
   startListingId,
+  startEnquiryLeadId,
   starters,
 }: Props) {
   const [conversations, setConversations] = React.useState<ChatConversation[]>([]);
@@ -290,13 +294,14 @@ export default function ChatApp({
           ownerId: startOwnerId,
           studentId: startStudentId,
           listingId: startListingId,
+          enquiryLeadId: startEnquiryLeadId,
         });
         await openConversation(conversationId);
       } catch (err) {
         setError((err as Error).message);
       }
     })();
-  }, [openConversation, startListingId, startOwnerId, startStudentId]);
+  }, [openConversation, startEnquiryLeadId, startListingId, startOwnerId, startStudentId]);
 
   /* ---- polling ------------------------------------------------------ */
   React.useEffect(() => {
@@ -591,11 +596,16 @@ export default function ChatApp({
                           </span>
                         )}
                       </span>
-                      {conversation.listingName && (
+                      {conversation.enquiryReply && role === "student" ? (
+                        <span className="mt-0.5 flex items-center gap-1 truncate text-[11px] font-semibold text-emerald-700">
+                          <Building2 className="h-3 w-3 shrink-0" />
+                          {enquiryReplyLabel(conversation.listingName)}
+                        </span>
+                      ) : conversation.listingName ? (
                         <span className="mt-0.5 flex items-center gap-1 truncate text-[11px] font-semibold text-brand-700">
                           <Building2 className="h-3 w-3" /> {conversation.listingName}
                         </span>
-                      )}
+                      ) : null}
                       <span className="mt-0.5 block truncate text-xs text-slate-500">
                         {conversation.lastMessage
                           ? `${conversation.lastMessage.fromMe ? "You: " : ""}${conversation.lastMessage.preview}`
@@ -651,11 +661,16 @@ export default function ChatApp({
                 <p className="truncate text-sm font-bold text-slate-900">
                   {counterpartLabel?.name ?? "Conversation"}
                 </p>
-                {thread?.conversation.listingName && (
+                {thread?.conversation.enquiryReply && role === "student" ? (
+                  <p className="flex items-center gap-1 truncate text-[11px] font-semibold text-emerald-700">
+                    <Building2 className="h-3 w-3 shrink-0" />
+                    {enquiryReplyLabel(thread.conversation.listingName)}
+                  </p>
+                ) : thread?.conversation.listingName ? (
                   <p className="flex items-center gap-1 truncate text-[11px] font-semibold text-brand-700">
                     <Building2 className="h-3 w-3" /> {thread.conversation.listingName}
                   </p>
-                )}
+                ) : null}
               </div>
               {thread?.conversation.listingId && (
                 <a

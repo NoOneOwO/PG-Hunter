@@ -41,7 +41,7 @@ const MIN_RENT_SUBQUERY = `COALESCE(
 /**
  * Public, published owner listings.
  *
- * Supports the search vocabulary of the demo results page:
+ * Supports the search vocabulary of /pgs-near-you:
  *   ?q=dtu&budget=under-10&roomType=double&gender=boys&sort=price-asc&limit=&offset=
  *
  * A listing is public only when it is BOTH approved and inside its plan window.

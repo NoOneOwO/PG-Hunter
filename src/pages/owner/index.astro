@@ -243,6 +243,9 @@ const manageTiles = [
         <span class="badge bg-brand-100 text-brand-800">${escapeHtml(leadStatusLabel(lead.status))}</span>
       </div>
       <p class="mt-0.5 truncate text-xs font-medium text-slate-500">${escapeHtml(lead.property_name ?? 'Your PG')} · ${escapeHtml(formatRelativeDate(lead.created_at))}</p>
+      ${lead.student_id ? `<a href="/owner/messages?student=${encodeURIComponent(String(lead.student_id))}&listing=${encodeURIComponent(String(lead.property_id))}&enquiry=${encodeURIComponent(String(lead.id))}" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-brand-700 hover:underline">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg>
+        Message student</a>` : ''}
     </div>`;
 
   const empty = (text: string) => `

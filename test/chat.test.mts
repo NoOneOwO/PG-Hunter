@@ -15,6 +15,8 @@
  *      /api/media checks before streaming a private file.
  *   5. The kind vocabulary the code uses and the CHECK constraint in migration
  *      0012 cannot drift apart.
+ *   6. A conversation opened from an enquiry carries the label the student's
+ *      inbox shows, which lives on the row (migration 0014).
  *
  * Run with `npm test`.
  */
@@ -34,6 +36,7 @@ import {
   chatKeyPrefix,
   chatTextError,
   conversationIdFromKey,
+  enquiryReplyLabel,
   isChatKind,
   messagePreview,
   validateChatAttachment,
@@ -198,6 +201,31 @@ test('isChatKind accepts exactly the kind vocabulary', () => {
   for (const bad of ['', 'photo', 'file', 'TEXT', null, 7, undefined]) {
     assert.equal(isChatKind(bad), false);
   }
+});
+
+/* ------------------------------------------------------------------ */
+/* Enquiry replies                                                     */
+/* ------------------------------------------------------------------ */
+
+test('an enquiry reply names the PG the student asked about', () => {
+  assert.equal(enquiryReplyLabel('Sunrise PG'), 'Reply to your enquiry about Sunrise PG');
+});
+
+test('an enquiry reply still reads sensibly when the PG is gone', () => {
+  // The listing can be renamed or unpublished between the enquiry and the
+  // reply; the label must not render "about null".
+  assert.equal(enquiryReplyLabel(null), 'Reply to your enquiry');
+  assert.equal(enquiryReplyLabel(undefined), 'Reply to your enquiry');
+  assert.equal(enquiryReplyLabel(''), 'Reply to your enquiry');
+});
+
+test('migration 0014 tags conversations with the enquiry they answer', () => {
+  const sql = readFileSync(join(here, '..', 'db', 'migrations', '0014_enquiry_reply.sql'), 'utf8');
+  assert.match(
+    sql,
+    /ALTER TABLE conversations\s+ADD COLUMN enquiry_lead_id INTEGER REFERENCES leads\(id\)/,
+    'the student\'s inbox label is stored on the conversation, so the column must exist'
+  );
 });
 
 test('migration 0012 accepts exactly the kinds the code can write', () => {
