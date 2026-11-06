@@ -9,13 +9,16 @@
  * plan answers 404 rather than leaking a private row.
  *
  * Everything a student can do here is wired to the same engagement APIs the
- * demo pages use: views, save, like/dislike, experiences and enquiries all
- * accept the D1 listing id, and an enquiry lands in the owner's inbox because
- * /api/owner/leads matches on owner_listings.id.
+ * demo pages use: views, save, like/dislike and experiences all accept the D1
+ * listing id. Contact is deliberately NONE of them — the owner's number is
+ * never rendered here. An enquiry posts to /api/enquiries; the owner's
+ * Call/WhatsApp details come back only after that, and only when the owner
+ * allows direct contact for this listing.
  */
 export const prerender = false;
 
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import ContactOwner from '@/components/enquiry/ContactOwner.astro';
 import GradientBackdrop from '@/components/GradientBackdrop.astro';
 import VideoPlayer from '@/components/VideoPlayer.astro';
 import VerificationBadge from '@/components/VerificationBadge.astro';
@@ -27,8 +30,6 @@ import {
   Utensils,
   Clock3,
   ShieldCheck,
-  MessageCircle,
-  Phone,
   Check,
   Building2,
   Eye,
@@ -44,7 +45,7 @@ import { getDb } from '@/lib/server/auth';
 import { fetchListing, listingDto } from '@/lib/server/listings';
 import { mediaUrl } from '@/lib/server/media';
 import { isExpired } from '@/lib/verificationRules';
-import { formatINR, contactNumber, formatPhone } from '@/lib/format';
+import { formatINR } from '@/lib/format';
 
 const { id } = Astro.params;
 const found = id ? await fetchListing(getDb(), id) : null;
@@ -61,23 +62,10 @@ if (!visible) {
 
 const l = visible ? listing! : null;
 
-// Talk-to-owner (migration 0010): the phone number lives on users and a public
-// read may join it only while the owner has opted in on this listing. Nothing
-// is fetched — and no link is built — when both opt-ins are off.
-const ownerPhone =
-  l && (l.contactWhatsapp || l.contactShowPhone)
-    ? (
-        await getDb()
-          .prepare('SELECT phone FROM users WHERE id = ?')
-          .bind(found!.row.owner_id)
-          .first<{ phone: string | null }>()
-      )?.phone ?? null
-    : null;
-const waNumber = l?.contactWhatsapp ? contactNumber(ownerPhone) : null;
-const waText = l
-  ? encodeURIComponent(`Hi, I'm interested in "${l.name}" on PG Hunter — is it still available?`)
-  : '';
-const telHref = l?.contactShowPhone && contactNumber(ownerPhone) ? `+${contactNumber(ownerPhone)}` : null;
+// The owner's number is never fetched into this page — no template, link or
+// JSON can leak it. <ContactOwner /> asks the enquiry API, which returns
+// Call/WhatsApp details only to the student who enquired, and only while the
+// owner has direct contact enabled for this listing.
 
 // The badge component speaks the demo vocabulary ('listed' | tier); D1 reports
 // 'unverified' for an absent or lapsed claim.
@@ -461,7 +449,7 @@ const listedOn = l
 
               <div id="experiences-list" class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"></div>
               <p id="experiences-empty" class="mt-4 border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
-                No approved experiences yet. Be the first to share what living here is like.
+                No comments yet. Be the first to share what living here is like.
               </p>
 
               <form id="experience-form" class="mt-6 border border-slate-200 bg-white p-4">
@@ -469,7 +457,7 @@ const listedOn = l
                   Share your experience
                 </label>
                 <p class="mt-0.5 text-xs text-slate-500">
-                  Goes live after moderation. Please avoid personal attacks and contact details.
+                  Posts straight away. Please avoid personal attacks and contact details.
                 </p>
                 <textarea
                   id="exp-content"
@@ -527,127 +515,9 @@ const listedOn = l
                 </li>
               </ul>
 
-              <button
-                type="button"
-                id="enquiry-btn"
-                class="btn-primary mt-5 w-full px-6"
-                aria-expanded="false"
-                aria-controls="enquiry-panel"
-              >
-                <MessageCircle class="h-4 w-4" />
-                <span data-enquiry-btn-label>Send enquiry</span>
-              </button>
-
-              {/* The form opens inline, right here — no modal, no interstitial
-                  page: the enquiry IS the main business of this card. */}
-              <div id="enquiry-panel" class="pop-in mt-4 hidden rounded-sm border border-brand-200 bg-brand-50/40 p-4">
-                <h3 class="text-sm font-extrabold text-slate-900">
-                  Send enquiry to {l.name}
-                </h3>
-                <p class="mt-1 text-xs leading-relaxed text-slate-500">
-                  The owner will see your contact details and reach out to you.
-                </p>
-                <form id="enquiry-form" class="mt-4 flex flex-col gap-3">
-                  <label class="flex flex-col gap-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Monthly budget</span>
-                    <select name="budget" class="field w-full">
-                      <option value="">Any budget</option>
-                      <option value="under-10">Under ₹10k</option>
-                      <option value="10-15">₹10k – ₹15k</option>
-                      <option value="15-20">₹15k – ₹20k</option>
-                      <option value="20-plus">₹20k +</option>
-                    </select>
-                  </label>
-                  <label class="flex flex-col gap-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Move-in month</span>
-                    <select name="moveInMonth" class="field w-full">
-                      <option value="">Any month</option>
-                    </select>
-                  </label>
-                  <label class="flex flex-col gap-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Your phone number *</span>
-                    <input
-                      type="tel"
-                      name="phone"
-                      autocomplete="tel"
-                      maxlength="24"
-                      required
-                      placeholder="The owner will call you on this number"
-                      class="field w-full"
-                    />
-                  </label>
-                  <p class="-mt-1 text-xs leading-relaxed text-slate-400">
-                    Shared with this owner only so they can respond to your enquiry.
-                  </p>
-                  <label class="flex flex-col gap-1">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Message (optional)</span>
-                    <textarea
-                      name="message"
-                      rows="3"
-                      maxlength="1000"
-                      placeholder="Anything the owner should know?"
-                      class="w-full resize-none rounded-sm border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none"
-                    ></textarea>
-                  </label>
-                  <button type="submit" class="btn-primary w-full">
-                    <MessageCircle class="h-4 w-4" />
-                    Send enquiry
-                  </button>
-                  <button type="button" id="enquiry-cancel" class="btn-secondary w-full">Cancel</button>
-                  <p
-                    id="enquiry-status"
-                    class="hidden rounded-sm bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-700"
-                    role="status"
-                  >
-                    Enquiry sent! The owner will reach out to you shortly.
-                  </p>
-                </form>
-              </div>
-
-              <p class="mt-3 text-xs leading-relaxed text-slate-500">
-                The owner sees your name{''}
-                and contact details only after you send an enquiry. PG Hunter never asks
-                for an advance payment.
-              </p>
             </div>
 
-            {(waNumber || telHref) && (
-              <div class="card mt-4 border border-brand-200 bg-brand-50/50 p-5">
-                <h2 class="flex items-center gap-2 text-sm font-bold text-slate-900">
-                  <MessageCircle class="h-4 w-4 text-brand-600" /> Talk to the owner
-                </h2>
-                <p class="mt-1.5 text-xs leading-relaxed text-slate-500">
-                  The owner shares direct contact details for this listing — reach them
-                  without waiting for an enquiry reply.
-                </p>
-                <div class="mt-3 flex flex-col gap-2">
-                  {waNumber && (
-                    <a
-                      href={`https://wa.me/${waNumber}?text=${waText}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="btn-secondary w-full justify-center"
-                    >
-                      <MessageCircle class="h-4 w-4" /> WhatsApp owner
-                    </a>
-                  )}
-                  {telHref && (
-                    <div class="flex flex-col gap-2">
-                      <button type="button" id="reveal-phone-btn" class="btn-secondary w-full justify-center">
-                        <Phone class="h-4 w-4" /> Show phone number
-                      </button>
-                      <a
-                        id="owner-phone-link"
-                        href={`tel:${telHref}`}
-                        class="btn-secondary w-full justify-center hidden"
-                      >
-                        <Phone class="h-4 w-4" /> {formatPhone(ownerPhone)}
-                      </a>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            <ContactOwner listingId={l.id} listingName={l.name} />
 
             <div class="card mt-4 border border-slate-200 p-5">
               <h2 class="flex items-center gap-2 text-sm font-bold text-slate-900">
@@ -699,7 +569,7 @@ const listedOn = l
     // Astro hoists every <script> it finds, so this runs on the 404 state too:
     // each block below is guarded by the presence of its own markup instead of
     // assuming the listing rendered.
-    import { getCurrentSession, getSession, isSaved, toggleSaved, createEnquiry } from '@/lib/auth';
+    import { getCurrentSession, isSaved, toggleSaved } from '@/lib/auth';
     import { recordView, getStats, setReaction, getExperiences, submitExperience } from '@/lib/engagement';
     import { escapeAttr, escapeHtml } from '@/lib/html';
 
@@ -934,131 +804,15 @@ const listedOn = l
       expStatus.className = 'mt-3 rounded-sm bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600';
       try {
         await submitExperience(propertyId, content, ratingVal);
-        expStatus.textContent = 'Experience submitted for moderation and will appear after approval.';
+        expStatus.textContent = 'Comment posted.';
         expStatus.className = 'mt-3 rounded-sm bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700';
         expContent.value = '';
         if (expRating) expRating.value = '';
+        await renderExperiences();
       } catch (err) {
         expStatus.textContent = (err as Error).message || 'Could not submit experience.';
         expStatus.className = 'mt-3 rounded-sm bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700';
       }
     });
 
-    /* ------------------------------------------------ enquiry ------- */
-    // Inline panel inside the contact card: clicking "Send enquiry" opens the
-    // form where the user already stands — no modal, no interstitial page.
-    const enquiryPanel = document.getElementById('enquiry-panel') as HTMLElement | null;
-    const enquiryBtn = document.getElementById('enquiry-btn') as HTMLButtonElement | null;
-    const enquiryBtnLabel = enquiryBtn?.querySelector('[data-enquiry-btn-label]') as HTMLElement | null;
-    const cancelBtn = document.getElementById('enquiry-cancel') as HTMLButtonElement | null;
-    const enquiryForm = document.getElementById('enquiry-form') as HTMLFormElement | null;
-    const statusEl = document.getElementById('enquiry-status') as HTMLElement | null;
-    const moveInSelect = enquiryForm?.querySelector<HTMLSelectElement>('select[name="moveInMonth"]') ?? null;
-    const budgetSelect = enquiryForm?.querySelector<HTMLSelectElement>('select[name="budget"]') ?? null;
-    const messageField = enquiryForm?.querySelector<HTMLTextAreaElement>('textarea[name="message"]') ?? null;
-
-    const now = new Date();
-    if (moveInSelect) {
-      for (let i = 0; i < 8; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-        const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        moveInSelect.insertAdjacentHTML('beforeend', `<option value="${value}">${label}</option>`);
-      }
-    }
-
-    const closeEnquiry = () => {
-      if (!enquiryPanel || !enquiryForm || !statusEl) return;
-      enquiryPanel.classList.add('hidden');
-      statusEl.classList.add('hidden');
-      statusEl.className = 'hidden rounded-sm bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-700';
-      enquiryForm.reset();
-      enquiryForm.querySelector<HTMLButtonElement>('button[type="submit"]')?.removeAttribute('disabled');
-      enquiryBtn?.setAttribute('aria-expanded', 'false');
-      if (enquiryBtnLabel) enquiryBtnLabel.textContent = 'Send enquiry';
-    };
-
-    const openEnquiry = () => {
-      enquiryPanel?.classList.remove('hidden');
-      enquiryBtn?.setAttribute('aria-expanded', 'true');
-      if (enquiryBtnLabel) enquiryBtnLabel.textContent = 'Hide enquiry form';
-      // A frame later, so the pop-in reveal is visible before we scroll.
-      requestAnimationFrame(() =>
-        enquiryPanel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      );
-    };
-
-    /** Prefill from the student's saved hunt preferences (see /profile). */
-    const prefillEnquiry = (user: {
-      budgetPref?: string;
-      movingInMonth?: string;
-      messageToOwners?: string;
-      phone?: string;
-    }) => {
-      const phoneField = enquiryForm?.querySelector<HTMLInputElement>('input[name="phone"]');
-      if (phoneField && user.phone && !phoneField.value.trim()) phoneField.value = user.phone;
-      if (user.budgetPref && budgetSelect?.querySelector(`option[value="${user.budgetPref}"]`)) {
-        budgetSelect.value = user.budgetPref;
-      }
-      if (user.movingInMonth && moveInSelect?.querySelector(`option[value="${user.movingInMonth}"]`)) {
-        moveInSelect.value = user.movingInMonth;
-      }
-      if (user.messageToOwners && messageField && !messageField.value.trim()) {
-        messageField.value = user.messageToOwners;
-      }
-    };
-
-    enquiryBtn?.addEventListener('click', async () => {
-      // Second press collapses the panel — the button is a toggle now.
-      if (enquiryPanel && !enquiryPanel.classList.contains('hidden')) {
-        closeEnquiry();
-        return;
-      }
-      const user = await getCurrentSession();
-      if (!user) {
-        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
-        return;
-      }
-      prefillEnquiry(user);
-      openEnquiry();
-    });
-
-    cancelBtn?.addEventListener('click', closeEnquiry);
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeEnquiry();
-    });
-
-    enquiryForm?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!enquiryForm || !statusEl || !propertyId) return;
-      if (!(await getSession())) {
-        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
-        return;
-      }
-      const data = new FormData(enquiryForm);
-      const { error } = await createEnquiry({
-        propertyId,
-        budget: String(data.get('budget') ?? ''),
-        moveInMonth: String(data.get('moveInMonth') ?? ''),
-        message: String(data.get('message') ?? ''),
-        phone: String(data.get('phone') ?? '').trim(),
-      });
-      if (error) {
-        statusEl.textContent = `Could not send the enquiry: ${error}`;
-        statusEl.className = 'rounded-sm bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-700';
-        return;
-      }
-      statusEl.textContent = 'Enquiry sent! The owner will reach out to you shortly.';
-      statusEl.className = 'rounded-sm bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-700';
-      enquiryForm.querySelector<HTMLButtonElement>('button[type="submit"]')?.setAttribute('disabled', 'true');
-      setTimeout(closeEnquiry, 2500);
-    });
-
-    // Tap-to-reveal: the number ships in the anchor either way (it has to, for
-    // tel:), but a deliberate tap keeps it out of casual view.
-    const revealBtn = document.getElementById('reveal-phone-btn') as HTMLButtonElement | null;
-    revealBtn?.addEventListener('click', () => {
-      (document.getElementById('owner-phone-link') as HTMLAnchorElement | null)?.classList.remove('hidden');
-      revealBtn.classList.add('hidden');
-    });
   </script>

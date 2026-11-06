@@ -11,7 +11,6 @@ import {
   Utensils,
   Clock3,
   ShieldCheck,
-  MessageCircle,
   Check,
   Building2,
   Play,
@@ -324,7 +323,7 @@ const availableRooms = p.rooms.filter((r) => r.available).length;
           </div>
           <div class="mt-6 card border border-slate-200 p-5">
             <h3 class="text-sm font-bold text-slate-900">Write your experience</h3>
-            <p class="mt-1 text-xs text-slate-500">Only approved experiences appear publicly. Pending experiences are not shown until reviewed.</p>
+            <p class="mt-1 text-xs text-slate-500">Your comment is posted straight away. Comments that break our rules can be removed by moderators.</p>
             <form id="experience-form" class="mt-4 flex flex-col gap-3">
               <div class="flex items-center gap-2">
                 <label for="exp-rating" class="text-sm font-semibold text-slate-700">Rating</label>
@@ -346,7 +345,7 @@ const availableRooms = p.rooms.filter((r) => r.available).length;
                 required
               ></textarea>
               <div class="flex items-center gap-3">
-                <button type="submit" class="btn-primary">Submit for review</button>
+                <button type="submit" class="btn-primary">Post comment</button>
                 <span id="exp-status" class="hidden rounded-sm px-3 py-2 text-sm font-medium"></span>
               </div>
             </form>
@@ -370,66 +369,17 @@ const availableRooms = p.rooms.filter((r) => r.available).length;
           <p class="mt-2 text-sm font-medium text-slate-600">{roomsLabel}</p>
 
           <div class="mt-5 flex flex-col gap-2.5">
-            <button id="enquiry-btn" type="button" class="btn-primary w-full">
-              Send Enquiry
-            </button>
-            <a
-              id="message-owner-link"
-              href="/login"
-              class="btn-secondary w-full"
-              title="Login required to message the owner"
-            >
-              <MessageCircle class="h-4 w-4" />
-              Message Owner
+            <a href="/pgs-near-you" class="btn-primary w-full justify-center">
+              <Phone class="h-4 w-4" /> Get an owner’s number
             </a>
           </div>
 
           <p class="mt-4 rounded-sm border border-brand-100 bg-brand-50 px-3 py-2.5 text-xs leading-relaxed text-brand-800">
             <Phone class="mr-1 inline h-3.5 w-3.5" />
-            Contact details are shared with logged-in students to keep your number private.
+            This is a sample listing, so no owner is attached to it. Owner numbers are
+            never printed on live listings either — PG Hunter texts the number to your
+            registered phone once you log in.
           </p>
-
-          <div id="enquiry-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="enquiry-title">
-            <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-              <div class="card w-full max-w-md border border-slate-200 p-6">
-                <h2 id="enquiry-title" class="text-lg font-extrabold text-slate-900">
-                  Send enquiry to {p.name}
-                </h2>
-                <p class="mt-1 text-sm text-slate-500">
-                  The owner will see your contact details and reach out to you.
-                </p>
-                <form id="enquiry-form" class="mt-4 flex flex-col gap-3">
-                  <label class="field">
-                    <span class="sr-only">Budget</span>
-                    <select name="budget" class="w-full appearance-none bg-transparent outline-none">
-                      <option value="">Monthly budget — any</option>
-                      <option value="under-10">Under ₹10k</option>
-                      <option value="10-15">₹10k – ₹15k</option>
-                      <option value="15-20">₹15k – ₹20k</option>
-                      <option value="20-plus">₹20k +</option>
-                    </select>
-                  </label>
-                  <label class="field">
-                    <span class="sr-only">Move-in month</span>
-                    <select name="moveInMonth" class="w-full appearance-none bg-transparent outline-none">
-                      <option value="">Move-in month — any</option>
-                    </select>
-                  </label>
-                  <textarea
-                    name="message"
-                    rows="3"
-                    placeholder="Anything the owner should know? (optional)"
-                    class="w-full resize-none rounded-sm border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none"
-                  ></textarea>
-                  <button type="submit" class="btn-primary w-full">Send enquiry</button>
-                  <button type="button" id="enquiry-cancel" class="btn-secondary w-full">Cancel</button>
-                  <p id="enquiry-status" class="hidden rounded-sm bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-700" role="status">
-                    Enquiry sent! The owner will reach out to you shortly.
-                  </p>
-                </form>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div class="card mt-4 border border-slate-200 p-6">
@@ -462,7 +412,7 @@ const availableRooms = p.rooms.filter((r) => r.available).length;
 
 <script>
   // Engagement wiring: views, saves, likes/dislikes, enquiries, student experiences.
-  import { getCurrentSession, getSession, isSaved, toggleSaved, createEnquiry } from '@/lib/auth';
+  import { getCurrentSession, isSaved, toggleSaved } from '@/lib/auth';
   import { recordView, getStats, setReaction, getExperiences, submitExperience } from '@/lib/engagement';
   // A student's display name and free-text experience are untrusted input.
   import { escapeAttr, escapeHtml } from '@/lib/html';
@@ -692,108 +642,14 @@ const availableRooms = p.rooms.filter((r) => r.available).length;
     expStatus.classList.remove('hidden');
     try {
       await submitExperience(propertyId, content, ratingVal);
-      expStatus.textContent = 'Experience submitted for moderation and will appear after approval.';
+      expStatus.textContent = 'Comment posted.';
       expStatus.className = 'rounded-sm bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700';
       expContent.value = '';
       if (expRating) expRating.value = '';
+      await renderExperiences();
     } catch (err) {
       expStatus.textContent = (err as Error).message || 'Could not submit experience.';
       expStatus.className = 'rounded-sm bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700';
     }
-  });
-
-  // ---- Enquiry modal ------------------------------------------------
-  const modal = document.getElementById('enquiry-modal') as HTMLElement;
-  const enquiryBtn = document.getElementById('enquiry-btn') as HTMLButtonElement;
-  const cancelBtn = document.getElementById('enquiry-cancel') as HTMLButtonElement;
-  const enquiryForm = document.getElementById('enquiry-form') as HTMLFormElement;
-  const statusEl = document.getElementById('enquiry-status') as HTMLElement;
-  const moveInSelect = enquiryForm.querySelector<HTMLSelectElement>('select[name="moveInMonth"]')!;
-
-  // Next 8 months for the move-in picker.
-  const now = new Date();
-  for (let i = 0; i < 8; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    moveInSelect.insertAdjacentHTML('beforeend', `<option value="${value}">${label}</option>`);
-  }
-
-  const closeModal = () => {
-    modal.classList.add('hidden');
-    statusEl.classList.add('hidden');
-    enquiryForm.reset();
-    enquiryForm.querySelector<HTMLButtonElement>('button[type="submit"]')?.removeAttribute('disabled');
-  };
-
-  const budgetSelect = enquiryForm.querySelector<HTMLSelectElement>('select[name="budget"]')!;
-  const messageField = enquiryForm.querySelector<HTMLTextAreaElement>('textarea[name="message"]')!;
-
-  /**
-   * Prefill the enquiry from the student's saved hunt preferences. Anything
-   * they have already typed in this session wins, and a value the form does
-   * not offer (e.g. a month outside the 8-month window) is simply skipped.
-   */
-  const prefillEnquiry = (user: { budgetPref?: string; movingInMonth?: string; messageToOwners?: string }) => {
-    if (user.budgetPref && budgetSelect.querySelector(`option[value="${user.budgetPref}"]`)) {
-      budgetSelect.value = user.budgetPref;
-    }
-    if (user.movingInMonth && moveInSelect.querySelector(`option[value="${user.movingInMonth}"]`)) {
-      moveInSelect.value = user.movingInMonth;
-    }
-    if (user.messageToOwners && !messageField.value.trim()) {
-      messageField.value = user.messageToOwners;
-    }
-  };
-
-  enquiryBtn.addEventListener('click', async () => {
-    const user = await getCurrentSession();
-    if (!user) {
-      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
-      return;
-    }
-    prefillEnquiry(user);
-    modal.classList.remove('hidden');
-  });
-
-  cancelBtn.addEventListener('click', closeModal);
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
-  });
-
-  enquiryForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!(await getCurrentSession())) return;
-    const data = new FormData(enquiryForm);
-    const { error } = await createEnquiry({
-      propertyId,
-      budget: String(data.get('budget') ?? ''),
-      moveInMonth: String(data.get('moveInMonth') ?? ''),
-      message: String(data.get('message') ?? ''),
-    });
-    if (error) {
-      statusEl.textContent = `Could not send the enquiry: ${error}`;
-      statusEl.classList.remove('hidden');
-      statusEl.classList.replace('bg-emerald-50', 'bg-rose-50');
-      statusEl.classList.replace('text-emerald-700', 'text-rose-700');
-      return;
-    }
-    statusEl.textContent = 'Enquiry sent! The owner will reach out to you shortly.';
-    statusEl.classList.remove('hidden');
-    enquiryForm.querySelector<HTMLButtonElement>('button[type="submit"]')?.setAttribute('disabled', 'true');
-    setTimeout(closeModal, 2000);
-  });
-
-  // Private messaging is deferred (Phase 3) — disable it for signed-in users.
-  getSession().then((user) => {
-    const msgLink = document.getElementById('message-owner-link') as HTMLAnchorElement;
-    if (!user || !msgLink) return;
-    msgLink.href = '#';
-    msgLink.classList.add('pointer-events-none', 'opacity-60');
-    msgLink.title = 'Private messaging is coming soon';
-    msgLink.setAttribute('aria-disabled', 'true');
   });
 </script>

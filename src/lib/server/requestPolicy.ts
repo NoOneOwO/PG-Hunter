@@ -63,6 +63,10 @@ export const rateLimitScopeFor = (pathname: string, method: string): RateLimitSc
   if (pathname.startsWith('/api/auth/register')) return 'auth_register';
   if (pathname.startsWith('/api/auth/google')) return 'auth_oauth_start';
   if (pathname.startsWith('/api/views')) return 'views';
+  // Sub-routes first: reading contact details and reporting funnel events must
+  // not eat into the (deliberately small) enquiry submission budget.
+  if (pathname.startsWith('/api/enquiries/contact')) return 'enquiry_contact';
+  if (pathname.startsWith('/api/enquiries/events')) return 'enquiry_events';
   if (pathname.startsWith('/api/enquiries')) return 'enquiries';
   if (pathname.startsWith('/api/experiences')) return 'experiences';
   if (pathname.startsWith('/api/reports')) return 'reports';

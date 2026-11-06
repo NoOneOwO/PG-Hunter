@@ -1,6 +1,7 @@
 ---
 import OwnerLayout from '@/layouts/OwnerLayout.astro';
-import { Inbox } from '@lucide/astro';
+import { Inbox, Info } from '@lucide/astro';
+import { LEAD_STATUSES, leadStatusMeta } from '@/lib/owner';
 ---
 
 <OwnerLayout title="Enquiries — PG Hunter" active="leads">
@@ -8,9 +9,12 @@ import { Inbox } from '@lucide/astro';
     <div>
       <p class="eyebrow">Owner workspace</p>
       <div class="pixel-rule mt-3" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-      <h1 class="mt-5 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Enquiries</h1>
+      <h1 class="mt-5 flex flex-wrap items-center gap-3 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+        Enquiries
+        <span id="leads-unread" class="hidden rounded-full bg-brand-600 px-2.5 py-1 text-xs font-bold text-white"></span>
+      </h1>
       <p class="mt-1 text-sm font-medium text-slate-500">
-        Students interested in your PGs. Reach out to them directly.
+        Students who sent you an enquiry. Viewing, liking or saving a PG never appears here.
       </p>
     </div>
   </div>
@@ -21,26 +25,60 @@ import { Inbox } from '@lucide/astro';
   </div>
 
   <div id="leads-root" class="hidden">
+    <div class="card mt-6 flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+      <label class="flex-1">
+        <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">PG</span>
+        <select id="filter-listing" class="mt-1 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:border-brand-400 focus:outline-none">
+          <option value="">All listings</option>
+        </select>
+      </label>
+      <label class="flex-1">
+        <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Status</span>
+        <select id="filter-status" class="mt-1 w-full rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:border-brand-400 focus:outline-none">
+          <option value="">All statuses</option>
+          {LEAD_STATUSES.map((status) => <option value={status}>{leadStatusMeta[status].label}</option>)}
+        </select>
+      </label>
+      <button type="button" id="filter-clear" class="btn-secondary min-h-11 px-4">
+        Clear filters
+      </button>
+    </div>
+
     <div id="leads-empty" class="card mt-6 hidden p-12 text-center">
       <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-sm bg-brand-100 text-brand-700">
         <Inbox class="h-8 w-8" />
       </span>
-      <h2 class="mt-6 text-xl font-extrabold tracking-tight text-slate-900">No enquiries yet</h2>
+      <h2 class="mt-6 text-xl font-extrabold tracking-tight text-slate-900">No enquiries here yet</h2>
       <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
-        When students send enquiries on your listings, they'll show up here with their
-        budget and move-in details.
+        When a student taps <span class="font-semibold">Contact Owner</span> on one of your live
+        PGs, the enquiry lands here with their requirements. You'll also see a count in the
+        Enquiries tab.
       </p>
-      <a href="/owner/listings/new" class="btn-primary mt-8 px-8">Add a PG</a>
+      <a href="/owner/listings" class="btn-primary mt-8 px-8">Check your listings</a>
     </div>
 
     <div id="leads-list" class="card mt-6 divide-y divide-slate-100"></div>
+
+    <p class="mt-4 flex items-start gap-1.5 text-xs leading-relaxed text-slate-500">
+      <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      Phone numbers appear only when the student ticked the consent box on their enquiry. Notes are
+      private and visible only to you.
+    </p>
   </div>
 </OwnerLayout>
 
 <script>
   import { getOwnerLeads, updateOwnerLead } from '@/lib/auth';
-  import type { OwnerLead } from '@/lib/auth';
-  import { leadStatusLabel, leadStatusMeta, budgetLabel, moveInLabel, formatShortDate } from '@/lib/owner';
+  import type { OwnerLead, OwnerLeadsResponse } from '@/lib/auth';
+  import {
+    LEAD_STATUSES,
+    leadStatusLabel,
+    leadStatusMeta,
+    budgetLabel,
+    moveInLabel,
+    enquiryRoomTypeLabel,
+    formatEnquiryTimestamp,
+  } from '@/lib/owner';
   // Every value below comes from another user or from the database, so it is
   // untrusted input being interpolated into innerHTML. Escape it or it is
   // stored XSS: a student's free-text enquiry renders in the owner's session.
@@ -52,77 +90,111 @@ import { Inbox } from '@lucide/astro';
   const root = document.getElementById('leads-root')!;
   const empty = document.getElementById('leads-empty')!;
   const list = document.getElementById('leads-list')!;
+  const unreadEl = document.getElementById('leads-unread')!;
+  const listingFilter = document.getElementById('filter-listing') as HTMLSelectElement;
+  const statusFilter = document.getElementById('filter-status') as HTMLSelectElement;
+  const clearBtn = document.getElementById('filter-clear') as HTMLButtonElement;
 
-  const leadCard = (lead: OwnerLead) => `
-    <article class="px-5 py-5" data-reveal>
+  const statusOptions = (current: string): string =>
+    LEAD_STATUSES.map(
+      (status) =>
+        `<option value="${status}" ${current === status ? 'selected' : ''}>${escapeHtml(leadStatusLabel(status))}</option>`
+    ).join('');
+
+  const leadCard = (lead: OwnerLead) => {
+    const phone = lead.phone_shared === 1 ? contactNumber(lead.shared_phone) : '';
+
+    const contactBlock = phone
+      ? `<div class="mt-3 flex flex-wrap items-center gap-2">
+          <a href="tel:+${escapeAttr(phone)}" class="btn-secondary min-h-9 px-3 text-xs">
+            Call ${escapeHtml(formatPhone(lead.shared_phone ?? ''))}
+          </a>
+          <a
+            href="${escapeAttr(`https://wa.me/${phone}?text=${encodeURIComponent(`Hi ${lead.student_name ?? 'there'}, thanks for your enquiry about ${lead.property_name ?? 'my PG'} on PG Hunter.`)}`)}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-secondary min-h-9 px-3 text-xs"
+          >
+            WhatsApp
+          </a>
+          <span class="text-[11px] font-medium text-slate-500">Shared with consent for this enquiry.</span>
+        </div>`
+      : `<p class="mt-3 text-xs font-medium text-slate-400">
+          This student did not share a phone number. Reply in your own time — the enquiry stays here.
+        </p>`;
+
+    return `
+    <article class="px-5 py-5" data-lead-id="${lead.id}" data-reveal>
       <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm bg-brand-50 text-brand-700">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/></svg>
-          </span>
-          <div>
-            <p class="text-sm font-bold text-slate-900">${escapeHtml(lead.student_name ?? 'Student')}</p>
-            <p class="text-xs font-medium text-slate-500">
-              ${escapeHtml(lead.property_name ?? 'Your PG')} · ${escapeHtml(formatShortDate(lead.created_at))}
-            </p>
-          </div>
+        <div class="min-w-0">
+          <p class="text-sm font-bold text-slate-900">${escapeHtml(lead.student_name ?? 'Student')}</p>
+          <p class="mt-0.5 text-xs font-medium text-slate-500">
+            ${escapeHtml(lead.college ?? 'College not given')} · ${escapeHtml(lead.property_name ?? 'Your PG')}
+          </p>
+          <p class="mt-0.5 text-[11px] font-medium text-slate-400">
+            ${escapeHtml(formatEnquiryTimestamp(lead.created_at))}
+          </p>
         </div>
         <select
           data-lead-status="${lead.id}"
           class="badge cursor-pointer border-0 outline-none ${leadStatusMeta[lead.status]?.classes ?? 'bg-slate-100 text-slate-600'}"
-          aria-label="Update lead status"
+          aria-label="Update status for ${escapeAttr(lead.student_name ?? 'this student')}"
         >
-          ${['new', 'contacted', 'interested', 'not_interested']
-            .map(
-              (s) =>
-                `<option value="${s}" ${lead.status === s ? 'selected' : ''}>${escapeHtml(leadStatusLabel(s))}</option>`
-            )
-            .join('')}
+          ${statusOptions(lead.status)}
         </select>
       </div>
 
       <div class="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
         <span class="rounded-sm bg-slate-100 px-2.5 py-1 text-slate-600">Budget: ${escapeHtml(budgetLabel(lead.budget))}</span>
         <span class="rounded-sm bg-slate-100 px-2.5 py-1 text-slate-600">Move-in: ${escapeHtml(moveInLabel(lead.move_in_month))}</span>
-        <span class="rounded-sm bg-slate-100 px-2.5 py-1 capitalize text-slate-600">Source: ${escapeHtml(lead.source)}</span>
+        <span class="rounded-sm bg-slate-100 px-2.5 py-1 text-slate-600">Room: ${escapeHtml(enquiryRoomTypeLabel(lead.room_type))}</span>
       </div>
 
-      ${lead.message ? `<p class="mt-3 rounded-sm bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700">${escapeHtml(lead.message)}</p>` : ''}
+      ${lead.message ? `<p class="mt-3 whitespace-pre-wrap rounded-sm bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700">${escapeHtml(lead.message)}</p>` : ''}
 
-      ${(() => {
-        const wa = contactNumber(lead.student_phone);
-        if (!wa) {
-          return `<p class="mt-3 text-xs font-medium text-slate-400">No phone number on this student's profile — ask them to add one in their profile.</p>`;
-        }
-        const intro = encodeURIComponent(
-          `Hi ${lead.student_name ?? 'there'}, thanks for your enquiry about ${lead.property_name ?? 'your PG'} on PG Hunter.`
-        );
-        return `<div class="mt-3 flex flex-wrap items-center gap-2">
-          <a href="${escapeAttr(`https://wa.me/${wa}?text=${intro}`)}" target="_blank" rel="noopener noreferrer" class="btn-secondary min-h-9 px-3 text-xs">
-            WhatsApp student
-          </a>
-          <a href="tel:+${wa}" class="btn-secondary min-h-9 px-3 text-xs">
-            Call ${escapeHtml(formatPhone(lead.student_phone))}
-          </a>
-        </div>`;
-      })()}
+      ${contactBlock}
+
+      <details class="mt-3" ${lead.owner_notes ? 'open' : ''}>
+        <summary class="cursor-pointer text-xs font-semibold text-brand-700">
+          Private notes${lead.owner_notes ? ' · saved' : ''}
+        </summary>
+        <label class="mt-2 block">
+          <span class="sr-only">Private note about this enquiry</span>
+          <textarea
+            data-lead-notes="${lead.id}"
+            rows="2"
+            maxlength="1000"
+            class="w-full resize-none rounded-sm border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none"
+            placeholder="Visited on Saturday, wants ground floor…"
+          >${escapeHtml(lead.owner_notes ?? '')}</textarea>
+        </label>
+        <div class="mt-1.5 flex items-center gap-2">
+          <button type="button" data-lead-notes-save="${lead.id}" class="btn-secondary min-h-9 px-3 text-xs">
+            Save note
+          </button>
+          <span data-lead-notes-status="${lead.id}" class="text-xs font-medium text-slate-500" role="status"></span>
+        </div>
+      </details>
     </article>`;
+  };
 
-  const init = async () => {
-    const { leads } = await getOwnerLeads();
-    empty.classList.toggle('hidden', leads.length > 0);
-    list.innerHTML = leads.map(leadCard).join('');
-    loading.classList.add('hidden');
-    root.classList.remove('hidden');
+  let data: OwnerLeadsResponse | null = null;
 
-    // Follow-up status: PATCH on change, recolour the pill, roll back on error.
+  const syncUnread = () => {
+    const unread = data?.unread ?? 0;
+    unreadEl.textContent = `${unread} new`;
+    unreadEl.classList.toggle('hidden', unread === 0);
+  };
+
+  const bindRowActions = () => {
     list.querySelectorAll<HTMLSelectElement>('[data-lead-status]').forEach((sel) => {
       let lastGood = sel.value;
       sel.addEventListener('change', async () => {
         try {
-          await updateOwnerLead(Number(sel.dataset.leadStatus), sel.value);
+          await updateOwnerLead(Number(sel.dataset.leadStatus), { status: sel.value });
           lastGood = sel.value;
           sel.className = `badge cursor-pointer border-0 outline-none ${leadStatusMeta[sel.value]?.classes ?? 'bg-slate-100 text-slate-600'}`;
+          await afterStatusChange();
         } catch (err) {
           sel.value = lastGood;
           alert((err as Error).message);
@@ -130,8 +202,99 @@ import { Inbox } from '@lucide/astro';
       });
     });
 
-    // Bind entrances for rows that did not exist at page load.
+    list.querySelectorAll<HTMLButtonElement>('[data-lead-notes-save]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = Number(btn.dataset.leadNotesSave);
+        const field = list.querySelector<HTMLTextAreaElement>(`[data-lead-notes="${id}"]`);
+        const status = list.querySelector<HTMLElement>(`[data-lead-notes-status="${id}"]`);
+        if (!field || !status) return;
+        btn.disabled = true;
+        status.textContent = 'Saving…';
+        try {
+          await updateOwnerLead(id, { notes: field.value });
+          status.textContent = 'Saved';
+        } catch (err) {
+          status.textContent = (err as Error).message;
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  };
+
+  const render = () => {
+    if (!data) return;
+    syncUnread();
+
+    // Listing options are rebuilt once; the current choice is preserved.
+    if (listingFilter.options.length <= 1 && data.listings.length > 0) {
+      data.listings.forEach((listing) => {
+        const option = document.createElement('option');
+        option.value = listing.id;
+        option.textContent = listing.name;
+        listingFilter.appendChild(option);
+      });
+    }
+
+    const filtered = Boolean(listingFilter.value || statusFilter.value);
+    empty.classList.toggle('hidden', data.leads.length > 0);
+    list.innerHTML = data.leads.map(leadCard).join('');
+    list.classList.toggle('hidden', data.leads.length === 0);
+
+    if (data.leads.length === 0 && filtered) {
+      empty.querySelector('h2')!.textContent = 'No enquiries match these filters';
+      empty.querySelector('p')!.textContent =
+        'Try a different PG or status. Your unread count still covers every listing.';
+    }
+
+    bindRowActions();
     initMotionUI();
+  };
+
+  const load = async () => {
+    data = await getOwnerLeads({
+      listing: listingFilter.value || undefined,
+      status: statusFilter.value || undefined,
+    });
+    render();
+  };
+
+  /**
+   * After a status change: the row keeps its place (so the owner's scroll does
+   * not jump), but the NEW counter must reflect reality. When a status filter
+   * is active the row no longer matches it, so the list is reloaded instead.
+   */
+  const afterStatusChange = async () => {
+    if (statusFilter.value) {
+      await load();
+      return;
+    }
+    try {
+      const fresh = await getOwnerLeads({ listing: listingFilter.value || undefined });
+      data = { ...fresh, leads: data?.leads ?? fresh.leads };
+      syncUnread();
+    } catch {
+      /* the badge is decoration; the change itself already succeeded */
+    }
+  };
+
+  listingFilter.addEventListener('change', () => void load());
+  statusFilter.addEventListener('change', () => void load());
+  clearBtn.addEventListener('click', () => {
+    listingFilter.value = '';
+    statusFilter.value = '';
+    void load();
+  });
+
+  const init = async () => {
+    try {
+      await load();
+    } catch (err) {
+      loading.innerHTML = `<p class="text-sm font-medium text-rose-600">${escapeHtml((err as Error).message)}</p>`;
+      return;
+    }
+    loading.classList.add('hidden');
+    root.classList.remove('hidden');
   };
 
   void init();

@@ -86,8 +86,8 @@ export async function POST(context: APIContext) {
       `INSERT INTO owner_listings
         (id, owner_id, name, property_type, gender, address, locality, city, latitude, longitude,
          description, rules, curfew, food, amenity_slugs, status, verification_status,
-         contact_whatsapp, contact_show_phone, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         contact_direct, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id,
@@ -115,8 +115,7 @@ export async function POST(context: APIContext) {
       JSON.stringify(strArr(body.amenitySlugs)),
       'draft',
       'unverified',
-      body.contactWhatsapp ? 1 : 0,
-      body.contactShowPhone ? 1 : 0,
+      body.contactDirect ? 1 : 0,
       now,
       now
     )

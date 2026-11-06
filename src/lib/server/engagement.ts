@@ -4,7 +4,7 @@
  *   pg_engagement_events = immutable-ish log (VIEW/SAVE/UNSAVE/LIKE/DISLIKE/UNLIKE/UNDISLIKE/ENQUIRY/SHARE)
  *   pg_reactions         = current reaction state (UNIQUE listing+user)
  *   saved_pgs            = current wishlist state (UNIQUE user+property, existing)
- *   pg_experiences       = moderated student experiences (pending by default)
+ *   pg_experiences       = student comments/experiences (published on submit; admins can reject)
  *   listing_events       = legacy owner analytics (kept, not source for new stats)
  * listing_id is TEXT without FK to allow mock IDs (prop_*) and D1 UUIDs. Do NOT create a second truth.
  */
@@ -171,7 +171,7 @@ export const createExperience = async (
   const cleanContent = content.trim();
   await db
     .prepare(
-      `INSERT INTO pg_experiences (id, listing_id, user_id, rating, content, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`
+      `INSERT INTO pg_experiences (id, listing_id, user_id, rating, content, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'approved', ?, ?)`
     )
     .bind(id, listingId, user.id, cleanRating, cleanContent, now, now)
     .run();
@@ -183,7 +183,7 @@ export const createExperience = async (
     user_id: user.id,
     rating: cleanRating,
     content: cleanContent,
-    status: 'pending',
+    status: 'approved',
     created_at: now,
     updated_at: now,
   };

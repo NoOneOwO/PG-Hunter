@@ -152,7 +152,7 @@ export async function PUT(context: APIContext) {
         name = ?, property_type = ?, gender = ?, address = ?, locality = ?, city = ?,
         latitude = ?, longitude = ?, description = ?, rules = ?, curfew = ?, food = ?,
         amenity_slugs = ?, status = ?, rejection_reason = ?,
-        contact_whatsapp = ?, contact_show_phone = ?, updated_at = ?
+        contact_direct = ?, updated_at = ?
        WHERE id = ?`
     )
     .bind(
@@ -183,8 +183,7 @@ export async function PUT(context: APIContext) {
       null,
       // Contact opt-ins are presentation, not evidence — changing them must
       // never re-queue a live listing for moderation.
-      body.contactWhatsapp ? 1 : 0,
-      body.contactShowPhone ? 1 : 0,
+      body.contactDirect ? 1 : 0,
       now,
       id
     )

@@ -129,6 +129,10 @@ test('the Google OAuth callback is covered by the oauth budget', () => {
 test('feature routes map to their named scopes', () => {
   assert.equal(rateLimitScopeFor('/api/views', 'POST'), 'views');
   assert.equal(rateLimitScopeFor('/api/enquiries', 'POST'), 'enquiries');
+  // Sub-routes get their own budget so reading contact details or reporting a
+  // funnel event never eats the (deliberately small) submission allowance.
+  assert.equal(rateLimitScopeFor('/api/enquiries/contact', 'GET'), 'enquiry_contact');
+  assert.equal(rateLimitScopeFor('/api/enquiries/events', 'POST'), 'enquiry_events');
   assert.equal(rateLimitScopeFor('/api/experiences', 'POST'), 'experiences');
   assert.equal(rateLimitScopeFor('/api/reports', 'POST'), 'reports');
   assert.equal(rateLimitScopeFor('/api/media', 'POST'), 'media_upload');

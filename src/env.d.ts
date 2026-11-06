@@ -42,6 +42,18 @@ declare namespace Cloudflare {
      * unlinkable to the original IP/user id.
      */
     RATE_LIMIT_SALT?: string;
+    /**
+     * Contact handoff SMS delivery (owner's number texted to the student).
+     * SMS_PROVIDER: 'msg91' | 'twilio' | 'dev'. When unset, whichever provider
+     * is fully credentialed is used; 'dev' logs the message instead of sending.
+     */
+    SMS_PROVIDER?: string;
+    MSG91_AUTH_KEY?: string;
+    MSG91_SENDER_ID?: string;
+    MSG91_FLOW_ID?: string;
+    TWILIO_ACCOUNT_SID?: string;
+    TWILIO_AUTH_TOKEN?: string;
+    TWILIO_FROM_NUMBER?: string;
   }
 }
 

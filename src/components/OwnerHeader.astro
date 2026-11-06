@@ -46,6 +46,13 @@ const navItems = [
         >
           <item.Icon class="h-4 w-4" />
           {item.label}
+          {item.key === 'leads' && (
+            <span
+              data-unread-badge
+              class="hidden min-w-5 rounded-full bg-brand-600 px-1.5 py-0.5 text-center text-[10px] font-bold text-white"
+              aria-label="new enquiries"
+            />
+          )}
         </a>
       ))}
       <button
@@ -103,9 +110,14 @@ const navItems = [
             'flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-semibold',
             active === item.key ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
           ]}
-        >
-          <item.Icon class="h-4 w-4" />
-          {item.label}
+        >          <item.Icon class="h-4 w-4" /> {item.label}
+          {item.key === 'leads' && (
+            <span
+              data-unread-badge
+              class="hidden min-w-5 rounded-full bg-brand-600 px-1.5 py-0.5 text-center text-[10px] font-bold text-white"
+              aria-label="new enquiries"
+            />
+          )}
         </a>
       ))}
       <button
@@ -123,7 +135,7 @@ const navItems = [
 </header>
 
 <script>
-  import { getSession, signOut, initialsOf } from '@/lib/auth';
+  import { getSession, signOut, initialsOf, getUnreadLeadCount } from '@/lib/auth';
 
   const avatar = document.getElementById('owner-avatar')!;
   const avatarImg = document.getElementById('owner-avatar-img') as HTMLImageElement | null;
@@ -147,6 +159,23 @@ const navItems = [
       window.location.href = '/';
     });
   });
+
+  // New-enquiry count, inside the dashboard only. No push, no SMS, no email:
+  // this badge is the whole owner notification system.
+  if (window.location.pathname.startsWith('/owner')) {
+    getUnreadLeadCount()
+      .then(({ unread }) => {
+        if (!unread) return;
+        const label = unread > 99 ? '99+' : String(unread);
+        document.querySelectorAll<HTMLElement>('[data-unread-badge]').forEach((badge) => {
+          badge.textContent = label;
+          badge.classList.remove('hidden');
+        });
+      })
+      .catch(() => {
+        /* signed out or offline — the badge is optional */
+      });
+  }
 
   getSession().then((user) => {
     if (!user) return;

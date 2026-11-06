@@ -16,7 +16,7 @@ const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
 
 <BaseLayout
   title="Login / Sign up — PG Hunter"
-  description="Log in or create a free account on PG Hunter to save PGs, send enquiries and message owners."
+  description="Log in or create a free account on PG Hunter to save PGs and get owner numbers sent to your phone."
 >
   <section class="mx-auto max-w-md px-4 py-10 sm:px-6">
     <!-- Step 1 — choose how you will use PG Hunter.
@@ -99,7 +99,7 @@ const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
           Welcome back
         </h1>
         <p id="auth-subtitle" class="mt-1 text-sm text-slate-500">
-          Log in to save PGs, send enquiries and message owners.
+          Log in to save PGs and get owner numbers sent to your phone.
         </p>
 
         <!-- Role mismatch: the account that authenticated is a different type
@@ -350,8 +350,8 @@ const googleMark = `<svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true">
     const isSignup = mode === 'signup';
     title.textContent = isSignup ? 'Create your account' : 'Welcome back';
     subtitle.textContent = isSignup
-      ? 'Free forever. Save PGs, send enquiries and manage your listings.'
-      : 'Log in to save PGs, send enquiries and message owners.';
+      ? 'Free forever. Save PGs, get owner numbers by SMS and manage your listings.'
+      : 'Log in to save PGs and get owner numbers sent to your phone.';
     loginForm.classList.toggle('hidden', isSignup);
     signupForm.classList.toggle('hidden', !isSignup);
     tabLogin.setAttribute('aria-selected', String(!isSignup));

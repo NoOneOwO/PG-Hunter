@@ -197,6 +197,29 @@ The policy lives in [`src/lib/verificationRules.ts`](src/lib/verificationRules.t
 - **Output escaping** — untrusted values are escaped before entering any
   `innerHTML` sink ([`src/lib/html.ts`](src/lib/html.ts)).
 
+### Student enquiries & direct owner contact
+
+Owner phone numbers are never rendered on a public page — no template, link or
+listing API response contains one. A logged-in student clicks **Contact
+Owner**, sends one enquiry (`POST /api/enquiries`), and that lead lands in the
+owner's `/owner/leads` inbox. Only after that does the server hand back the
+owner's Call (`tel:`) and WhatsApp (official click-to-chat URL) details, and
+only while the owner has enabled "Allow students to contact me directly" for
+that listing (`owner_listings.contact_direct`, migration 0015).
+
+What this deliberately does **not** do: no SMS gateway, no email, no
+automatic WhatsApp message, no push notification service. The only owner
+notification is the unread counter inside the dashboard
+(`GET /api/owner/leads/unread`). Enquiry, contact-view and Call/WhatsApp tap
+counts are aggregate `lead_events` rows on `/admin/analytics` — a tap is
+counted as a tap, never as a completed call.
+
+The student's number is stored on the lead only when they tick the consent box
+(`leads.phone_shared` + `leads.shared_phone`). Students who merely view, like or
+save a PG create no lead and never appear in an owner's inbox.
+
+Env: none. This flow needs no third-party credentials.
+
 ---
 
 ## 3. Repository layout

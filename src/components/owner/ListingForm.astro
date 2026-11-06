@@ -203,18 +203,22 @@ const edit = mode === 'edit';
     <fieldset class="border-t border-slate-100 pt-5">
       <legend class="text-sm font-bold text-slate-900">How students reach you</legend>
       <p class="mt-0.5 text-xs text-slate-500">
-        Pick the direct channels students see on this listing. Both use the phone number on your
+        This uses the phone number on your
         <a href="/owner/profile" class="font-semibold text-brand-700 hover:underline">profile</a> —
-        add it there first if it's empty.
+        add it there first if it's empty. Leave it off and every enquiry still reaches your
+        <a href="/owner/leads" class="font-semibold text-brand-700 hover:underline">Enquiries inbox</a>.
       </p>
       <div class="mt-3 flex flex-col gap-2 sm:max-w-xl">
-        <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800">
-          <input id="f-contact-whatsapp" type="checkbox" value="" class="sr-only" />
-          WhatsApp — students message you with this listing prefilled
-        </label>
-        <label class="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-3.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800">
-          <input id="f-contact-show-phone" type="checkbox" value="" class="sr-only" />
-          Phone number — students tap to reveal it and call you directly
+        <label class="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-700 has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50 has-[:checked]:text-brand-800">
+          <input id="f-contact-direct" type="checkbox" value="" class="mt-0.5" />
+          <span>
+            Allow students to contact me directly through Call and WhatsApp after submitting an
+            enquiry
+            <span class="mt-0.5 block text-xs font-medium text-slate-500">
+              Your number is never shown on the public page. It is only revealed to a logged-in
+              student after they send you an enquiry.
+            </span>
+          </span>
         </label>
       </div>
     </fieldset>
@@ -385,8 +389,7 @@ const edit = mode === 'edit';
     )
       .filter((c) => c.checked && c.value)
       .map((c) => c.value),
-    contactWhatsapp: form.querySelector<HTMLInputElement>('#f-contact-whatsapp')!.checked,
-    contactShowPhone: form.querySelector<HTMLInputElement>('#f-contact-show-phone')!.checked,
+    contactDirect: form.querySelector<HTMLInputElement>('#f-contact-direct')!.checked,
     rules: Array.from(rulesEl.querySelectorAll<HTMLInputElement>('input'))
       .map((i) => i.value.trim())
       .filter(Boolean),
@@ -889,8 +892,7 @@ const edit = mode === 'edit';
     if (l.rooms.length === 0) roomsEl.appendChild(roomRow());
 
     media = l.media;
-    form.querySelector<HTMLInputElement>('#f-contact-whatsapp')!.checked = Boolean(l.contactWhatsapp);
-    form.querySelector<HTMLInputElement>('#f-contact-show-phone')!.checked = Boolean(l.contactShowPhone);
+    form.querySelector<HTMLInputElement>('#f-contact-direct')!.checked = Boolean(l.contactDirect);
     renderPhotos();
     renderVideos();
   };

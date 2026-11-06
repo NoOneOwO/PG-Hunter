@@ -44,8 +44,12 @@ export const RATE_LIMITS = {
   auth_oauth_start: { limit: 20, windowSeconds: 15 * 60 },
   /** Public listing view counter -- unauthenticated, per IP. */
   views: { limit: 60, windowSeconds: 60 },
-  /** Student -> owner enquiry. */
+  /** Student -> owner enquiry submissions. */
   enquiries: { limit: 10, windowSeconds: 60 * 60 },
+  /** Reading the owner's Call/WhatsApp details for an existing enquiry. */
+  enquiry_contact: { limit: 60, windowSeconds: 60 * 60 },
+  /** Funnel events reported by the browser (form opened, call/WhatsApp tapped). */
+  enquiry_events: { limit: 120, windowSeconds: 60 * 60 },
   /** Student experience submissions. */
   experiences: { limit: 5, windowSeconds: 60 * 60 },
   /** Report abuse. */

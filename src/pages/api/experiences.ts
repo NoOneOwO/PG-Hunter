@@ -14,7 +14,7 @@ export async function GET(context: APIContext) {
   return json({ experiences, count, avgRating });
 }
 
-/** POST /api/experiences { listingId, rating?: 1-5, content } — auth required, creates pending. */
+/** POST /api/experiences { listingId, rating?: 1-5, content } — auth required, publishes immediately. */
 export async function POST(context: APIContext) {
   const user = await currentUser(context);
   if (!user) return json({ error: 'Not logged in.' }, 401);
@@ -37,5 +37,5 @@ export async function POST(context: APIContext) {
 
   const db = getDb();
   const exp = await createExperience(db, listingId, user, rating, content);
-  return json({ experience: exp, message: 'Experience submitted for moderation.' }, 201);
+  return json({ experience: exp, message: 'Comment posted.' }, 201);
 }

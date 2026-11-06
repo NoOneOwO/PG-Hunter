@@ -64,6 +64,73 @@ const totalsRes = await db
   .catch(() => ({ results: [] as { event_type: string; c: number }[] }));
 const total = (type: string) => totalsRes.results.find((row) => row.event_type === type)?.c ?? 0;
 
+/* ------------------------------------------------------------------ */
+/* Enquiry funnel (lead_events, migration 0015)                        */
+/*                                                                     */
+/* Aggregate only: counts per event type and per listing. No student    */
+/* name, phone or id is selected here, so this page cannot become a     */
+/* contact list even for an admin.                                      */
+/* ------------------------------------------------------------------ */
+
+const [leadEventsRes, leadFunnelRes, leadStatusRes, consentRes] = await Promise.all([
+  db
+    .prepare(`SELECT event_type, COUNT(*) AS c FROM lead_events GROUP BY event_type`)
+    .all<{ event_type: string; c: number }>()
+    .catch(() => ({ results: [] as { event_type: string; c: number }[] })),
+  db
+    .prepare(
+      `SELECT le.listing_id,
+              COALESCE(ol.name, le.listing_id) AS name,
+              SUM(CASE WHEN le.event_type = 'ENQUIRY_SUBMITTED' THEN 1 ELSE 0 END) AS enquiries,
+              SUM(CASE WHEN le.event_type = 'OWNER_CALL_CLICKED' THEN 1 ELSE 0 END) AS call_taps,
+              SUM(CASE WHEN le.event_type = 'OWNER_WHATSAPP_CLICKED' THEN 1 ELSE 0 END) AS whatsapp_taps
+       FROM lead_events le
+       LEFT JOIN owner_listings ol ON ol.id = le.listing_id
+       GROUP BY le.listing_id
+       HAVING enquiries > 0 OR call_taps > 0 OR whatsapp_taps > 0
+       ORDER BY enquiries DESC, call_taps DESC
+       LIMIT 10`
+    )
+    .all<{ listing_id: string; name: string; enquiries: number; call_taps: number; whatsapp_taps: number }>()
+    .catch(() => ({
+      results: [] as {
+        listing_id: string;
+        name: string;
+        enquiries: number;
+        call_taps: number;
+        whatsapp_taps: number;
+      }[],
+    })),
+  db
+    .prepare(`SELECT status, COUNT(*) AS c FROM leads GROUP BY status`)
+    .all<{ status: string; c: number }>()
+    .catch(() => ({ results: [] as { status: string; c: number }[] })),
+  db
+    .prepare(`SELECT COUNT(*) AS total, COALESCE(SUM(phone_shared), 0) AS shared FROM leads`)
+    .first<{ total: number; shared: number }>()
+    .catch(() => ({ total: 0, shared: 0 })),
+]);
+
+const leadEventTotal = (type: string) =>
+  leadEventsRes.results.find((row) => row.event_type === type)?.c ?? 0;
+const leadStatusCount = (status: string) =>
+  leadStatusRes.results.find((row) => row.status === status)?.c ?? 0;
+const consentRow = consentRes ?? { total: 0, shared: 0 };
+
+const funnelCards = [
+  { label: 'Forms opened', value: leadEventTotal('ENQUIRY_STARTED') },
+  { label: 'Enquiries sent', value: leadEventTotal('ENQUIRY_SUBMITTED') },
+  { label: 'Contact viewed', value: leadEventTotal('OWNER_CONTACT_DETAILS_VIEWED') },
+  { label: 'Call taps', value: leadEventTotal('OWNER_CALL_CLICKED') },
+  { label: 'WhatsApp taps', value: leadEventTotal('OWNER_WHATSAPP_CLICKED') },
+  { label: 'Status changes', value: leadEventTotal('LEAD_STATUS_CHANGED') },
+];
+
+const pipeline = (['new', 'contacted', 'interested', 'booked', 'not_interested'] as const).map((status) => ({
+  status,
+  count: leadStatusCount(status),
+}));
+
 /** Last 14 days, oldest → newest, so the chart reads left to right. */
 const days = Array.from({ length: 14 }, (_, i) => {
   const date = new Date();
@@ -235,6 +302,83 @@ const listingStatus = (status: string) =>
         </table>
       </div>
     )}
+  </section>
+
+  {/* Enquiry funnel — aggregate events only, no identities */}
+  <section class="card mt-8" aria-labelledby="enquiry-funnel-heading" data-reveal>
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3">
+      <h2 id="enquiry-funnel-heading" class="flex items-center gap-2 text-sm font-bold text-slate-900">
+        <MessageCircle class="h-4 w-4 text-brand-600" /> Enquiry funnel
+      </h2>
+      <span class="text-xs font-medium text-slate-500">
+        {consentRow.shared} of {consentRow.total} enquiries shared a phone number
+      </span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 lg:grid-cols-6">
+      {
+        funnelCards.map((card) => (
+          <div class="rounded-sm border border-slate-100 bg-slate-50 px-3 py-2.5">
+            <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">{card.label}</p>
+            <p class="mt-1 text-xl font-extrabold tracking-tight text-slate-900" data-count-up={card.value}>
+              {card.value}
+            </p>
+          </div>
+        ))
+      }
+    </div>
+
+    {leadFunnelRes.results.length === 0 ? (
+      <p class="border-t border-slate-100 p-5 text-sm text-slate-500">
+        No enquiries recorded yet. The funnel starts counting the first time a student sends one.
+      </p>
+    ) : (
+      <div class="overflow-x-auto border-t border-slate-100">
+        <table class="w-full min-w-[560px] text-left text-sm">
+          <thead class="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
+            <tr>
+              <th class="px-5 py-2.5 font-semibold">Listing</th>
+              <th class="px-5 py-2.5 font-semibold">Enquiries</th>
+              <th class="px-5 py-2.5 font-semibold">Call taps</th>
+              <th class="px-5 py-2.5 font-semibold">WhatsApp taps</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {leadFunnelRes.results.map((row) => (
+              <tr class="transition-colors hover:bg-slate-50">
+                <td class="px-5 py-3">
+                  <a
+                    href={`/pgs/live/${encodeURIComponent(row.listing_id)}`}
+                    target="_blank"
+                    rel="noopener"
+                    class="font-semibold text-slate-800 hover:text-brand-700 hover:underline"
+                  >
+                    {row.name}
+                  </a>
+                </td>
+                <td class="px-5 py-3 font-semibold text-slate-700">{row.enquiries}</td>
+                <td class="px-5 py-3 font-semibold text-slate-700">{row.call_taps}</td>
+                <td class="px-5 py-3 font-semibold text-slate-700">{row.whatsapp_taps}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+
+    <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-3">
+      <span class="text-xs font-semibold tracking-wide text-slate-500 uppercase">Pipeline</span>
+      {pipeline.map((item) => (
+        <span class="badge border border-slate-200 bg-white text-slate-600">
+          {item.status.replaceAll('_', ' ')} · {item.count}
+        </span>
+      ))}
+    </div>
+
+    <p class="px-5 pb-4 text-[11px] leading-relaxed text-slate-500">
+      A Call or WhatsApp tap is exactly that — a tap. Nothing here measures a completed call or a
+      sent WhatsApp message, and no student name or number is stored in these aggregates.
+    </p>
   </section>
 
   <script>

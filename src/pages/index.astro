@@ -2,7 +2,6 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import SearchPanel from '@/components/SearchPanel.astro';
 import PropertyCard from '@/components/PropertyCard.astro';
-import GradientBackdrop from '@/components/GradientBackdrop.astro';
 import {
   ArrowRight,
   SlidersHorizontal,
@@ -57,12 +56,6 @@ const valueProps = [
     aria-hidden="true"
     class="absolute inset-0 -z-10 bg-gradient-to-r from-slate-950/90 via-slate-950/75 to-slate-950/40"
   ></div>
-  <!--
-    Brand aurora: the same cursor-reactive canvas the live listings use, run
-    low and screen-blended over the photo so the hero glows purple without
-    losing the room. -z-10 keeps it behind the copy, never over it.
-  -->
-  <GradientBackdrop class="-z-10 opacity-45 mix-blend-screen" />
 
   <div class="mx-auto max-w-7xl px-4 pt-9 pb-8 sm:px-6 sm:pt-12 sm:pb-10 lg:px-8 lg:pt-14 lg:pb-12">
     <div class="max-w-3xl">

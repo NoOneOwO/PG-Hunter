@@ -1,4 +1,5 @@
 // @ts-check
+import { fileURLToPath } from 'node:url';
 import { defineConfig, sessionDrivers } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
@@ -31,6 +32,10 @@ export default defineConfig({
     // instance: sonner's <Toaster> then threw "Invalid hook call" during SSR and
     // its toast store never reached the mounted <Toaster> in the browser.
     resolve: {
+      // tsconfig maps `@/*` to `src/*`, but Vite needs the same alias or a
+      // framework island imported as `@/components/...` gets an unresolved
+      // `/@id/...` component URL in dev and never hydrates.
+      alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
       dedupe: ['react', 'react-dom', 'sonner', 'motion', 'motion/react'],
     },
     optimizeDeps: {

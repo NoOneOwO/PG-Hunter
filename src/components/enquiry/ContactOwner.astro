@@ -1,0 +1,551 @@
+---
+/**
+ * Contact Owner — the student enquiry entry point for a live D1 listing.
+ *
+ * Privacy model (nothing here is decorative):
+ *   - no owner phone number is rendered on the server, in an attribute or in a
+ *     JSON island; the card is just a button;
+ *   - after a successful POST /api/enquiries the server returns Call/WhatsApp
+ *     details ONLY if that owner enabled direct contact for this listing, and
+ *     only for the student who just enquired;
+ *   - on a repeat visit the same details are fetched from
+ *     GET /api/enquiries/contact, which refuses anyone without a lead.
+ *
+ * No message is sent by this component: `tel:` opens the dialler, and the
+ * WhatsApp link opens a prefilled chat the student must send themselves.
+ */
+import { Phone, MessageCircle, Send, CircleCheck, Info } from '@lucide/astro';
+import { colleges } from '@/data/colleges';
+
+interface Props {
+  listingId: string;
+  listingName: string;
+}
+
+const { listingId, listingName } = Astro.props;
+
+const budgetOptions = [
+  { value: 'under-10', label: 'Under ₹10,000' },
+  { value: '10-15', label: '₹10,000 – ₹15,000' },
+  { value: '15-20', label: '₹15,000 – ₹20,000' },
+  { value: '20-plus', label: '₹20,000 +' },
+  { value: 'custom', label: 'A different amount' },
+];
+
+const roomOptions = [
+  { value: 'any', label: 'Any room type' },
+  { value: 'single', label: 'Single sharing' },
+  { value: 'double', label: 'Double sharing' },
+  { value: 'triple', label: 'Triple sharing' },
+];
+
+const inputClass =
+  'mt-1 w-full rounded-sm border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-400 focus:outline-none';
+const labelClass = 'block text-xs font-semibold uppercase tracking-wide text-slate-500';
+---
+
+<div
+  class="card pixel-corner relative border border-brand-200 bg-brand-50/60 p-5"
+  id="contact-owner-card"
+  data-listing-id={listingId}
+>
+  <div class="pixel-rule" aria-hidden="true"><i /><i /><i /><i /><i /></div>
+  <h2 class="mt-4 flex items-center gap-2 text-sm font-bold text-slate-900">
+    <Phone class="h-4 w-4 text-brand-600" /> Contact Owner
+  </h2>
+  <p class="mt-1.5 text-xs leading-relaxed text-slate-600">
+    Send one enquiry and the owner sees it in their PG Hunter dashboard. That's the only way they
+    get your details — no spam calls from a public number.
+  </p>
+
+  <button type="button" id="enquiry-open" class="btn-primary mt-3 w-full justify-center">
+    <Send class="h-4 w-4" /> Contact Owner
+  </button>
+
+  <div id="enquiry-existing" class="mt-3 hidden">
+    <p class="text-xs font-medium leading-relaxed text-slate-600">
+      You've already enquired about this PG. The owner can see it in their dashboard.
+    </p>
+    <div id="enquiry-existing-contact" class="mt-2 flex flex-col gap-2"></div>
+  </div>
+
+  <p id="enquiry-card-status" class="mt-2 hidden rounded-sm px-3 py-2 text-xs font-medium leading-relaxed" role="status"></p>
+</div>
+
+<dialog
+  id="enquiry-dialog"
+  class="w-[min(600px,calc(100vw-1.5rem))] rounded-xl border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-900/60"
+  aria-labelledby="enquiry-dialog-title"
+>
+  <form id="enquiry-form" novalidate class="max-h-[85vh] overflow-y-auto">
+    <div class="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+      <div>
+        <p class="eyebrow">Enquiry</p>
+        <h2 id="enquiry-dialog-title" class="mt-1 text-lg font-extrabold tracking-tight text-slate-900">
+          Contact Owner
+        </h2>
+        <p class="mt-0.5 text-xs font-medium text-slate-500">{listingName}</p>
+      </div>
+      <button
+        type="button"
+        id="enquiry-close"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-sm text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+        aria-label="Close enquiry form"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div id="enquiry-fields" class="px-5 py-4">
+      <fieldset>
+        <legend class="text-sm font-bold text-slate-900">About you</legend>
+        <div class="mt-2 grid gap-3 sm:grid-cols-2">
+          <label class="block">
+            <span class={labelClass}>Full name *</span>
+            <input id="enquiry-name" name="name" type="text" maxlength="80" autocomplete="name" required class={inputClass} />
+          </label>
+          <label class="block">
+            <span class={labelClass}>Phone (optional)</span>
+            <input
+              id="enquiry-phone"
+              name="phone"
+              type="tel"
+              inputmode="tel"
+              maxlength="20"
+              autocomplete="tel"
+              placeholder="10-digit mobile"
+              class={inputClass}
+            />
+          </label>
+        </div>
+        <label class="mt-3 block">
+          <span class={labelClass}>College / university</span>
+          <select id="enquiry-college" name="college" class={inputClass}>
+            <option value="">Select your college</option>
+            {colleges.map((college) => <option value={college.name}>{college.name}</option>)}
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <label id="enquiry-college-other-wrap" class="mt-3 hidden">
+          <span class={labelClass}>College name</span>
+          <input id="enquiry-college-other" type="text" maxlength="100" class={inputClass} placeholder="Type your college" />
+        </label>
+
+        <label id="enquiry-consent-wrap" class="mt-3 flex items-start gap-2.5 rounded-sm bg-slate-50 px-3 py-2.5">
+          <input id="enquiry-consent" type="checkbox" class="mt-0.5 h-4 w-4" />
+          <span class="text-xs leading-relaxed text-slate-600">
+            I agree to share this phone number with this PG owner so they can contact me regarding
+            this enquiry.
+          </span>
+        </label>
+        <p id="enquiry-consent-hint" class="mt-1 text-[11px] font-medium text-slate-500">
+          Add a number above to let the owner call you back.
+        </p>
+      </fieldset>
+
+      <fieldset class="mt-5 border-t border-slate-100 pt-4">
+        <legend class="text-sm font-bold text-slate-900">What you're looking for</legend>
+        <div class="mt-2 grid gap-3 sm:grid-cols-2">
+          <label class="block">
+            <span class={labelClass}>Monthly budget *</span>
+            <select id="enquiry-budget" name="budget" required class={inputClass}>
+              <option value="">Select a range</option>
+              {budgetOptions.map((option) => <option value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+          <label class="block">
+            <span class={labelClass}>Move-in month</span>
+            <input id="enquiry-move-in" name="moveInMonth" type="month" class={inputClass} />
+          </label>
+        </div>
+        <label id="enquiry-custom-wrap" class="mt-3 hidden">
+          <span class={labelClass}>Your monthly budget (₹)</span>
+          <input
+            id="enquiry-custom-budget"
+            type="number"
+            inputmode="numeric"
+            min="1000"
+            max="500000"
+            step="500"
+            class={inputClass}
+            placeholder="12000"
+          />
+        </label>
+        <label class="mt-3 block">
+          <span class={labelClass}>Preferred room type</span>
+          <select id="enquiry-room-type" name="roomType" class={inputClass}>
+            {roomOptions.map((option) => <option value={option.value}>{option.label}</option>)}
+          </select>
+        </label>
+        <label class="mt-3 block">
+          <span class={labelClass}>Message to owner (optional)</span>
+          <textarea
+            id="enquiry-message"
+            name="message"
+            rows="3"
+            maxlength="500"
+            class="{inputClass} resize-none"
+            placeholder="Anything the owner should know — food preference, floor, sharing with a friend…"></textarea>
+          <span class="mt-1 block text-right text-[11px] font-medium text-slate-400">
+            <span id="enquiry-message-count">0</span>/500
+          </span>
+        </label>
+      </fieldset>
+
+      <p id="enquiry-error" class="mt-4 hidden rounded-sm bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700" role="alert"></p>
+
+      <button type="submit" id="enquiry-submit" class="btn-primary mt-4 w-full justify-center">
+        Send enquiry
+      </button>
+      <p class="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-slate-500">
+        <Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        One enquiry per PG. Your number is only shared if you tick the box above.
+      </p>
+    </div>
+
+    <div id="enquiry-done" class="hidden px-5 py-6 text-center">
+      <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+        <CircleCheck class="h-6 w-6" />
+      </span>
+      <h3 class="mt-4 text-lg font-extrabold tracking-tight text-slate-900">
+        Your enquiry has been submitted successfully!
+      </h3>
+      <p class="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-slate-600">
+        {listingName} can see it in their PG Hunter dashboard.
+      </p>
+
+      <div id="enquiry-contact" class="mt-5 hidden flex-col gap-2">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Reach the owner now</p>
+        <a id="enquiry-call" href="#" class="btn-primary w-full justify-center">
+          <Phone class="h-4 w-4" /> Call Owner
+        </a>
+        <a
+          id="enquiry-whatsapp"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn-secondary w-full justify-center"
+        >
+          <MessageCircle class="h-4 w-4" /> WhatsApp Owner
+        </a>
+        <p class="text-[11px] leading-relaxed text-slate-500">
+          WhatsApp opens with a short message ready to send. Nothing is sent until you press send.
+        </p>
+      </div>
+
+      <p id="enquiry-no-contact" class="mt-4 rounded-sm bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-600">
+        The owner has chosen not to publish direct contact details, so there are no call or WhatsApp
+        buttons. Your enquiry is safely in their dashboard and they can reach you there.
+      </p>
+
+      <button type="button" id="enquiry-done-close" class="btn-secondary mt-5 w-full justify-center">
+        Back to the listing
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  import { getCurrentSession } from '@/lib/auth';
+  import { colleges } from '@/data/colleges';
+
+  interface ContactDetails {
+    phone: string;
+    display: string;
+    whatsappUrl: string;
+  }
+
+  const card = document.getElementById('contact-owner-card');
+  if (card) {
+    const dialog = document.getElementById('enquiry-dialog') as HTMLDialogElement;
+    const form = document.getElementById('enquiry-form') as HTMLFormElement;
+    const fields = document.getElementById('enquiry-fields') as HTMLElement;
+    const done = document.getElementById('enquiry-done') as HTMLElement;
+    const openBtn = document.getElementById('enquiry-open') as HTMLButtonElement;
+    const closeBtns = [
+      document.getElementById('enquiry-close') as HTMLButtonElement | null,
+      document.getElementById('enquiry-done-close') as HTMLButtonElement | null,
+    ];
+    const nameInput = document.getElementById('enquiry-name') as HTMLInputElement;
+    const phoneInput = document.getElementById('enquiry-phone') as HTMLInputElement;
+    const collegeSelect = document.getElementById('enquiry-college') as HTMLSelectElement;
+    const collegeOtherWrap = document.getElementById('enquiry-college-other-wrap') as HTMLElement;
+    const collegeOther = document.getElementById('enquiry-college-other') as HTMLInputElement;
+    const consentWrap = document.getElementById('enquiry-consent-wrap') as HTMLElement;
+    const consent = document.getElementById('enquiry-consent') as HTMLInputElement;
+    const consentHint = document.getElementById('enquiry-consent-hint') as HTMLElement;
+    const budget = document.getElementById('enquiry-budget') as HTMLSelectElement;
+    const customWrap = document.getElementById('enquiry-custom-wrap') as HTMLElement;
+    const customBudget = document.getElementById('enquiry-custom-budget') as HTMLInputElement;
+    const moveIn = document.getElementById('enquiry-move-in') as HTMLInputElement;
+    const roomType = document.getElementById('enquiry-room-type') as HTMLSelectElement;
+    const message = document.getElementById('enquiry-message') as HTMLTextAreaElement;
+    const messageCount = document.getElementById('enquiry-message-count') as HTMLElement;
+    const errorEl = document.getElementById('enquiry-error') as HTMLElement;
+    const submitBtn = document.getElementById('enquiry-submit') as HTMLButtonElement;
+    const contactBox = document.getElementById('enquiry-contact') as HTMLElement;
+    const callLink = document.getElementById('enquiry-call') as HTMLAnchorElement;
+    const whatsappLink = document.getElementById('enquiry-whatsapp') as HTMLAnchorElement;
+    const noContact = document.getElementById('enquiry-no-contact') as HTMLElement;
+    const existing = document.getElementById('enquiry-existing') as HTMLElement;
+    const existingContact = document.getElementById('enquiry-existing-contact') as HTMLElement;
+    const cardStatus = document.getElementById('enquiry-card-status') as HTMLElement;
+
+    const listingId = card.dataset.listingId ?? '';
+    let leadId: number | null = null;
+    let startedReported = false;
+    let submitting = false;
+
+    const showError = (text: string) => {
+      errorEl.textContent = text;
+      errorEl.classList.remove('hidden');
+    };
+    const clearError = () => errorEl.classList.add('hidden');
+
+    const setCardStatus = (text: string) => {
+      cardStatus.textContent = text;
+      cardStatus.classList.remove('hidden');
+      cardStatus.className = 'mt-2 rounded-sm bg-amber-50 px-3 py-2 text-xs font-medium leading-relaxed text-amber-800';
+    };
+
+    const track = async (type: string, lead: number | null) => {
+      try {
+        await fetch('/api/enquiries/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, listingId, leadId: lead }),
+        });
+      } catch {
+        /* analytics must never block the student */
+      }
+    };
+
+    /**
+     * Render the Call / WhatsApp buttons from data the server just returned.
+     * Built with DOM APIs (not innerHTML) so nothing from the response can be
+     * interpreted as markup.
+     */
+    const renderContact = (container: HTMLElement, contact: ContactDetails, lead: number | null) => {
+      container.textContent = '';
+      container.classList.remove('hidden');
+      container.classList.add('flex');
+
+      const call = document.createElement('a');
+      call.href = `tel:+${contact.phone}`;
+      call.className = 'btn-primary w-full justify-center';
+      call.textContent = 'Call Owner';
+      call.addEventListener('click', () => void track('OWNER_CALL_CLICKED', lead));
+
+      const whatsapp = document.createElement('a');
+      whatsapp.href = contact.whatsappUrl;
+      whatsapp.target = '_blank';
+      whatsapp.rel = 'noopener noreferrer';
+      whatsapp.className = 'btn-secondary w-full justify-center';
+      whatsapp.textContent = 'WhatsApp Owner';
+      whatsapp.addEventListener('click', () => void track('OWNER_WHATSAPP_CLICKED', lead));
+
+      container.append(call, whatsapp);
+
+      const note = document.createElement('p');
+      note.className = 'text-[11px] leading-relaxed text-slate-500';
+      note.textContent = `Owner: ${contact.display}. Nothing is dialled or sent until you choose.`;
+      container.append(note);
+    };
+
+    const fillConnectedContact = (contact: ContactDetails | null, lead: number | null) => {
+      if (contact) {
+        contactBox.classList.remove('hidden');
+        contactBox.classList.add('flex');
+        noContact.classList.add('hidden');
+        callLink.href = `tel:+${contact.phone}`;
+        whatsappLink.href = contact.whatsappUrl;
+        callLink.onclick = () => void track('OWNER_CALL_CLICKED', lead);
+        whatsappLink.onclick = () => void track('OWNER_WHATSAPP_CLICKED', lead);
+      } else {
+        contactBox.classList.add('hidden');
+        contactBox.classList.remove('flex');
+        noContact.classList.remove('hidden');
+      }
+    };
+
+    const showDone = (contact: ContactDetails | null, lead: number | null, duplicate: boolean) => {
+      fields.classList.add('hidden');
+      done.classList.remove('hidden');
+      if (duplicate) {
+        const title = done.querySelector('h3');
+        if (title) title.textContent = 'You have already enquired about this PG.';
+      }
+      fillConnectedContact(contact, lead);
+    };
+
+    /* ---- conditional fields ---------------------------------------- */
+    const syncPhoneState = () => {
+      const hasPhone = phoneInput.value.replace(/\D/g, '').length > 0;
+      consentWrap.classList.toggle('opacity-50', !hasPhone);
+      consent.disabled = !hasPhone;
+      if (!hasPhone) consent.checked = false;
+      consentHint.classList.toggle('hidden', hasPhone);
+    };
+
+    const syncCollegeOther = () => {
+      const isOther = collegeSelect.value === 'Other';
+      collegeOtherWrap.classList.toggle('hidden', !isOther);
+      if (!isOther) collegeOther.value = '';
+    };
+
+    const syncBudget = () => {
+      customWrap.classList.toggle('hidden', budget.value !== 'custom');
+    };
+
+    phoneInput.addEventListener('input', syncPhoneState);
+    collegeSelect.addEventListener('change', syncCollegeOther);
+    budget.addEventListener('change', syncBudget);
+    message.addEventListener('input', () => {
+      messageCount.textContent = String(message.value.length);
+    });
+    syncPhoneState();
+    syncCollegeOther();
+    syncBudget();
+
+    /* ---- open / close ---------------------------------------------- */
+    const openDialog = async () => {
+      const user = await getCurrentSession();
+      if (!user) {
+        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+        return;
+      }
+      if (user.role === 'owner' && !user.isAdmin) {
+        setCardStatus('Enquiries are for student accounts. You are signed in as an owner.');
+        return;
+      }
+      clearError();
+      if (!dialog.open) dialog.showModal();
+      if (!startedReported) {
+        startedReported = true;
+        void track('ENQUIRY_STARTED', null);
+      }
+    };
+
+    openBtn.addEventListener('click', () => void openDialog());
+    closeBtns.forEach((btn) => btn?.addEventListener('click', () => dialog.close()));
+    dialog.addEventListener('click', (event) => {
+      // Clicking the backdrop (the dialog element itself) closes, like a sheet.
+      if (event.target === dialog) dialog.close();
+    });
+
+    /* ---- submit ----------------------------------------------------- */
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (submitting) return;
+      clearError();
+
+      const rawPhone = phoneInput.value.trim();
+      const digits = rawPhone.replace(/\D/g, '');
+      if (nameInput.value.trim().length < 2) return showError('Please enter your full name.');
+      if (rawPhone && !/^[6-9]\d{9}$/.test(digits.slice(-10))) {
+        return showError('Enter a valid 10-digit mobile number, or leave it empty.');
+      }
+      if (!budget.value) return showError('Please choose your monthly budget.');
+      if (budget.value === 'custom') {
+        const amount = Number(customBudget.value);
+        if (!Number.isFinite(amount) || amount < 1000) {
+          return showError('Enter a custom budget of at least ₹1,000.');
+        }
+      }
+      if (rawPhone && !consent.checked) {
+        // Allowed: the number stays on the student's profile, unshared. Tell
+        // them plainly rather than silently dropping it.
+        setCardStatus('Note: without the consent box the owner will not see your number.');
+      }
+
+      const collegeChoice = collegeSelect.value;
+      const college = collegeChoice === 'Other' ? collegeOther.value.trim() : collegeChoice;
+
+      submitting = true;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+
+      try {
+        const res = await fetch('/api/enquiries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            propertyId: listingId,
+            name: nameInput.value.trim(),
+            phone: rawPhone,
+            college,
+            budget: budget.value,
+            customBudget: budget.value === 'custom' ? Number(customBudget.value) : undefined,
+            moveInMonth: moveIn.value,
+            roomType: roomType.value,
+            message: message.value.trim(),
+            consent: consent.checked,
+          }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          leadId?: number | null;
+          duplicate?: boolean;
+          contact?: ContactDetails | null;
+        };
+
+        if (res.status === 401) {
+          window.location.href = `/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+          return;
+        }
+        if (!res.ok && !data.duplicate) {
+          showError(data.error ?? 'Could not send your enquiry. Please try again.');
+          return;
+        }
+
+        leadId = data.leadId ?? null;
+        showDone(data.contact ?? null, leadId, Boolean(data.duplicate));
+        if (data.contact) renderContact(existingContact, data.contact, leadId);
+        existing.classList.remove('hidden');
+        openBtn.textContent = 'View your enquiry';
+      } catch {
+        showError('Network problem — your enquiry was not sent. Please try again.');
+      } finally {
+        submitting = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send enquiry';
+      }
+    });
+
+    /* ---- prefill + returning student -------------------------------- */
+    void (async () => {
+      const session = await getCurrentSession();
+      if (!session) return;
+
+      nameInput.value = session.name ?? '';
+      if (session.phone) phoneInput.value = session.phone;
+      if (session.collegeSlug) {
+        const college = colleges.find((entry) => entry.slug === session.collegeSlug);
+        if (college) collegeSelect.value = college.name;
+      }
+      if (session.budgetPref) {
+        const known = Array.from(budget.options).some((option) => option.value === session.budgetPref);
+        if (known) budget.value = session.budgetPref;
+      }
+      if (session.movingInMonth) moveIn.value = session.movingInMonth;
+      syncPhoneState();
+
+      if (session.role !== 'student') return;
+
+      try {
+        const res = await fetch(`/api/enquiries/contact?listingId=${encodeURIComponent(listingId)}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as { leadId?: number; contact?: ContactDetails | null };
+        leadId = data.leadId ?? null;
+        openBtn.textContent = 'View your enquiry';
+        if (data.contact) renderContact(existingContact, data.contact, leadId);
+        else
+          existingContact.textContent =
+            'The owner reviews enquiries in their dashboard and will reach out there.';
+        existing.classList.remove('hidden');
+      } catch {
+        /* not fatal: the button still opens the form */
+      }
+    })();
+  }
+</script>
